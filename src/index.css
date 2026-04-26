@@ -1,0 +1,202 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+    --page-bg: #f6f8fb;
+    --page-fg: #111827;
+    --panel-bg: rgba(255, 255, 255, 0.92);
+    --panel-border: rgba(15, 23, 42, 0.12);
+    --muted-fg: #64748b;
+    --brand: #2563eb;
+    --brand-strong: #1d4ed8;
+    --accent: #0f766e;
+    --warm: #b45309;
+  }
+
+  .dark {
+    color-scheme: dark;
+    --page-bg: #0b1120;
+    --page-fg: #e5eefb;
+    --panel-bg: rgba(15, 23, 42, 0.86);
+    --panel-border: rgba(148, 163, 184, 0.18);
+    --muted-fg: #94a3b8;
+    --brand: #60a5fa;
+    --brand-strong: #3b82f6;
+    --accent: #2dd4bf;
+    --warm: #f59e0b;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    min-width: 320px;
+    margin: 0;
+    background: var(--page-bg);
+    color: var(--page-fg);
+    font-family:
+      Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+      "Segoe UI", sans-serif;
+    text-rendering: optimizeLegibility;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+
+  a {
+    color: inherit;
+  }
+
+  ::selection {
+    background: rgba(37, 99, 235, 0.24);
+  }
+}
+
+@layer components {
+  .app-root {
+    min-height: 100vh;
+    background:
+      radial-gradient(circle at top left, rgba(45, 212, 191, 0.12), transparent 30rem),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.84), rgba(241, 245, 249, 0.92));
+  }
+
+  .dark .app-root {
+    background:
+      radial-gradient(circle at top left, rgba(45, 212, 191, 0.1), transparent 30rem),
+      linear-gradient(180deg, rgba(15, 23, 42, 0.95), rgba(2, 6, 23, 1));
+  }
+
+  .page-wrap {
+    @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+  }
+
+  .surface-card {
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 0.5rem;
+    box-shadow: 0 24px 70px rgba(15, 23, 42, 0.12);
+    backdrop-filter: blur(18px);
+  }
+
+  .dark .surface-card {
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.28);
+  }
+
+  .subtle-card {
+    @apply rounded-lg border border-slate-200 bg-white shadow-sm transition duration-200 dark:border-slate-800 dark:bg-slate-900;
+  }
+
+  .interactive-card {
+    @apply subtle-card hover:-translate-y-1 hover:border-blue-300 hover:shadow-lg dark:hover:border-blue-500/60;
+  }
+
+  .btn-base {
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-60 dark:focus-visible:ring-offset-slate-950;
+  }
+
+  .btn-primary {
+    @apply btn-base bg-blue-600 text-white shadow-sm shadow-blue-600/20 hover:bg-blue-700;
+  }
+
+  .btn-secondary {
+    @apply btn-base border border-slate-300 bg-white text-slate-800 hover:border-slate-400 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800;
+  }
+
+  .btn-danger {
+    @apply btn-base bg-rose-600 text-white shadow-sm shadow-rose-600/20 hover:bg-rose-700;
+  }
+
+  .form-field {
+    @apply w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition duration-200 placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/15 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-500;
+  }
+
+  .field-label {
+    @apply mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200;
+  }
+
+  .section-kicker {
+    @apply text-sm font-semibold text-teal-700 dark:text-teal-300;
+  }
+
+  .table-shell {
+    @apply overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950;
+  }
+
+  .status-pill {
+    @apply inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold;
+  }
+}
+
+@layer utilities {
+  .animate-enter {
+    animation: enter 420ms ease both;
+  }
+
+  .animate-soft-pulse {
+    animation: softPulse 2.4s ease-in-out infinite;
+  }
+
+  .animate-marquee {
+    animation: marquee 26s linear infinite;
+  }
+
+  .pause-animation {
+    animation-play-state: paused;
+  }
+
+  .safe-text {
+    overflow-wrap: anywhere;
+    word-break: normal;
+  }
+}
+
+@keyframes enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes softPulse {
+  0%,
+  100% {
+    opacity: 0.75;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes marquee {
+  0% {
+    transform: translateX(100%);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
