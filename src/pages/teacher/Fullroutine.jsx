@@ -10,6 +10,7 @@ import {
   FiUsers,
 } from "react-icons/fi";
 import api from "../../api";
+import { useActiveSession } from "../../App";
 import Header from "../components/Header";
 import RoutineTable from "../components/RoutineTable";
 import {
@@ -50,9 +51,14 @@ const SLOT_LABELS = {
  * Teacher routine lookup with autocomplete and a reusable timetable surface.
  */
 const TeacherRoutine = () => {
+  const {
+    activeSessionName,
+    activeSessionLoading,
+    activeSessionError,
+  } = useActiveSession();
   const [schedule, setSchedule] = useState([]);
   const [hasSearched, setHasSearched] = useState(false);
-  const [session, setSession] = useState("Spring-26");
+  const [session, setSession] = useState("");
   const [teacherQuery, setTeacherQuery] = useState("");
   const [teacherCode, setTeacherCode] = useState("");
   const [gender, setGender] = useState("male");
@@ -75,6 +81,15 @@ const TeacherRoutine = () => {
   );
 
   const timeSlots = SLOT_LABELS[gender];
+  const sessionHelper = activeSessionLoading
+    ? "Loading active session..."
+    : activeSessionError || (activeSessionName ? `Active: ${activeSessionName}` : "Enter a session");
+
+  useEffect(() => {
+    if (activeSessionName) {
+      setSession((current) => current || activeSessionName);
+    }
+  }, [activeSessionName]);
 
   const handleSessionChange = async (event) => {
     const value = event.target.value;
@@ -275,7 +290,7 @@ const TeacherRoutine = () => {
             <FormField
               id="session"
               label="Session"
-              helper={sessionLoading ? "Loading session suggestions..." : "Example: Spring-26"}
+              helper={sessionLoading ? "Loading session suggestions..." : sessionHelper}
             >
               <div className="relative">
                 <FiCalendar
@@ -288,7 +303,7 @@ const TeacherRoutine = () => {
                   value={session}
                   onChange={handleSessionChange}
                   type="text"
-                  placeholder="Spring-26"
+                  placeholder={activeSessionName || "Active session"}
                   className="form-field pl-12"
                 />
                 <SuggestionList

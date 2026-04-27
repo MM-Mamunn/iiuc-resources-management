@@ -22,11 +22,10 @@ import {
   Notice,
   SectionHeading,
 } from "../components/ui";
-import { useAuth } from "../../App";
+import { useActiveSession, useAuth } from "../../App";
 
 const DAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 const DISPLAY_DAYS = ["sat", "sun", "mon", "tue", "wed"];
-const SESSION = "Spring-26";
 
 const SLOT_LABELS = {
   1: [
@@ -53,6 +52,11 @@ const SLOT_LABELS = {
  */
 const HomePersonal = () => {
   const { user } = useAuth();
+  const {
+    activeSessionName,
+    activeSessionLoading,
+    activeSessionError,
+  } = useActiveSession();
   const navigate = useNavigate();
   const [schedule, setSchedule] = useState([]);
   const [profile, setProfile] = useState(user);
@@ -62,6 +66,7 @@ const HomePersonal = () => {
   const [notice, setNotice] = useState(null);
 
   const timeSlots = SLOT_LABELS[shift] ?? SLOT_LABELS[1];
+  const sessionLabel = activeSessionName || "No active session";
   const currentClass = useMemo(
     () => getCurrentClass(schedule, shift),
     [schedule, shift]
@@ -91,8 +96,23 @@ const HomePersonal = () => {
    * Fetches the current student's personal routine for the active session.
    */
   const fetchPersonalRoutine = useCallback(async () => {
+    if (!activeSessionName) {
+      setSchedule([]);
+      setShift(1);
+      if (!activeSessionLoading) {
+        setNotice({
+          type: "error",
+          text: activeSessionError || "No active session is available.",
+        });
+      }
+      return;
+    }
+
     try {
-      const response = await api.post(`/api/user/fullroutine/${SESSION.toUpperCase()}`, {});
+      const response = await api.post(
+        `/api/user/fullroutine/${activeSessionName.toUpperCase()}`,
+        {},
+      );
       setSchedule(response.data?.rows ?? []);
       setShift(response.data?.gender || 1);
     } catch {
@@ -103,7 +123,7 @@ const HomePersonal = () => {
         text: "Your personal routine could not be loaded.",
       });
     }
-  }, []);
+  }, [activeSessionError, activeSessionLoading, activeSessionName]);
 
   /**
    * Loads profile and personal routine in parallel.
@@ -175,7 +195,7 @@ const HomePersonal = () => {
     printWindow.document.write(
       buildPersonalPrintHtml({
         profile,
-        session: SESSION,
+        session: sessionLabel,
         timeSlots,
         displayDays: DISPLAY_DAYS,
         getItemsForDay: generateDaySchedule,
@@ -201,7 +221,7 @@ const HomePersonal = () => {
     },
     {
       label: "Session",
-      value: SESSION,
+      value: sessionLabel,
       icon: <FiCalendar className="h-5 w-5" aria-hidden="true" />,
       tone: "amber",
     },
@@ -301,7 +321,7 @@ const HomePersonal = () => {
             ) : schedule.length ? (
               <RoutineTable
                 title="Personal Schedule"
-                subtitle={`${profile?.name || "Student"} - ${SESSION}`}
+                subtitle={`${profile?.name || "Student"} - ${sessionLabel}`}
                 timeSlots={timeSlots}
                 displayDays={DISPLAY_DAYS}
                 getItemsForDay={generateDaySchedule}

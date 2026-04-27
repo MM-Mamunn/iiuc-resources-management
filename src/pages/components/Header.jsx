@@ -22,7 +22,7 @@ import {
   FiUsers,
   FiX,
 } from "react-icons/fi";
-import { useAuth, useTheme } from "../../App";
+import { useActiveSession, useAuth, useTheme } from "../../App";
 import { cx } from "./ui";
 
 /**
@@ -444,13 +444,24 @@ function Avatar({ image, initials }) {
  * Small announcement strip kept separate from the main nav for readability.
  */
 function ContributionStrip() {
+  const {
+    activeSessionName,
+    activeSessionLoading,
+    activeSessionError,
+  } = useActiveSession();
+  const sessionLabel = activeSessionLoading
+    ? "the active session"
+    : activeSessionError
+      ? "current routines"
+      : `${activeSessionName || "current"} routines`;
+
   return (
     <div className="border-t border-slate-200 bg-slate-950 text-white dark:border-slate-800">
       <div className="page-wrap overflow-hidden py-2">
         <div className="animate-marquee hover:pause-animation whitespace-nowrap text-sm">
           <span className="inline-flex items-center gap-3">
             <FiSend className="text-teal-300" aria-hidden="true" />
-            Want to contribute to Spring-26 routines or resources?
+            Want to contribute to {sessionLabel} or resources?
             <a
               href="https://t.me/+eMiAC0y7sMM4ZjM1"
               target="_blank"

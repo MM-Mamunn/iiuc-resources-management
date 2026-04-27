@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FiCalendar, FiEdit3, FiGrid, FiPlus, FiSearch, FiTrash2 } from "react-icons/fi";
 import api from "../../api";
+import { useActiveSession } from "../../App";
 import Header from "../components/Header";
 import {
   EmptyState,
@@ -30,12 +31,26 @@ const dayNames = {
  */
 function CR() {
   const navigate = useNavigate();
-  const [session, setSession] = useState("Spring-26");
+  const {
+    activeSessionName,
+    activeSessionLoading,
+    activeSessionError,
+  } = useActiveSession();
+  const [session, setSession] = useState("");
   const [sessionSuggestions, setSessionSuggestions] = useState([]);
   const [sessionLoading, setSessionLoading] = useState(false);
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState(null);
+  const sessionHelper = activeSessionLoading
+    ? "Loading active session..."
+    : activeSessionError || (activeSessionName ? `Active: ${activeSessionName}` : "Enter a session");
+
+  useEffect(() => {
+    if (activeSessionName) {
+      setSession((current) => current || activeSessionName);
+    }
+  }, [activeSessionName]);
 
   const handleSessionChange = async (event) => {
     const value = event.target.value;
@@ -128,7 +143,7 @@ function CR() {
             <FormField
               id="session"
               label="Session"
-              helper={sessionLoading ? "Loading suggestions..." : "Example: Spring-26"}
+              helper={sessionLoading ? "Loading suggestions..." : sessionHelper}
             >
               <div className="relative">
                 <FiCalendar
@@ -141,7 +156,7 @@ function CR() {
                   onChange={handleSessionChange}
                   autoComplete="off"
                   type="text"
-                  placeholder="Spring-26"
+                  placeholder={activeSessionName || "Active session"}
                   className="form-field pl-12"
                 />
                 <SuggestionList

@@ -13,6 +13,7 @@ import {
   SectionHeading,
   SuggestionList,
 } from "../components/ui";
+import { useActiveSession } from "../../App";
 
 const initialFormData = {
   session: "",
@@ -28,6 +29,11 @@ const initialFormData = {
  * Class-entry screen used by authorized contributors and CR workflows.
  */
 function LoggedHome() {
+  const {
+    activeSessionName,
+    activeSessionLoading,
+    activeSessionError,
+  } = useActiveSession();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState(null);
@@ -42,6 +48,18 @@ function LoggedHome() {
   const [loadingField, setLoadingField] = useState("");
   const [formSubmitting, setFormSubmitting] = useState(false);
   const [lastSubmittedData, setLastSubmittedData] = useState(null);
+  const sessionHelper = activeSessionLoading
+    ? "Loading active session..."
+    : activeSessionError || (activeSessionName ? `Active: ${activeSessionName}` : "");
+
+  useEffect(() => {
+    if (activeSessionName) {
+      setFormData((current) => ({
+        ...current,
+        session: current.session || activeSessionName,
+      }));
+    }
+  }, [activeSessionName]);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -110,7 +128,7 @@ function LoggedHome() {
         ...submitData,
         submittedAt: new Date().toLocaleString(),
       });
-      setFormData(initialFormData);
+      setFormData({ ...initialFormData, session: activeSessionName });
     } catch (submitError) {
       setNotice({ type: "error", text: getSubmitError(submitError) });
     } finally {
@@ -176,8 +194,9 @@ function LoggedHome() {
                   id="session"
                   label="Session"
                   value={formData.session}
-                  placeholder="Spring-26"
+                  placeholder={activeSessionName || "Active session"}
                   loading={loadingField === "session"}
+                  helper={loadingField === "session" ? "" : sessionHelper}
                   suggestions={suggestions.session}
                   onChange={(value) =>
                     updateSuggestions({
@@ -355,12 +374,13 @@ function AutocompleteField({
   value,
   placeholder,
   loading,
+  helper,
   suggestions,
   onChange,
   onSelect,
 }) {
   return (
-    <FormField id={id} label={label} helper={loading ? "Loading suggestions..." : ""}>
+    <FormField id={id} label={label} helper={loading ? "Loading suggestions..." : helper}>
       <div className="relative">
         <input
           id={id}

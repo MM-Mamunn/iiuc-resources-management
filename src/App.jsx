@@ -5,6 +5,7 @@ import {
   createContext,
   lazy,
   useContext,
+  useCallback,
   useEffect,
   useState,
 } from "react";
@@ -12,6 +13,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import Cookies from "js-cookie";
 import { FiAlertTriangle, FiLoader } from "react-icons/fi";
 import api from "./api";
+import { fetchActiveSession } from "./services/sessionService";
 
 const Home = lazy(() => import("./pages/home"));
 const LoggedHome = lazy(() => import("./pages/personal/LoggedHome"));
@@ -37,6 +39,7 @@ const ClassroomRoutine = lazy(() => import("./pages/room/ClassroomRoutine"));
 
 const AuthContext = createContext(null);
 const ThemeContext = createContext(null);
+const SessionContext = createContext(null);
 
 /**
  * Returns the authenticated user state shared by pages and navigation.
@@ -50,6 +53,57 @@ export function useAuth() {
  */
 export function useTheme() {
   return useContext(ThemeContext);
+}
+
+/**
+ * Returns the active academic session loaded once from the backend.
+ */
+export function useActiveSession() {
+  return useContext(SessionContext);
+}
+
+/**
+ * Loads and caches the currently active committee/session.
+ */
+function SessionProvider({ children }) {
+  const [activeSession, setActiveSession] = useState(null);
+  const [loadingActiveSession, setLoadingActiveSession] = useState(true);
+  const [activeSessionError, setActiveSessionError] = useState(null);
+
+  const loadActiveSession = useCallback(async () => {
+    setLoadingActiveSession(true);
+    setActiveSessionError(null);
+
+    try {
+      const sessionData = await fetchActiveSession();
+      setActiveSession(sessionData);
+    } catch (error) {
+      setActiveSession(null);
+      setActiveSessionError(
+        error.response?.data?.msg || "Active session could not be loaded.",
+      );
+    } finally {
+      setLoadingActiveSession(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadActiveSession();
+  }, [loadActiveSession]);
+
+  return (
+    <SessionContext.Provider
+      value={{
+        activeSession,
+        activeSessionName: activeSession?.session || "",
+        activeSessionLoading: loadingActiveSession,
+        activeSessionError,
+        refreshActiveSession: loadActiveSession,
+      }}
+    >
+      {children}
+    </SessionContext.Provider>
+  );
 }
 
 /**
@@ -268,9 +322,11 @@ function App() {
     <ThemeProvider>
       <div className="app-root text-slate-900 dark:text-slate-100">
         <BrowserRouter>
-          <AuthProvider>
-            <AppRoutes />
-          </AuthProvider>
+          <SessionProvider>
+            <AuthProvider>
+              <AppRoutes />
+            </AuthProvider>
+          </SessionProvider>
         </BrowserRouter>
       </div>
     </ThemeProvider>

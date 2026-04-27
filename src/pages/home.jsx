@@ -26,11 +26,10 @@ import {
 } from "./components/ui";
 import routineImage from "./components/routine.webp";
 import api from "../api";
-import { useAuth } from "../App";
+import { useActiveSession, useAuth } from "../App";
 
 const DAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 const DISPLAY_DAYS = ["sat", "sun", "mon", "tue", "wed"];
-const DEFAULT_SESSION = "Spring-26";
 
 const SLOT_LABELS = {
   1: [
@@ -57,11 +56,16 @@ const SLOT_LABELS = {
  */
 const Home = () => {
   const { isLoggedIn } = useAuth();
+  const {
+    activeSessionName,
+    activeSessionLoading,
+    activeSessionError,
+  } = useActiveSession();
   const [schedule, setSchedule] = useState([]);
   const [hasSearched, setHasSearched] = useState(false);
   const [shift, setShift] = useState(1);
   const [section, setSection] = useState("");
-  const [session, setSession] = useState(DEFAULT_SESSION);
+  const [session, setSession] = useState("");
   const [sectionSuggestions, setSectionSuggestions] = useState([]);
   const [sessionSuggestions, setSessionSuggestions] = useState([]);
   const [sectionLoading, setSectionLoading] = useState(false);
@@ -75,6 +79,16 @@ const Home = () => {
   const timeSlots = SLOT_LABELS[shift] ?? SLOT_LABELS[1];
   const normalizedSection = section.toUpperCase().trim();
   const normalizedSession = session.toUpperCase().trim();
+  const sessionLabel = session || activeSessionName || "No active session";
+  const sessionHelper = activeSessionLoading
+    ? "Loading active session..."
+    : activeSessionError || (activeSessionName ? `Active: ${activeSessionName}` : "Enter a session");
+
+  useEffect(() => {
+    if (activeSessionName) {
+      setSession((current) => current || activeSessionName);
+    }
+  }, [activeSessionName]);
 
   useEffect(() => {
     async function fetchTopContributors() {
@@ -96,7 +110,7 @@ const Home = () => {
     () => [
       {
         label: "Active session",
-        value: session || DEFAULT_SESSION,
+        value: sessionLabel,
         icon: <FiCalendar className="h-5 w-5" aria-hidden="true" />,
         tone: "blue",
       },
@@ -113,7 +127,7 @@ const Home = () => {
         tone: "amber",
       },
     ],
-    [session, topContributors.length]
+    [sessionLabel, topContributors.length]
   );
 
   /**
@@ -396,7 +410,7 @@ const Home = () => {
               <FormField
                 id="session"
                 label="Session"
-                helper={sessionLoading ? "Searching sessions..." : "Current default: Spring-26"}
+                helper={sessionLoading ? "Searching sessions..." : sessionHelper}
               >
                 <div className="relative">
                   <FiCalendar
@@ -408,7 +422,7 @@ const Home = () => {
                     type="text"
                     value={session}
                     onChange={handleSessionChange}
-                    placeholder={DEFAULT_SESSION}
+                    placeholder={activeSessionName || "Active session"}
                     className="form-field pl-12"
                     autoComplete="off"
                   />
@@ -450,7 +464,7 @@ const Home = () => {
         {hasSearched && (
           <RoutineTable
             title={`${normalizedSection || "Section"} Schedule`}
-            subtitle={`${normalizedSession || DEFAULT_SESSION} session`}
+            subtitle={`${normalizedSession || activeSessionName || "Selected"} session`}
             timeSlots={timeSlots}
             displayDays={schedule.length ? DISPLAY_DAYS : []}
             getItemsForDay={generateDaySchedule}
@@ -572,7 +586,7 @@ const Home = () => {
             <MetricCard
               icon={<FiCalendar className="h-5 w-5" aria-hidden="true" />}
               label="Default session"
-              value={DEFAULT_SESSION}
+              value={sessionLabel}
               tone="blue"
             />
             <MetricCard

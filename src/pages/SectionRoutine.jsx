@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FiCalendar, FiDownload, FiPlus, FiSearch, FiTrash2 } from "react-icons/fi";
 import api from "../api";
-import { useAuth } from "../App";
+import { useActiveSession, useAuth } from "../App";
 import Header from "./components/Header";
 import RoutineTable from "./components/RoutineTable";
 import {
@@ -43,10 +43,15 @@ const SLOT_LABELS = {
  */
 const SectionRoutine = () => {
   const { isLoggedIn } = useAuth();
+  const {
+    activeSessionName,
+    activeSessionLoading,
+    activeSessionError,
+  } = useActiveSession();
   const [schedule, setSchedule] = useState([]);
   const [shift, setShift] = useState(1);
   const [section, setSection] = useState("");
-  const [session, setSession] = useState("Spring-26");
+  const [session, setSession] = useState("");
   const [sectionSuggestions, setSectionSuggestions] = useState([]);
   const [sessionSuggestions, setSessionSuggestions] = useState([]);
   const [loadingField, setLoadingField] = useState("");
@@ -58,6 +63,15 @@ const SectionRoutine = () => {
   const timeSlots = SLOT_LABELS[shift] ?? SLOT_LABELS[1];
   const normalizedSection = section.toUpperCase().trim();
   const normalizedSession = session.toUpperCase().trim();
+  const sessionHelper = activeSessionLoading
+    ? "Loading active session..."
+    : activeSessionError || (activeSessionName ? `Active: ${activeSessionName}` : "Enter a session");
+
+  useEffect(() => {
+    if (activeSessionName) {
+      setSession((current) => current || activeSessionName);
+    }
+  }, [activeSessionName]);
 
   const updateSuggestions = async ({ key, value, endpoint, mapValue, maxLength }) => {
     if (key === "section") setSection(value);
@@ -228,7 +242,7 @@ const SectionRoutine = () => {
             <FormField
               id="session"
               label="Session"
-              helper={loadingField === "session" ? "Loading suggestions..." : "Example: Spring-26"}
+              helper={loadingField === "session" ? "Loading suggestions..." : sessionHelper}
             >
               <div className="relative">
                 <input

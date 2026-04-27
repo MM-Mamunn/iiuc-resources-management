@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   FiAlertTriangle,
   FiCheckCircle,
@@ -10,6 +10,7 @@ import {
   FiTrash2,
 } from "react-icons/fi";
 import api from "../../api";
+import { useActiveSession } from "../../App";
 import Header from "../components/Header";
 import {
   EmptyState,
@@ -25,8 +26,13 @@ import {
  * Search classes and add/drop them from the personal routine.
  */
 function PersonalCourseManage() {
+  const {
+    activeSessionName,
+    activeSessionLoading,
+    activeSessionError,
+  } = useActiveSession();
   const [formData, setFormData] = useState({
-    session: "Spring-26",
+    session: "",
     section: "",
     code: "",
   });
@@ -43,6 +49,18 @@ function PersonalCourseManage() {
   const [rowState, setRowState] = useState({});
   const [courseCodeEnabled, setCourseCodeEnabled] = useState(false);
   const [sectionEnabled, setSectionEnabled] = useState(false);
+  const sessionHelper = activeSessionLoading
+    ? "Loading active session..."
+    : activeSessionError || (activeSessionName ? `Active: ${activeSessionName}` : "");
+
+  useEffect(() => {
+    if (activeSessionName) {
+      setFormData((current) => ({
+        ...current,
+        session: current.session || activeSessionName,
+      }));
+    }
+  }, [activeSessionName]);
 
   const updateSuggestions = async ({ key, value, endpoint, mapValue, maxLength }) => {
     setFormData((current) => ({ ...current, [key]: value }));
@@ -293,8 +311,9 @@ function PersonalCourseManage() {
                 id="session"
                 label="Session"
                 value={formData.session}
-                placeholder="Spring-26"
+                placeholder={activeSessionName || "Active session"}
                 loading={loadingField === "session"}
+                helper={loadingField === "session" ? "" : sessionHelper}
                 suggestions={suggestions.session}
                 onChange={(value) =>
                   updateSuggestions({
@@ -407,12 +426,13 @@ function AutocompleteField({
   value,
   placeholder,
   loading,
+  helper,
   suggestions,
   onChange,
   onSelect,
 }) {
   return (
-    <FormField id={id} label={label} helper={loading ? "Loading suggestions..." : ""}>
+    <FormField id={id} label={label} helper={loading ? "Loading suggestions..." : helper}>
       <div className="relative">
         <input
           id={id}

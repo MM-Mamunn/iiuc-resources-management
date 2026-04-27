@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   FiBookOpen,
   FiCalendar,
@@ -12,6 +12,7 @@ import {
   FiX,
 } from "react-icons/fi";
 import api from "../../api";
+import { useActiveSession } from "../../App";
 import Header from "../components/Header";
 import {
   EmptyState,
@@ -49,10 +50,15 @@ const TIME_SLOTS = [
  * Classroom routine lookup with room/session autocomplete and detail dialogs.
  */
 const ClassroomRoutine = () => {
+  const {
+    activeSessionName,
+    activeSessionLoading,
+    activeSessionError,
+  } = useActiveSession();
   const [formData, setFormData] = useState({
     room: "",
     day: "today",
-    session: "Spring-26",
+    session: "",
   });
   const [roomSuggestions, setRoomSuggestions] = useState([]);
   const [sessionSuggestions, setSessionSuggestions] = useState([]);
@@ -67,6 +73,18 @@ const ClassroomRoutine = () => {
 
   const schedule = useMemo(() => buildSchedule(routineData), [routineData]);
   const displayDay = getDisplayDay(formData.day);
+  const sessionHelper = activeSessionLoading
+    ? "Loading active session..."
+    : activeSessionError || (activeSessionName ? `Active: ${activeSessionName}` : "Enter a session");
+
+  useEffect(() => {
+    if (activeSessionName) {
+      setFormData((current) => ({
+        ...current,
+        session: current.session || activeSessionName,
+      }));
+    }
+  }, [activeSessionName]);
 
   const updateForm = (key, value) => {
     setFormData((current) => ({ ...current, [key]: value }));
@@ -234,7 +252,7 @@ const ClassroomRoutine = () => {
             <FormField
               id="session"
               label="Session"
-              helper={sessionLoading ? "Loading session suggestions..." : "Example: Spring-26"}
+              helper={sessionLoading ? "Loading session suggestions..." : sessionHelper}
             >
               <div className="relative">
                 <FiCalendar
@@ -247,7 +265,7 @@ const ClassroomRoutine = () => {
                   value={formData.session}
                   onChange={handleSessionChange}
                   type="text"
-                  placeholder="Spring-26"
+                  placeholder={activeSessionName || "Active session"}
                   className="form-field pl-12"
                   required
                 />

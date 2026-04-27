@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { FiCalendar, FiClock, FiDownload, FiSearch } from "react-icons/fi";
 import api from "../../api";
+import { useActiveSession } from "../../App";
 import Header from "../components/Header";
 import RoutineTable from "../components/RoutineTable";
 import {
@@ -42,9 +43,14 @@ const SLOT_LABELS = {
  * Personal routine lookup by session.
  */
 const PersonalRoutine = () => {
+  const {
+    activeSessionName,
+    activeSessionLoading,
+    activeSessionError,
+  } = useActiveSession();
   const [schedule, setSchedule] = useState([]);
   const [hasSearched, setHasSearched] = useState(false);
-  const [session, setSession] = useState("Spring-26");
+  const [session, setSession] = useState("");
   const [sessionSuggestions, setSessionSuggestions] = useState([]);
   const [sessionLoading, setSessionLoading] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -62,6 +68,15 @@ const PersonalRoutine = () => {
     () => getCurrentClass(schedule, shift, currentTime),
     [schedule, shift, currentTime]
   );
+  const sessionHelper = activeSessionLoading
+    ? "Loading active session..."
+    : activeSessionError || (activeSessionName ? `Active: ${activeSessionName}` : "Enter a session");
+
+  useEffect(() => {
+    if (activeSessionName) {
+      setSession((current) => current || activeSessionName);
+    }
+  }, [activeSessionName]);
 
   const handleSessionChange = async (event) => {
     const value = event.target.value;
@@ -173,7 +188,7 @@ const PersonalRoutine = () => {
             <FormField
               id="session"
               label="Session"
-              helper={sessionLoading ? "Loading suggestions..." : "Example: Spring-26"}
+              helper={sessionLoading ? "Loading suggestions..." : sessionHelper}
             >
               <div className="relative">
                 <FiCalendar
@@ -186,7 +201,7 @@ const PersonalRoutine = () => {
                   value={session}
                   onChange={handleSessionChange}
                   type="text"
-                  placeholder="Spring-26"
+                  placeholder={activeSessionName || "Active session"}
                   className="form-field pl-12"
                 />
                 <SuggestionList

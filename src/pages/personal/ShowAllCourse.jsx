@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FiBookOpen, FiCalendar, FiSearch, FiTrash2 } from "react-icons/fi";
 import api from "../../api";
+import { useActiveSession } from "../../App";
 import Header from "../components/Header";
 import {
   EmptyState,
@@ -18,8 +19,13 @@ import {
  * Shows a student's saved courses for a selected session.
  */
 function ShowAllCourse() {
+  const {
+    activeSessionName,
+    activeSessionLoading,
+    activeSessionError,
+  } = useActiveSession();
   const [formData, setFormData] = useState({
-    session: "Spring-26",
+    session: "",
   });
   const [sessionSuggestions, setSessionSuggestions] = useState([]);
   const [sessionLoading, setSessionLoading] = useState(false);
@@ -28,6 +34,18 @@ function ShowAllCourse() {
   const [notice, setNotice] = useState(null);
   const [hasSearched, setHasSearched] = useState(false);
   const [deletingCourse, setDeletingCourse] = useState({});
+  const sessionHelper = activeSessionLoading
+    ? "Loading active session..."
+    : activeSessionError || (activeSessionName ? `Active: ${activeSessionName}` : "Enter a session");
+
+  useEffect(() => {
+    if (activeSessionName) {
+      setFormData((current) => ({
+        ...current,
+        session: current.session || activeSessionName,
+      }));
+    }
+  }, [activeSessionName]);
 
   const totalCredits = courses.reduce((sum, course) => {
     const credit = Number.parseFloat(course.credit || course.credits || 0);
@@ -118,7 +136,7 @@ function ShowAllCourse() {
             <FormField
               id="session"
               label="Session"
-              helper={sessionLoading ? "Loading suggestions..." : "Example: Spring-26"}
+              helper={sessionLoading ? "Loading suggestions..." : sessionHelper}
             >
               <div className="relative">
                 <FiCalendar
@@ -132,7 +150,7 @@ function ShowAllCourse() {
                   onChange={handleSessionChange}
                   autoComplete="off"
                   type="text"
-                  placeholder="Spring-26"
+                  placeholder={activeSessionName || "Active session"}
                   className="form-field pl-12"
                   required
                 />
