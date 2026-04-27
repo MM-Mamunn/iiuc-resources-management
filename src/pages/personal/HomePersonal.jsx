@@ -408,6 +408,9 @@ function CurrentClassPanel({ currentClass }) {
  * Student profile summary with editable account details.
  */
 function ProfilePanel({ profile, loading, onEdit }) {
+  const profileImage = getProfileImage(profile);
+  const profileInitials = getProfileInitials(profile);
+
   if (loading) {
     return (
       <div className="surface-card p-5">
@@ -419,8 +422,12 @@ function ProfilePanel({ profile, loading, onEdit }) {
   return (
     <div className="surface-card p-5">
       <div className="flex items-center gap-4">
-        <span className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-950 text-sm font-black text-white dark:bg-white dark:text-slate-950">
-          {(profile?.name || profile?.id || "U").slice(0, 2).toUpperCase()}
+        <span className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-950 text-sm font-black text-white ring-1 ring-slate-200 dark:bg-white dark:text-slate-950 dark:ring-slate-700">
+          {profileImage ? (
+            <img src={profileImage} alt="" className="h-full w-full object-cover" />
+          ) : (
+            profileInitials
+          )}
         </span>
         <div className="min-w-0">
           <h2 className="safe-text text-xl font-bold text-slate-950 dark:text-white">
@@ -444,6 +451,26 @@ function ProfilePanel({ profile, loading, onEdit }) {
       </button>
     </div>
   );
+}
+
+/**
+ * Resolves profile image fields used by current and legacy API responses.
+ */
+function getProfileImage(profile) {
+  return profile?.profilePic || profile?.profilePicUrl || profile?.profile_pic || "";
+}
+
+/**
+ * Builds a stable two-character fallback for profile cards.
+ */
+function getProfileInitials(profile) {
+  return (profile?.name || profile?.id || "U")
+    .split(" ")
+    .filter(Boolean)
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 }
 
 /**
