@@ -59,17 +59,26 @@ const HomePersonal = () => {
   } = useActiveSession();
   const navigate = useNavigate();
   const [schedule, setSchedule] = useState([]);
+  const [sectionSchedule, setSectionSchedule] = useState([]);
   const [profile, setProfile] = useState(user);
   const [loading, setLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(false);
   const [shift, setShift] = useState(1);
+  const [sectionShift, setSectionShift] = useState(1);
   const [notice, setNotice] = useState(null);
 
   const timeSlots = SLOT_LABELS[shift] ?? SLOT_LABELS[1];
+  const sectionTimeSlots = SLOT_LABELS[sectionShift] ?? SLOT_LABELS[1];
   const sessionLabel = activeSessionName || "No active session";
+  const sectionLabel = profile?.sec || user?.sec || "N/A";
+  const normalizedSection = (profile?.sec || user?.sec || "").toUpperCase().trim();
   const currentClass = useMemo(
     () => getCurrentClass(schedule, shift),
     [schedule, shift]
+  );
+  const sectionCurrentClass = useMemo(
+    () => getCurrentClass(sectionSchedule, sectionShift),
+    [sectionSchedule, sectionShift]
   );
   const highlightedDay = getHighlightedDay();
 
@@ -80,13 +89,16 @@ const HomePersonal = () => {
     setProfileLoading(true);
     try {
       const response = await api.get("/api/user/profile");
-      setProfile(response.data?.[0] ?? null);
+      const nextProfile = response.data?.[0] ?? null;
+      setProfile(nextProfile);
+      return nextProfile;
     } catch {
       setProfile(null);
       setNotice({
         type: "error",
         text: "Profile information could not be loaded.",
       });
+      return null;
     } finally {
       setProfileLoading(false);
     }
@@ -126,14 +138,43 @@ const HomePersonal = () => {
   }, [activeSessionError, activeSessionLoading, activeSessionName]);
 
   /**
-   * Loads profile and personal routine in parallel.
+   * Fetches the student's section routine for the active session.
+   */
+  const fetchSectionRoutine = useCallback(async (sectionCode) => {
+    if (!activeSessionName || !sectionCode) {
+      setSectionSchedule([]);
+      setSectionShift(1);
+      return;
+    }
+
+    try {
+      const response = await api.get(
+        `/api/section/fullroutine/${encodeURIComponent(
+          sectionCode.toUpperCase(),
+        )}/${encodeURIComponent(activeSessionName.toUpperCase())}`,
+      );
+      setSectionSchedule(response.data?.rows ?? []);
+      setSectionShift(response.data?.gender || 1);
+    } catch {
+      setSectionSchedule([]);
+      setSectionShift(1);
+      setNotice({
+        type: "error",
+        text: "Your section routine could not be loaded.",
+      });
+    }
+  }, [activeSessionName]);
+
+  /**
+   * Loads profile, personal routine, and section routine.
    */
   const loadDashboard = useCallback(async () => {
     setLoading(true);
     setNotice(null);
-    await Promise.all([fetchProfile(), fetchPersonalRoutine()]);
+    const [nextProfile] = await Promise.all([fetchProfile(), fetchPersonalRoutine()]);
+    await fetchSectionRoutine(nextProfile?.sec || user?.sec);
     setLoading(false);
-  }, [fetchPersonalRoutine, fetchProfile]);
+  }, [fetchPersonalRoutine, fetchProfile, fetchSectionRoutine, user?.sec]);
 
   useEffect(() => {
     loadDashboard();
@@ -142,41 +183,15 @@ const HomePersonal = () => {
   /**
    * Converts backend routine rows into cells for the shared timetable.
    */
-  const generateDaySchedule = (day) => {
-    const daySchedule = schedule.filter((item) => item.day === DAYS.indexOf(day));
-    const mergedSchedule = [];
-    let slot = 1;
+  const generatePersonalDaySchedule = (day) =>
+    buildRoutineDaySchedule({ schedule, shift, day });
 
-    while (slot <= 6) {
-      if (shift === 1 && slot === 4) {
-        mergedSchedule.push({
-          subject: "BREAK",
-          colspan: 1,
-          isBreak: true,
-          slotStart: slot,
-        });
-      }
-
-      const classItem = daySchedule.find((item) => Number(item.slot) === slot);
-      if (classItem) {
-        const count = Number(classItem.count || 1);
-        mergedSchedule.push({
-          subject: classItem.code || "Course",
-          title: classItem.short_name || "",
-          room: classItem.room || "",
-          faculty: classItem.name || classItem.faculty || "",
-          colspan: count,
-          slotStart: slot,
-        });
-        slot += count;
-      } else {
-        mergedSchedule.push({ subject: "-", colspan: 1, slotStart: slot });
-        slot += 1;
-      }
-    }
-
-    return mergedSchedule;
-  };
+  const generateSectionDaySchedule = (day) =>
+    buildRoutineDaySchedule({
+      schedule: sectionSchedule,
+      shift: sectionShift,
+      day,
+    });
 
   /**
    * Opens a printable personal routine document.
@@ -198,7 +213,7 @@ const HomePersonal = () => {
         session: sessionLabel,
         timeSlots,
         displayDays: DISPLAY_DAYS,
-        getItemsForDay: generateDaySchedule,
+        getItemsForDay: generatePersonalDaySchedule,
       })
     );
     printWindow.document.close();
@@ -275,7 +290,11 @@ const HomePersonal = () => {
               </div>
             </div>
 
-            <CurrentClassPanel currentClass={currentClass} />
+            <CurrentClassPanel
+              currentClass={currentClass}
+              sectionCurrentClass={sectionCurrentClass}
+              sectionLabel={sectionLabel}
+            />
           </div>
         </section>
 
@@ -315,7 +334,7 @@ const HomePersonal = () => {
             </div>
           </aside>
 
-          <div>
+          <div className="space-y-8">
             {loading ? (
               <LoadingState label="Loading your dashboard..." />
             ) : schedule.length ? (
@@ -324,7 +343,7 @@ const HomePersonal = () => {
                 subtitle={`${profile?.name || "Student"} - ${sessionLabel}`}
                 timeSlots={timeSlots}
                 displayDays={DISPLAY_DAYS}
-                getItemsForDay={generateDaySchedule}
+                getItemsForDay={generatePersonalDaySchedule}
                 actions={
                   <button type="button" onClick={downloadPDF} className="btn-secondary">
                     <FiDownload aria-hidden="true" />
@@ -336,13 +355,7 @@ const HomePersonal = () => {
                   label: day === highlightedDay.day ? highlightedDay.label : "",
                 })}
                 getCellMeta={(day, item) => ({
-                  active:
-                    Boolean(currentClass) &&
-                    day === DAYS[new Date().getDay()] &&
-                    item.subject !== "-" &&
-                    !item.isBreak &&
-                    currentClass.slot >= item.slotStart &&
-                    currentClass.slot < item.slotStart + item.colspan,
+                  active: isCurrentRoutineCell(currentClass, day, item),
                 })}
               />
             ) : (
@@ -359,6 +372,37 @@ const HomePersonal = () => {
                 />
               </div>
             )}
+
+            {!loading && (
+              sectionSchedule.length ? (
+                <RoutineTable
+                  title="Section Routine"
+                  subtitle={`${sectionLabel} - ${sessionLabel}`}
+                  timeSlots={sectionTimeSlots}
+                  displayDays={DISPLAY_DAYS}
+                  getItemsForDay={generateSectionDaySchedule}
+                  getDayMeta={(day) => ({
+                    active: day === highlightedDay.day,
+                    label: day === highlightedDay.day ? highlightedDay.label : "",
+                  })}
+                  getCellMeta={(day, item) => ({
+                    active: isCurrentRoutineCell(sectionCurrentClass, day, item),
+                  })}
+                />
+              ) : (
+                <div className="table-shell">
+                  <EmptyState
+                    icon={<FiCalendar className="h-7 w-7" aria-hidden="true" />}
+                    title="No section routine found"
+                    description={
+                      normalizedSection && activeSessionName
+                        ? "No section routine is available for this section and session."
+                        : "Section and active session details are needed to load the section routine."
+                    }
+                  />
+                </div>
+              )
+            )}
           </div>
         </section>
       </main>
@@ -369,7 +413,9 @@ const HomePersonal = () => {
 /**
  * Shows the live class when the current time falls inside a scheduled slot.
  */
-function CurrentClassPanel({ currentClass }) {
+function CurrentClassPanel({ currentClass, sectionCurrentClass, sectionLabel }) {
+  const hasLiveClass = Boolean(currentClass || sectionCurrentClass);
+
   return (
     <div className="rounded-lg border border-slate-200 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-900">
       <div className="flex items-center gap-3">
@@ -379,21 +425,22 @@ function CurrentClassPanel({ currentClass }) {
         <div>
           <p className="text-sm text-slate-500 dark:text-slate-400">Now</p>
           <h2 className="text-lg font-bold text-slate-950 dark:text-white">
-            {currentClass ? "Class in progress" : "No live class"}
+            {hasLiveClass ? "Class in progress" : "No live class"}
           </h2>
         </div>
       </div>
-      {currentClass ? (
-        <div className="mt-5 space-y-2 text-sm">
-          <p className="font-bold text-blue-700 dark:text-blue-300">
-            {currentClass.code}
-          </p>
-          <p className="text-slate-600 dark:text-slate-300">
-            {currentClass.short_name || currentClass.name || currentClass.faculty}
-          </p>
-          <p className="text-slate-500 dark:text-slate-400">
-            Room {currentClass.room || "N/A"}
-          </p>
+      {hasLiveClass ? (
+        <div className="mt-5 space-y-3 text-sm">
+          <LiveClassDetails
+            label="Personal Routine"
+            classInfo={currentClass}
+            emptyText="No personal live class"
+          />
+          <LiveClassDetails
+            label={`${sectionLabel !== "N/A" ? sectionLabel : "Section"} Routine`}
+            classInfo={sectionCurrentClass}
+            emptyText="No section live class"
+          />
         </div>
       ) : (
         <p className="mt-5 text-sm leading-6 text-slate-600 dark:text-slate-400">
@@ -454,6 +501,34 @@ function ProfilePanel({ profile, loading, onEdit }) {
 }
 
 /**
+ * One live-class row inside the dashboard status panel.
+ */
+function LiveClassDetails({ label, classInfo, emptyText }) {
+  return (
+    <div className="border-t border-slate-200 pt-3 first:border-t-0 first:pt-0 dark:border-slate-800">
+      <p className="text-xs font-bold uppercase text-slate-500 dark:text-slate-400">
+        {label}
+      </p>
+      {classInfo ? (
+        <div className="mt-2 space-y-1">
+          <p className="font-bold text-blue-700 dark:text-blue-300">
+            {classInfo.code}
+          </p>
+          <p className="text-slate-600 dark:text-slate-300">
+            {classInfo.short_name || classInfo.name || classInfo.faculty}
+          </p>
+          <p className="text-slate-500 dark:text-slate-400">
+            Room {classInfo.room || "N/A"}
+          </p>
+        </div>
+      ) : (
+        <p className="mt-2 text-slate-500 dark:text-slate-400">{emptyText}</p>
+      )}
+    </div>
+  );
+}
+
+/**
  * Resolves profile image fields used by current and legacy API responses.
  */
 function getProfileImage(profile) {
@@ -500,6 +575,59 @@ function DashboardAction({ icon, label, onClick }) {
       <span className="text-blue-700 dark:text-blue-300">{icon}</span>
       {label}
     </button>
+  );
+}
+
+/**
+ * Converts backend routine rows into merged cells for the shared timetable.
+ */
+function buildRoutineDaySchedule({ schedule, shift, day }) {
+  const daySchedule = schedule.filter((item) => item.day === DAYS.indexOf(day));
+  const mergedSchedule = [];
+  let slot = 1;
+
+  while (slot <= 6) {
+    if (shift === 1 && slot === 4) {
+      mergedSchedule.push({
+        subject: "BREAK",
+        colspan: 1,
+        isBreak: true,
+        slotStart: slot,
+      });
+    }
+
+    const classItem = daySchedule.find((item) => Number(item.slot) === slot);
+    if (classItem) {
+      const count = Number(classItem.count || 1);
+      mergedSchedule.push({
+        subject: classItem.code || "Course",
+        title: classItem.short_name || "",
+        room: classItem.room || "",
+        faculty: classItem.name || classItem.faculty || "",
+        colspan: count,
+        slotStart: slot,
+      });
+      slot += count;
+    } else {
+      mergedSchedule.push({ subject: "-", colspan: 1, slotStart: slot });
+      slot += 1;
+    }
+  }
+
+  return mergedSchedule;
+}
+
+/**
+ * Marks the routine cell that matches the current class slot.
+ */
+function isCurrentRoutineCell(currentClass, day, item) {
+  return (
+    Boolean(currentClass) &&
+    day === DAYS[new Date().getDay()] &&
+    item.subject !== "-" &&
+    !item.isBreak &&
+    currentClass.slot >= item.slotStart &&
+    currentClass.slot < item.slotStart + item.colspan
   );
 }
 
