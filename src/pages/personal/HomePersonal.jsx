@@ -21,6 +21,7 @@ import {
   MetricCard,
   Notice,
   SectionHeading,
+  cx,
 } from "../components/ui";
 import { useActiveSession, useAuth } from "../../App";
 
@@ -47,6 +48,11 @@ const SLOT_LABELS = {
   ],
 };
 
+const ROUTINE_VIEW_OPTIONS = [
+  { key: "personal", label: "Personal routine", icon: FiUser },
+  { key: "section", label: "Section routine", icon: FiGrid },
+];
+
 /**
  * Authenticated student dashboard with profile summary and personal routine.
  */
@@ -65,6 +71,7 @@ const HomePersonal = () => {
   const [profileLoading, setProfileLoading] = useState(false);
   const [shift, setShift] = useState(1);
   const [sectionShift, setSectionShift] = useState(1);
+  const [routineView, setRoutineView] = useState("personal");
   const [notice, setNotice] = useState(null);
 
   const timeSlots = SLOT_LABELS[shift] ?? SLOT_LABELS[1];
@@ -80,6 +87,8 @@ const HomePersonal = () => {
     () => getCurrentClass(sectionSchedule, sectionShift),
     [sectionSchedule, sectionShift]
   );
+  const selectedCurrentClass =
+    routineView === "personal" ? currentClass : sectionCurrentClass;
   const highlightedDay = getHighlightedDay();
 
   /**
@@ -242,9 +251,9 @@ const HomePersonal = () => {
     },
     {
       label: "Current class",
-      value: currentClass?.code || "No live class",
+      value: selectedCurrentClass?.code || "No live class",
       icon: <FiClock className="h-5 w-5" aria-hidden="true" />,
-      tone: currentClass ? "teal" : "rose",
+      tone: selectedCurrentClass ? "teal" : "rose",
     },
   ];
 
@@ -334,74 +343,76 @@ const HomePersonal = () => {
             </div>
           </aside>
 
-          <div className="space-y-8">
+          <div className="space-y-4">
+            <div className="flex justify-end">
+              <RoutineTypeToggle value={routineView} onChange={setRoutineView} />
+            </div>
+
             {loading ? (
               <LoadingState label="Loading your dashboard..." />
-            ) : schedule.length ? (
-              <RoutineTable
-                title="Personal Schedule"
-                subtitle={`${profile?.name || "Student"} - ${sessionLabel}`}
-                timeSlots={timeSlots}
-                displayDays={DISPLAY_DAYS}
-                getItemsForDay={generatePersonalDaySchedule}
-                actions={
-                  <button type="button" onClick={downloadPDF} className="btn-secondary">
-                    <FiDownload aria-hidden="true" />
-                    Print routine
-                  </button>
-                }
-                getDayMeta={(day) => ({
-                  active: day === highlightedDay.day,
-                  label: day === highlightedDay.day ? highlightedDay.label : "",
-                })}
-                getCellMeta={(day, item) => ({
-                  active: isCurrentRoutineCell(currentClass, day, item),
-                })}
-              />
-            ) : (
-              <div className="table-shell">
-                <EmptyState
-                  icon={<FiCalendar className="h-7 w-7" aria-hidden="true" />}
-                  title="No personal routine found"
-                  description="Add courses from section routines or refresh once your data is available."
-                  action={
-                    <button type="button" onClick={() => navigate("/courseadddrop")} className="btn-primary">
-                      Add courses
+            ) : routineView === "personal" ? (
+              schedule.length ? (
+                <RoutineTable
+                  title="Personal Schedule"
+                  subtitle={`${profile?.name || "Student"} - ${sessionLabel}`}
+                  timeSlots={timeSlots}
+                  displayDays={DISPLAY_DAYS}
+                  getItemsForDay={generatePersonalDaySchedule}
+                  actions={
+                    <button type="button" onClick={downloadPDF} className="btn-secondary">
+                      <FiDownload aria-hidden="true" />
+                      Print routine
                     </button>
                   }
-                />
-              </div>
-            )}
-
-            {!loading && (
-              sectionSchedule.length ? (
-                <RoutineTable
-                  title="Section Routine"
-                  subtitle={`${sectionLabel} - ${sessionLabel}`}
-                  timeSlots={sectionTimeSlots}
-                  displayDays={DISPLAY_DAYS}
-                  getItemsForDay={generateSectionDaySchedule}
                   getDayMeta={(day) => ({
                     active: day === highlightedDay.day,
                     label: day === highlightedDay.day ? highlightedDay.label : "",
                   })}
                   getCellMeta={(day, item) => ({
-                    active: isCurrentRoutineCell(sectionCurrentClass, day, item),
+                    active: isCurrentRoutineCell(currentClass, day, item),
                   })}
                 />
               ) : (
                 <div className="table-shell">
                   <EmptyState
                     icon={<FiCalendar className="h-7 w-7" aria-hidden="true" />}
-                    title="No section routine found"
-                    description={
-                      normalizedSection && activeSessionName
-                        ? "No section routine is available for this section and session."
-                        : "Section and active session details are needed to load the section routine."
+                    title="No personal routine found"
+                    description="Add courses from section routines or refresh once your data is available."
+                    action={
+                      <button type="button" onClick={() => navigate("/courseadddrop")} className="btn-primary">
+                        Add courses
+                      </button>
                     }
                   />
                 </div>
               )
+            ) : sectionSchedule.length ? (
+              <RoutineTable
+                title="Section Routine"
+                subtitle={`${sectionLabel} - ${sessionLabel}`}
+                timeSlots={sectionTimeSlots}
+                displayDays={DISPLAY_DAYS}
+                getItemsForDay={generateSectionDaySchedule}
+                getDayMeta={(day) => ({
+                  active: day === highlightedDay.day,
+                  label: day === highlightedDay.day ? highlightedDay.label : "",
+                })}
+                getCellMeta={(day, item) => ({
+                  active: isCurrentRoutineCell(sectionCurrentClass, day, item),
+                })}
+              />
+            ) : (
+              <div className="table-shell">
+                <EmptyState
+                  icon={<FiCalendar className="h-7 w-7" aria-hidden="true" />}
+                  title="No section routine found"
+                  description={
+                    normalizedSection && activeSessionName
+                      ? "No section routine is available for this section and session."
+                      : "Section and active session details are needed to load the section routine."
+                  }
+                />
+              </div>
             )}
           </div>
         </section>
@@ -409,6 +420,37 @@ const HomePersonal = () => {
     </div>
   );
 };
+
+/**
+ * Segmented control for the dashboard routine table.
+ */
+function RoutineTypeToggle({ value, onChange }) {
+  return (
+    <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1 dark:border-slate-800 dark:bg-slate-950">
+      {ROUTINE_VIEW_OPTIONS.map((option) => {
+        const Icon = option.icon;
+        const isActive = value === option.key;
+
+        return (
+          <button
+            key={option.key}
+            type="button"
+            onClick={() => onChange(option.key)}
+            className={cx(
+              "inline-flex min-h-10 items-center gap-2 rounded-md px-3 py-2 text-sm font-bold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
+              isActive
+                ? "bg-white text-blue-700 shadow-sm dark:bg-slate-800 dark:text-blue-200"
+                : "text-slate-600 hover:text-slate-950 dark:text-slate-400 dark:hover:text-white",
+            )}
+          >
+            <Icon className="h-4 w-4" aria-hidden="true" />
+            {option.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 /**
  * Shows the live class when the current time falls inside a scheduled slot.

@@ -24,7 +24,7 @@ import {
   SectionHeading,
   SuggestionList,
 } from "./components/ui";
-import routineImage from "./components/routine.webp";
+import routineImage from "../assets/iiuc.webp";
 import api from "../api";
 import { useActiveSession, useAuth } from "../App";
 
@@ -339,9 +339,9 @@ const Home = () => {
         <img
           src={routineImage}
           alt=""
-          className="absolute inset-0 -z-20 h-full w-full object-cover opacity-30"
+          className="absolute inset-0 -z-20 h-full w-full object-cover opacity-75"
         />
-        <div className="absolute inset-0 -z-10 bg-slate-950/78" />
+        <div className="absolute inset-0 -z-10 bg-slate-950/55" />
 
         <div className="page-wrap grid gap-8 py-12 lg:grid-cols-[1fr_430px] lg:items-center lg:py-16">
           <div className="max-w-3xl animate-enter">

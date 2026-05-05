@@ -104,11 +104,8 @@ function Header() {
   );
 
   const topLinks = [
-    {
-      label: isLoggedIn ? "Dashboard" : "Home",
-      to: isLoggedIn ? "/homepersonal" : "/",
-      icon: FiHome,
-    },
+    { label: "Home", to: "/", icon: FiHome },
+    isLoggedIn && { label: "Dashboard", to: "/homepersonal", icon: FiGrid },
     isCrOrAdmin && { label: "CR", to: "/CR", icon: FiUsers },
     isAdmin && { label: "Admin", to: "/admin/users", icon: FiShield },
   ].filter(Boolean);
@@ -155,17 +152,24 @@ function Header() {
       <div ref={navRef} className="page-wrap">
         <div className="flex min-h-16 items-center justify-between gap-4">
           <Link
-            to={isLoggedIn ? "/homepersonal" : "/"}
+            to="/"
             className="group inline-flex items-center gap-3 rounded-lg py-2 pr-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
             onClick={closeMenus}
           >
-            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-950 text-sm font-black text-white shadow-sm transition group-hover:-translate-y-0.5 dark:bg-white dark:text-slate-950">
-              RMS
+            <span className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-slate-950 shadow-md ring-1 ring-white/20 transition group-hover:-translate-y-0.5 dark:bg-slate-900 dark:ring-slate-700">
+              <span className="absolute inset-0 bg-gradient-to-br from-blue-600 via-teal-500 to-amber-400" />
+              <span className="absolute left-2 top-2 h-6 w-5 rounded-md bg-white/20 ring-1 ring-white/30" />
+              <span className="absolute right-2 bottom-2 h-6 w-5 rounded-md bg-slate-950/25 ring-1 ring-white/25" />
+              <span className="relative text-[11px] font-black tracking-normal text-white drop-shadow-sm">
+                RMS
+              </span>
             </span>
             <span className="hidden leading-tight sm:block">
-              <span className="block text-sm font-bold">Resources</span>
-              <span className="block text-xs text-slate-500 dark:text-slate-400">
-                Management System
+              <span className="block text-sm font-black text-slate-950 dark:text-white">
+                IIUC RMS
+              </span>
+              <span className="block text-xs font-medium text-slate-500 dark:text-slate-400">
+                Resources Management
               </span>
             </span>
           </Link>

@@ -228,7 +228,7 @@ function AppRoutes() {
         />
         <Route
           path="/"
-          element={isLoggedIn ? <Navigate to="/homepersonal" replace /> : <Home />}
+          element={<Home />}
         />
         <Route
           path="/homepersonal"
