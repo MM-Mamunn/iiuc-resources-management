@@ -2,7 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FiCalendar, FiEdit3, FiGrid, FiPlus, FiSearch, FiTrash2 } from "react-icons/fi";
+import {
+  FiArrowRight,
+  FiBookOpen,
+  FiCalendar,
+  FiEdit3,
+  FiGrid,
+  FiPlus,
+  FiSearch,
+  FiTrash2,
+} from "react-icons/fi";
 import api from "../../api";
 import { useActiveSession } from "../../App";
 import Header from "../components/Header";
@@ -45,6 +54,29 @@ function CR() {
   const sessionHelper = activeSessionLoading
     ? "Loading active session..."
     : activeSessionError || (activeSessionName ? `Active: ${activeSessionName}` : "Enter a session");
+  const navigationCards = [
+    {
+      title: "Routine editor",
+      description: "Bulk add and adjust section classes.",
+      to: "/CR/routine",
+      icon: FiPlus,
+      tone: "blue",
+    },
+    {
+      title: "Section routine",
+      description: "Open the public timetable view.",
+      to: "/routine/section",
+      icon: FiCalendar,
+      tone: "teal",
+    },
+    {
+      title: "Course selection",
+      description: "Review personal add/drop choices.",
+      to: "/courseadddrop",
+      icon: FiBookOpen,
+      tone: "amber",
+    },
+  ];
 
   useEffect(() => {
     if (activeSessionName) {
@@ -190,6 +222,39 @@ function CR() {
         )}
 
         <section className="mt-6 grid gap-4 md:grid-cols-3">
+          {navigationCards.map((item) => {
+            const Icon = item.icon;
+
+            return (
+              <button
+                key={item.to}
+                type="button"
+                onClick={() => navigate(item.to)}
+                className="interactive-card group p-5 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div
+                    className={`flex h-11 w-11 items-center justify-center rounded-lg ${getActionTone(item.tone)}`}
+                  >
+                    <Icon className="h-5 w-5" aria-hidden="true" />
+                  </div>
+                  <FiArrowRight
+                    className="h-5 w-5 text-slate-400 transition group-hover:translate-x-1 group-hover:text-blue-600 dark:group-hover:text-blue-300"
+                    aria-hidden="true"
+                  />
+                </div>
+                <h2 className="mt-4 text-lg font-bold text-slate-950 dark:text-white">
+                  {item.title}
+                </h2>
+                <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-400">
+                  {item.description}
+                </p>
+              </button>
+            );
+          })}
+        </section>
+
+        <section className="mt-6 grid gap-4 md:grid-cols-3">
           <MetricCard
             icon={<FiGrid className="h-5 w-5" aria-hidden="true" />}
             label="Loaded classes"
@@ -276,6 +341,16 @@ function CourseField({ label, value }) {
       </dd>
     </div>
   );
+}
+
+function getActionTone(tone) {
+  const tones = {
+    blue: "bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-200",
+    teal: "bg-teal-50 text-teal-700 dark:bg-teal-500/10 dark:text-teal-200",
+    amber: "bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-200",
+  };
+
+  return tones[tone] || tones.blue;
 }
 
 function getLoadError(error) {

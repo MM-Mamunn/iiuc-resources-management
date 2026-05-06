@@ -1,7 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { FiCalendar, FiEdit3, FiPlus, FiSearch, FiTrash2, FiX } from "react-icons/fi";
+import {
+  FiAlertTriangle,
+  FiCalendar,
+  FiCheckCircle,
+  FiEdit3,
+  FiHash,
+  FiList,
+  FiPlus,
+  FiSearch,
+  FiTrash2,
+  FiType,
+  FiUser,
+  FiX,
+} from "react-icons/fi";
 import api from "../../api";
 import { useActiveSession, useAuth } from "../../App";
 import Header from "../components/Header";
@@ -15,6 +28,7 @@ import {
   PageShell,
   SectionHeading,
   SuggestionList,
+  cx,
 } from "../components/ui";
 
 const DAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
@@ -47,6 +61,39 @@ const emptyClassForm = {
   slot: "",
 };
 
+const emptyBulkClassForm = {
+  code: "",
+  room: "",
+  day: "",
+  slot: "",
+};
+
+const FACULTY_SEARCH_MODES = {
+  code: {
+    label: "Code",
+    fieldLabel: "Faculty code",
+    helper: "Example: JAA",
+    placeholder: "Enter faculty code",
+    maxLength: 10,
+    suggestionEndpoint: "/api/lookLike/facultyLookLike",
+    getSuggestionValue: (faculty) => faculty.code || "",
+  },
+  name: {
+    label: "Name",
+    fieldLabel: "Faculty name",
+    helper: "Example: Abdullah",
+    placeholder: "Enter faculty name",
+    maxLength: 80,
+    suggestionEndpoint: "/api/lookLike/facultyNameLookLike",
+    getSuggestionValue: (faculty) => faculty.name || "",
+  },
+};
+
+const DAY_OPTIONS = DISPLAY_DAYS.map((day) => ({
+  value: DAYS.indexOf(day),
+  label: day,
+}));
+
 /**
  * CR routine editor for adding, editing, and deleting section classes.
  */
@@ -72,10 +119,30 @@ const CrRoutine = () => {
   const [formSubmitting, setFormSubmitting] = useState(false);
   const [notice, setNotice] = useState(null);
   const [formError, setFormError] = useState(null);
+  const [facultySearchMode, setFacultySearchMode] = useState("code");
+  const [facultyQuery, setFacultyQuery] = useState("");
+  const [selectedFaculty, setSelectedFaculty] = useState(null);
+  const [facultySuggestions, setFacultySuggestions] = useState([]);
+  const [facultyLoading, setFacultyLoading] = useState(false);
+  const [bulkForm, setBulkForm] = useState(emptyBulkClassForm);
+  const [bulkSuggestions, setBulkSuggestions] = useState({ code: [], room: [] });
+  const [bulkLoadingField, setBulkLoadingField] = useState("");
+  const [bulkQueue, setBulkQueue] = useState([]);
+  const [bulkWarning, setBulkWarning] = useState(null);
+  const [bulkChecking, setBulkChecking] = useState(false);
+  const [bulkSubmitting, setBulkSubmitting] = useState(false);
   const { user } = useAuth();
 
   const userSection = user?.sec;
   const timeSlots = SLOT_LABELS[shift] ?? SLOT_LABELS[1];
+  const slotOptions = getSlotOptions(shift);
+  const facultySearchConfig = FACULTY_SEARCH_MODES[facultySearchMode];
+  const selectedFacultyCode =
+    selectedFaculty?.code ||
+    (facultySearchMode === "code" ? facultyQuery.trim().toUpperCase() : "");
+  const selectedFacultyLabel = selectedFacultyCode
+    ? formatFacultyLabel({ code: selectedFacultyCode, name: selectedFaculty?.name })
+    : "Not selected";
   const sessionHelper = activeSessionLoading
     ? "Loading active session..."
     : activeSessionError || (activeSessionName ? `Active: ${activeSessionName}` : "Enter a session");
@@ -85,6 +152,76 @@ const CrRoutine = () => {
       setSession((current) => current || activeSessionName);
     }
   }, [activeSessionName]);
+
+  useEffect(() => {
+    if (!hasSearched && userSection) {
+      setShift(getShiftFromSection(userSection));
+    }
+  }, [hasSearched, userSection]);
+
+  useEffect(() => {
+    if (
+      bulkForm.day === "" ||
+      bulkForm.slot === "" ||
+      !selectedFacultyCode ||
+      !session.trim() ||
+      !userSection
+    ) {
+      setBulkChecking(false);
+      setBulkWarning(null);
+      return undefined;
+    }
+
+    const queuedClass = findQueuedCell(bulkQueue, bulkForm.day, bulkForm.slot);
+    if (queuedClass) {
+      setBulkChecking(false);
+      setBulkWarning({
+        type: "error",
+        text: `${getDayLabel(bulkForm.day)} slot ${bulkForm.slot} is already queued for ${queuedClass.code}.`,
+      });
+      return undefined;
+    }
+
+    let ignoreResult = false;
+    const validateTimer = window.setTimeout(async () => {
+      setBulkChecking(true);
+      setBulkWarning(null);
+
+      try {
+        await api.post("/api/class/validate", {
+          session,
+          section: userSection,
+          faculty: selectedFacultyCode,
+          day: bulkForm.day,
+          slot: bulkForm.slot,
+        });
+
+        if (!ignoreResult) {
+          setBulkWarning(null);
+        }
+      } catch (slotError) {
+        if (!ignoreResult) {
+          setBulkWarning({ type: "error", text: getClassConflictError(slotError) });
+        }
+      } finally {
+        if (!ignoreResult) {
+          setBulkChecking(false);
+        }
+      }
+    }, 250);
+
+    return () => {
+      ignoreResult = true;
+      window.clearTimeout(validateTimer);
+    };
+  }, [
+    bulkForm.day,
+    bulkForm.slot,
+    bulkQueue,
+    selectedFacultyCode,
+    session,
+    userSection,
+  ]);
 
   const handleSessionChange = async (event) => {
     const value = event.target.value;
@@ -162,6 +299,199 @@ const CrRoutine = () => {
   const chooseSuggestion = (key, value) => {
     setFormData((current) => ({ ...current, [key]: value }));
     setSuggestions((current) => ({ ...current, [key]: [] }));
+  };
+
+  const handleFacultySearchModeChange = (nextMode) => {
+    if (nextMode === facultySearchMode) return;
+
+    setFacultySearchMode(nextMode);
+    setFacultyQuery("");
+    setSelectedFaculty(null);
+    setFacultySuggestions([]);
+    setBulkQueue([]);
+    setBulkForm(emptyBulkClassForm);
+    setBulkWarning(null);
+  };
+
+  const handleFacultyChange = async (event) => {
+    const value = event.target.value;
+    setFacultyQuery(value);
+    setSelectedFaculty(null);
+    setFacultySuggestions([]);
+    setBulkQueue([]);
+    setBulkWarning(null);
+
+    if (value.length < 1 || value.length > facultySearchConfig.maxLength) {
+      return;
+    }
+
+    setFacultyLoading(true);
+    try {
+      const response = await api.get(
+        `${facultySearchConfig.suggestionEndpoint}/${encodeURIComponent(value)}`,
+      );
+      setFacultySuggestions(response.data?.rows ?? []);
+    } catch {
+      setFacultySuggestions([]);
+    } finally {
+      setFacultyLoading(false);
+    }
+  };
+
+  const chooseFaculty = (faculty) => {
+    setSelectedFaculty({
+      code: faculty.code || "",
+      name: faculty.name || "",
+    });
+    setFacultyQuery(facultySearchConfig.getSuggestionValue(faculty));
+    setFacultySuggestions([]);
+    setBulkQueue([]);
+    setBulkForm(emptyBulkClassForm);
+    setBulkWarning(null);
+  };
+
+  const updateBulkSuggestions = async ({ key, value, endpoint, mapValue, maxLength }) => {
+    setBulkForm((current) => ({ ...current, [key]: value }));
+    setBulkWarning(null);
+
+    if (value.length < 1 || value.length > maxLength) {
+      setBulkSuggestions((current) => ({ ...current, [key]: [] }));
+      return;
+    }
+
+    setBulkLoadingField(key);
+    try {
+      const response = await api.get(`${endpoint}/${encodeURIComponent(value)}`);
+      const nextSuggestions = response.data?.rows?.map(mapValue) ?? [];
+      setBulkSuggestions((current) => ({ ...current, [key]: nextSuggestions }));
+    } catch {
+      setBulkSuggestions((current) => ({ ...current, [key]: [] }));
+    } finally {
+      setBulkLoadingField("");
+    }
+  };
+
+  const chooseBulkSuggestion = (key, value) => {
+    setBulkForm((current) => ({ ...current, [key]: value }));
+    setBulkSuggestions((current) => ({ ...current, [key]: [] }));
+  };
+
+  const updateBulkFormField = (key, value) => {
+    setBulkForm((current) => ({ ...current, [key]: value }));
+    setBulkWarning(null);
+  };
+
+  const handleQueueBulkClass = async (event) => {
+    event.preventDefault();
+
+    if (!session.trim()) {
+      setBulkWarning({ type: "error", text: "Please enter a session first." });
+      return;
+    }
+
+    if (!userSection) {
+      setBulkWarning({ type: "error", text: "Section not found in user profile." });
+      return;
+    }
+
+    if (!selectedFacultyCode) {
+      setBulkWarning({ type: "error", text: "Choose a faculty from code or name search." });
+      return;
+    }
+
+    if (!bulkForm.code.trim() || !bulkForm.room.trim() || bulkForm.day === "" || bulkForm.slot === "") {
+      setBulkWarning({ type: "error", text: "Course, room, day, and slot are required." });
+      return;
+    }
+
+    const queuedClass = findQueuedCell(bulkQueue, bulkForm.day, bulkForm.slot);
+    if (queuedClass) {
+      setBulkWarning({
+        type: "error",
+        text: `${getDayLabel(bulkForm.day)} slot ${bulkForm.slot} is already queued for ${queuedClass.code}.`,
+      });
+      return;
+    }
+
+    setBulkChecking(true);
+    setBulkWarning(null);
+
+    try {
+      await api.post("/api/class/validate", {
+        session,
+        section: userSection,
+        faculty: selectedFacultyCode,
+        day: bulkForm.day,
+        slot: bulkForm.slot,
+      });
+
+      setBulkQueue((current) => [
+        ...current,
+        {
+          id: `${Date.now()}-${current.length}`,
+          code: bulkForm.code.trim(),
+          room: bulkForm.room.trim(),
+          day: Number(bulkForm.day),
+          slot: Number(bulkForm.slot),
+          faculty: selectedFacultyCode,
+          facultyName: selectedFaculty?.name || "",
+        },
+      ]);
+      setBulkForm((current) => ({
+        ...current,
+        slot: "",
+      }));
+      setBulkSuggestions({ code: [], room: [] });
+      setBulkWarning(null);
+    } catch (slotError) {
+      setBulkWarning({ type: "error", text: getClassConflictError(slotError) });
+    } finally {
+      setBulkChecking(false);
+    }
+  };
+
+  const removeQueuedClass = (classId) => {
+    setBulkQueue((current) => current.filter((classItem) => classItem.id !== classId));
+    setBulkWarning(null);
+  };
+
+  const handleBulkSubmit = async () => {
+    if (!bulkQueue.length) {
+      setBulkWarning({ type: "error", text: "Add at least one class before saving." });
+      return;
+    }
+
+    setBulkSubmitting(true);
+    setBulkWarning(null);
+
+    try {
+      const facultyCode = bulkQueue[0]?.faculty || selectedFacultyCode;
+      const response = await api.post("/api/class/bulk", {
+        session,
+        section: userSection,
+        faculty: facultyCode,
+        id: user?.id || "",
+        classes: bulkQueue.map(({ code, room, day, slot }) => ({
+          code,
+          room,
+          day,
+          slot,
+        })),
+      });
+
+      setBulkQueue([]);
+      setBulkForm(emptyBulkClassForm);
+      setBulkSuggestions({ code: [], room: [] });
+      setNotice({
+        type: "success",
+        text: `${response.data?.inserted || 0} class${response.data?.inserted === 1 ? "" : "es"} added successfully.`,
+      });
+      await fetchCrRoutine();
+    } catch (bulkError) {
+      setBulkWarning({ type: "error", text: getClassConflictError(bulkError) });
+    } finally {
+      setBulkSubmitting(false);
+    }
   };
 
   const handleAddClass = (day, slot) => {
@@ -361,6 +691,240 @@ const CrRoutine = () => {
             value={schedule.length}
             tone="amber"
           />
+        </section>
+
+        <section className="mt-8 surface-card p-6 sm:p-8">
+          <SectionHeading
+            kicker="Bulk entry"
+            title="Add Faculty Classes"
+            description="Select a faculty, queue class cells, and save them together for this section."
+          />
+
+          <div className="mt-6 grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+            <div>
+              <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1 dark:border-slate-800 dark:bg-slate-950">
+                {Object.entries(FACULTY_SEARCH_MODES).map(([mode, config]) => {
+                  const Icon = mode === "code" ? FiHash : FiType;
+                  const isActive = facultySearchMode === mode;
+
+                  return (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => handleFacultySearchModeChange(mode)}
+                      className={cx(
+                        "inline-flex min-h-10 items-center gap-2 rounded-md px-3 py-2 text-sm font-bold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
+                        isActive
+                          ? "bg-white text-blue-700 shadow-sm dark:bg-slate-800 dark:text-blue-200"
+                          : "text-slate-600 hover:text-slate-950 dark:text-slate-400 dark:hover:text-white",
+                      )}
+                    >
+                      <Icon className="h-4 w-4" aria-hidden="true" />
+                      {config.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <FormField
+                id="bulk-faculty"
+                label={facultySearchConfig.fieldLabel}
+                helper={facultyLoading ? "Loading faculty suggestions..." : facultySearchConfig.helper}
+                className="mt-4"
+              >
+                <div className="relative">
+                  <FiUser
+                    className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"
+                    aria-hidden="true"
+                  />
+                  <input
+                    id="bulk-faculty"
+                    name="bulk-faculty"
+                    value={facultyQuery}
+                    onChange={handleFacultyChange}
+                    type="text"
+                    autoComplete="off"
+                    placeholder={facultySearchConfig.placeholder}
+                    className={cx("form-field pl-12", facultySearchMode === "code" && "uppercase")}
+                    maxLength={facultySearchConfig.maxLength}
+                  />
+                  <SuggestionList
+                    suggestions={facultySuggestions}
+                    getLabel={(faculty) => formatFacultyLabel(faculty)}
+                    onSelect={chooseFaculty}
+                  />
+                </div>
+              </FormField>
+
+              <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-bold uppercase text-slate-500 dark:text-slate-400">
+                      Selected faculty
+                    </p>
+                    <p className="safe-text mt-1 font-bold text-slate-950 dark:text-white">
+                      {selectedFacultyLabel}
+                    </p>
+                  </div>
+                  {selectedFacultyCode && (
+                    <FiCheckCircle className="h-5 w-5 text-emerald-600 dark:text-emerald-300" aria-hidden="true" />
+                  )}
+                </div>
+              </div>
+
+              <form onSubmit={handleQueueBulkClass} className="mt-5 grid gap-4">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <AutocompleteField
+                    id="bulk-code"
+                    label="Course code"
+                    value={bulkForm.code}
+                    placeholder="CSE-1121"
+                    loading={bulkLoadingField === "code"}
+                    suggestions={bulkSuggestions.code}
+                    onChange={(value) =>
+                      updateBulkSuggestions({
+                        key: "code",
+                        value,
+                        endpoint: "/api/lookLike/courseLookLike",
+                        mapValue: (row) => row.code,
+                        maxLength: 15,
+                      })
+                    }
+                    onSelect={(value) => chooseBulkSuggestion("code", value)}
+                  />
+                  <AutocompleteField
+                    id="bulk-room"
+                    label="Room"
+                    value={bulkForm.room}
+                    placeholder="C505"
+                    loading={bulkLoadingField === "room"}
+                    suggestions={bulkSuggestions.room}
+                    onChange={(value) =>
+                      updateBulkSuggestions({
+                        key: "room",
+                        value,
+                        endpoint: "/api/lookLike/roomLookLike",
+                        mapValue: (row) => row.room,
+                        maxLength: 10,
+                      })
+                    }
+                    onSelect={(value) => chooseBulkSuggestion("room", value)}
+                  />
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <FormField id="bulk-day" label="Day">
+                    <select
+                      id="bulk-day"
+                      value={bulkForm.day}
+                      onChange={(event) => updateBulkFormField("day", event.target.value)}
+                      className="form-field capitalize"
+                      required
+                    >
+                      <option value="">Select day</option>
+                      {DAY_OPTIONS.map((day) => (
+                        <option key={day.value} value={day.value}>
+                          {day.label}
+                        </option>
+                      ))}
+                    </select>
+                  </FormField>
+                  <FormField id="bulk-slot" label="Slot" helper={bulkChecking ? "Checking availability..." : ""}>
+                    <select
+                      id="bulk-slot"
+                      value={bulkForm.slot}
+                      onChange={(event) => updateBulkFormField("slot", event.target.value)}
+                      className="form-field"
+                      required
+                    >
+                      <option value="">Select slot</option>
+                      {slotOptions.map((slot) => (
+                        <option key={slot} value={slot}>
+                          Slot {slot} - {getSlotLabel(shift, slot)}
+                        </option>
+                      ))}
+                    </select>
+                  </FormField>
+                </div>
+
+                {bulkWarning && (
+                  <Notice type={bulkWarning.type}>
+                    {bulkWarning.text}
+                  </Notice>
+                )}
+
+                <div className="flex flex-wrap justify-end gap-3">
+                  <button
+                    type="submit"
+                    disabled={bulkChecking || !selectedFacultyCode || bulkWarning?.type === "error"}
+                    className="btn-secondary"
+                  >
+                    <FiPlus aria-hidden="true" />
+                    Queue class
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleBulkSubmit}
+                    disabled={bulkSubmitting || bulkQueue.length === 0}
+                    className="btn-primary"
+                  >
+                    <FiCheckCircle aria-hidden="true" />
+                    {bulkSubmitting ? "Saving..." : "Add"}
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            <div className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="section-kicker">Queued classes</p>
+                  <h3 className="mt-1 text-xl font-bold text-slate-950 dark:text-white">
+                    {bulkQueue.length} pending
+                  </h3>
+                </div>
+                <FiList className="h-6 w-6 text-slate-400" aria-hidden="true" />
+              </div>
+
+              {bulkQueue.length > 0 ? (
+                <div className="mt-4 grid gap-3">
+                  {bulkQueue.map((classItem) => (
+                    <article
+                      key={classItem.id}
+                      className="rounded-lg border border-slate-200 p-4 dark:border-slate-800"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="safe-text font-bold text-blue-700 dark:text-blue-300">
+                            {classItem.code}
+                          </p>
+                          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                            {getDayLabel(classItem.day)} · Slot {classItem.slot} · Room {classItem.room}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeQueuedClass(classItem.id)}
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-rose-600 text-white transition hover:bg-rose-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
+                          aria-label={`Remove ${classItem.code}`}
+                          title="Remove class"
+                        >
+                          <FiTrash2 aria-hidden="true" />
+                        </button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <div className="mt-5 rounded-lg border border-dashed border-slate-300 p-8 text-center dark:border-slate-700">
+                  <FiAlertTriangle className="mx-auto h-7 w-7 text-slate-400" aria-hidden="true" />
+                  <p className="mt-3 text-sm font-semibold text-slate-600 dark:text-slate-300">
+                    No queued classes
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
         </section>
 
         <section className="mt-8">
@@ -592,8 +1156,65 @@ function AutocompleteField({
   );
 }
 
+function getShiftFromSection(section) {
+  return String(section || "").trim().toUpperCase().endsWith("M") ? 1 : 2;
+}
+
+function getSlotOptions() {
+  return [1, 2, 3, 4, 5, 6];
+}
+
+function getSlotLabel(shift, slot) {
+  const numericSlot = Number(slot);
+  const labels = SLOT_LABELS[shift] ?? SLOT_LABELS[1];
+  const labelIndex = shift === 1 && numericSlot >= 4 ? numericSlot : numericSlot - 1;
+
+  return labels[labelIndex] || `Slot ${numericSlot}`;
+}
+
+function getDayLabel(day) {
+  return DAYS[Number(day)] || "Day";
+}
+
+function formatFacultyLabel(faculty) {
+  if (!faculty) return "Faculty";
+
+  const code = faculty.code || "";
+  const name = faculty.name || "";
+
+  if (code && name) return `${name} (${code})`;
+  return code || name || "Faculty";
+}
+
+function findQueuedCell(queue, day, slot) {
+  return queue.find(
+    (classItem) =>
+      Number(classItem.day) === Number(day) &&
+      Number(classItem.slot) === Number(slot),
+  );
+}
+
+function getClassConflictError(error) {
+  const status = error.response?.status;
+  const message = error.response?.data?.message || error.response?.data?.error;
+
+  if (message) return message;
+  if (status === 409) return "That day and slot is already occupied.";
+  if (status === 400) return "Please check the class details.";
+  if (status === 404) return "The requested endpoint was not found.";
+  if (status === 401) return "Unauthorized. Please login again.";
+  if (status === 403) return "Access forbidden.";
+  if (status === 500) return "Internal server error.";
+  if (error.request) return "Network error: unable to connect to the server.";
+  return error.message || "Could not validate the class.";
+}
+
 function getSubmitError(error) {
   const status = error.response?.status;
+  const message = error.response?.data?.message || error.response?.data?.error;
+
+  if (message) return message;
+  if (status === 409) return "That class conflicts with an existing routine entry.";
   if (status === 404) return "The requested endpoint was not found.";
   if (status === 401) return "Unauthorized. Please login again.";
   if (status === 403) return "Access forbidden.";
