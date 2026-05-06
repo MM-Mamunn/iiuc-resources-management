@@ -14,6 +14,7 @@ import {
 import api from "../../api";
 import { useActiveSession } from "../../App";
 import Header from "../components/Header";
+import ResourceBrowser from "../components/ResourceBrowser";
 import {
   EmptyState,
   FormField,
@@ -392,27 +393,13 @@ const ClassroomRoutine = () => {
               <InfoRow label="Type" value={courseModal.data.type} />
               <InfoRow label="Semester" value={courseModal.data.sem} />
               <InfoRow label="Prerequisite" value={courseModal.data.prereq || "None"} />
-              {normalizeLinks(courseModal.data.links).length > 0 && (
-                <div className="rounded-lg border border-slate-200 p-4 dark:border-slate-800">
-                  <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">
-                    Resources
-                  </p>
-                  <div className="mt-3 grid gap-2">
-                    {normalizeLinks(courseModal.data.links).map((link, index) => (
-                      <a
-                        key={link}
-                        href={link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="btn-secondary justify-start"
-                      >
-                        <FiBookOpen aria-hidden="true" />
-                        Drive link {index + 1}
-                      </a>
-                    ))}
-                  </div>
-                </div>
-              )}
+              <ResourceBrowser
+                title="Course resources"
+                description={`Shared links submitted for ${courseModal.data.code}.`}
+                courseCode={courseModal.data.code}
+                framed={false}
+                limit={3}
+              />
             </div>
           ) : (
             <EmptyState
@@ -618,12 +605,6 @@ function getDayNumber(selectedDay) {
 function getDisplayDay(selectedDay) {
   if (selectedDay === "today") return DAYS[new Date().getDay()];
   return selectedDay;
-}
-
-function normalizeLinks(links) {
-  if (Array.isArray(links)) return links.filter(Boolean);
-  if (typeof links === "string" && links.trim()) return [links.trim()];
-  return [];
 }
 
 export default ClassroomRoutine;

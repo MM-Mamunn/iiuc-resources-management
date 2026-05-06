@@ -5,10 +5,13 @@ import Cookies from "js-cookie";
 import {
   FiCamera,
   FiEdit3,
+  FiExternalLink,
   FiEye,
   FiEyeOff,
   FiLock,
+  FiPlus,
   FiSave,
+  FiSearch,
   FiUser,
 } from "react-icons/fi";
 import api from "../../api";
@@ -21,13 +24,21 @@ import {
   Notice,
   PageShell,
   SectionHeading,
+  SuggestionList,
 } from "../components/ui";
+import ResourceBrowser from "../components/ResourceBrowser";
 
 const emptyEditData = {
   name: "",
   sec: "",
   email: "",
   phone: "",
+};
+
+const emptyResourceForm = {
+  course: "",
+  links: "",
+  images: "",
 };
 
 /**
@@ -50,6 +61,17 @@ function EditDetails() {
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [previewUrl, setPreviewUrl] = useState("");
   const [photoLoading, setPhotoLoading] = useState(false);
+  const [resourceForm, setResourceForm] = useState(emptyResourceForm);
+  const [resourceSuggestions, setResourceSuggestions] = useState([]);
+  const [resourceCourseLoading, setResourceCourseLoading] = useState(false);
+  const [resourceCountLoading, setResourceCountLoading] = useState(false);
+  const [resourceCount, setResourceCount] = useState({
+    total: 0,
+    limit: 5,
+    remaining: 5,
+  });
+  const [resourceSubmitting, setResourceSubmitting] = useState(false);
+  const [resourceRefreshKey, setResourceRefreshKey] = useState(0);
   const { setUser } = useAuth();
 
   useEffect(() => {
@@ -61,6 +83,47 @@ function EditDetails() {
       if (previewUrl) URL.revokeObjectURL(previewUrl);
     };
   }, [previewUrl]);
+
+  useEffect(() => {
+    const courseCode = resourceForm.course.trim();
+
+    if (!courseCode) {
+      setResourceCount({ total: 0, limit: 5, remaining: 5 });
+      return undefined;
+    }
+
+    let ignoreResult = false;
+    const timer = window.setTimeout(async () => {
+      setResourceCountLoading(true);
+
+      try {
+        const response = await api.get(
+          `/api/resources/mine/course/${encodeURIComponent(courseCode)}/count`,
+        );
+
+        if (!ignoreResult) {
+          setResourceCount({
+            total: response.data?.total ?? 0,
+            limit: response.data?.limit ?? 5,
+            remaining: response.data?.remaining ?? 5,
+          });
+        }
+      } catch {
+        if (!ignoreResult) {
+          setResourceCount({ total: 0, limit: 5, remaining: 5 });
+        }
+      } finally {
+        if (!ignoreResult) {
+          setResourceCountLoading(false);
+        }
+      }
+    }, 300);
+
+    return () => {
+      ignoreResult = true;
+      window.clearTimeout(timer);
+    };
+  }, [resourceForm.course]);
 
   const currentProfile = profile?.[0] || null;
   const avatarInitials = (currentProfile?.name || currentProfile?.id || "U")
@@ -240,6 +303,71 @@ function EditDetails() {
     }
   };
 
+  const handleResourceCourseChange = async (event) => {
+    const value = event.target.value.toUpperCase();
+    setResourceForm((current) => ({ ...current, course: value }));
+
+    if (value.length < 1 || value.length > 15) {
+      setResourceSuggestions([]);
+      return;
+    }
+
+    setResourceCourseLoading(true);
+    try {
+      const response = await api.get(`/api/lookLike/courseLookLike/${encodeURIComponent(value)}`);
+      const suggestions = response.data?.rows?.map((row) => row.code) ?? [];
+      setResourceSuggestions(suggestions);
+    } catch {
+      setResourceSuggestions([]);
+    } finally {
+      setResourceCourseLoading(false);
+    }
+  };
+
+  const handleResourceInputChange = (event) => {
+    const { name, value } = event.target;
+    setResourceForm((current) => ({ ...current, [name]: value }));
+  };
+
+  const handleResourceSubmit = async (event) => {
+    event.preventDefault();
+
+    if (resourceCount.total >= resourceCount.limit) {
+      setNotice({
+        type: "error",
+        text: `You can submit at most ${resourceCount.limit} resources for the same course.`,
+      });
+      return;
+    }
+
+    setResourceSubmitting(true);
+    setNotice(null);
+
+    try {
+      const response = await api.post("/api/resources", {
+        course: resourceForm.course,
+        links: resourceForm.links,
+        images: resourceForm.images,
+      });
+
+      setResourceForm((current) => ({
+        ...emptyResourceForm,
+        course: current.course,
+      }));
+      setResourceCount((current) => ({
+        ...current,
+        total: current.total + 1,
+        remaining: response.data?.remaining ?? Math.max(current.remaining - 1, 0),
+      }));
+      setResourceRefreshKey((current) => current + 1);
+      setNotice({ type: "success", text: "Resource submitted successfully." });
+    } catch (resourceError) {
+      setNotice({ type: "error", text: getResourceSubmitError(resourceError) });
+    } finally {
+      setResourceSubmitting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen">
       <Header />
@@ -401,6 +529,111 @@ function EditDetails() {
 
               <section className="surface-card p-5">
                 <SectionHeading
+                  kicker="Resources"
+                  title="Share a course resource"
+                  description="Add links for a course and keep track of what you have submitted."
+                />
+
+                <form onSubmit={handleResourceSubmit} className="mt-6 grid gap-5">
+                  <FormField
+                    id="resource-course"
+                    label="Course code"
+                    helper={
+                      resourceCourseLoading
+                        ? "Loading course suggestions..."
+                        : resourceCountLoading
+                          ? "Checking your submissions..."
+                          : resourceForm.course
+                            ? `${resourceCount.remaining} submission${resourceCount.remaining === 1 ? "" : "s"} remaining for this course`
+                            : "Example: CSE-1121"
+                    }
+                  >
+                    <div className="relative">
+                      <FiSearch
+                        className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"
+                        aria-hidden="true"
+                      />
+                      <input
+                        id="resource-course"
+                        name="course"
+                        value={resourceForm.course}
+                        onChange={handleResourceCourseChange}
+                        className="form-field pl-12 uppercase"
+                        placeholder="Search course"
+                        autoComplete="off"
+                        required
+                      />
+                      <SuggestionList
+                        suggestions={resourceSuggestions}
+                        onSelect={(courseCode) => {
+                          setResourceForm((current) => ({ ...current, course: courseCode }));
+                          setResourceSuggestions([]);
+                        }}
+                      />
+                    </div>
+                  </FormField>
+
+                  <FormField id="resource-link" label="Resource link">
+                    <div className="relative">
+                      <FiExternalLink
+                        className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"
+                        aria-hidden="true"
+                      />
+                      <input
+                        id="resource-link"
+                        name="links"
+                        value={resourceForm.links}
+                        onChange={handleResourceInputChange}
+                        className="form-field pl-12"
+                        placeholder="https://drive.google.com/..."
+                        type="url"
+                        required
+                      />
+                    </div>
+                  </FormField>
+
+                  <FormField id="resource-image" label="Image URL" helper="Optional preview image.">
+                    <input
+                      id="resource-image"
+                      name="images"
+                      value={resourceForm.images}
+                      onChange={handleResourceInputChange}
+                      className="form-field"
+                      placeholder="https://..."
+                      type="url"
+                    />
+                  </FormField>
+
+                  <div className="flex justify-end">
+                    <button
+                      type="submit"
+                      disabled={
+                        resourceSubmitting ||
+                        resourceCountLoading ||
+                        resourceCount.total >= resourceCount.limit
+                      }
+                      className="btn-primary"
+                    >
+                      <FiPlus aria-hidden="true" />
+                      {resourceSubmitting ? "Submitting..." : "Add resource"}
+                    </button>
+                  </div>
+                </form>
+              </section>
+
+              <section className="surface-card p-5">
+                <ResourceBrowser
+                  title="My submitted resources"
+                  description="Review the course links you have shared."
+                  mine
+                  framed={false}
+                  limit={6}
+                  refreshKey={resourceRefreshKey}
+                />
+              </section>
+
+              <section className="surface-card p-5">
+                <SectionHeading
                   kicker="Security"
                   title="Change password"
                   description="Use your current password and choose a new one."
@@ -522,6 +755,18 @@ function getPasswordError(error) {
   if (status === 500) return "Internal server error. Please try again later.";
   if (error.request) return "Network error: unable to connect to the server.";
   return error.response?.data?.message || error.message || "Could not change password.";
+}
+
+function getResourceSubmitError(error) {
+  const status = error.response?.status;
+  if (status === 400) return error.response?.data?.message || "Please check the resource details.";
+  if (status === 401) return "Unauthorized. Please login again.";
+  if (status === 403) return "Access forbidden.";
+  if (status === 404) return "Course not found.";
+  if (status === 409) return error.response?.data?.message || "You reached the resource limit for this course.";
+  if (status === 500) return "Internal server error. Please try again later.";
+  if (error.request) return "Network error: unable to connect to the server.";
+  return error.response?.data?.message || error.message || "Could not submit resource.";
 }
 
 export default EditDetails;

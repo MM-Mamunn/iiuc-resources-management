@@ -15,6 +15,7 @@ import {
   FiUsers,
 } from "react-icons/fi";
 import Header from "./components/Header";
+import ResourceBrowser from "./components/ResourceBrowser";
 import RoutineTable from "./components/RoutineTable";
 import {
   EmptyState,
@@ -544,6 +545,12 @@ const Home = () => {
             />
           </div>
         </section>
+
+        <ResourceBrowser
+          title="Shared course resources"
+          description="Browse links submitted by students across the course catalog."
+          limit={6}
+        />
 
         <section className="grid gap-6 lg:grid-cols-[1fr_360px]">
           <div className="surface-card p-6">

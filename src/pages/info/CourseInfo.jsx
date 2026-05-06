@@ -4,12 +4,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   FiBookOpen,
   FiChevronDown,
-  FiExternalLink,
   FiRefreshCw,
   FiSearch,
 } from "react-icons/fi";
 import api from "../../api";
 import Header from "../components/Header";
+import ResourceBrowser from "../components/ResourceBrowser";
 import {
   EmptyState,
   FormField,
@@ -237,7 +237,7 @@ function CourseInfo() {
           <SectionHeading
             kicker="Browse"
             title="Courses by semester"
-            description="Expand a semester, then open any course to see prerequisites and resource links."
+            description="Expand a semester, then open any course to see prerequisites and shared resources."
           />
 
           <div className="mt-6">
@@ -378,11 +378,9 @@ function CourseDetailCard({ course, className = "" }) {
 }
 
 /**
- * Shared course fields and resource links.
+ * Shared course fields and submitted resources.
  */
 function CourseDetail({ course }) {
-  const links = course.links?.filter(Boolean) || [];
-
   return (
     <div className="space-y-5">
       <div className="grid gap-3 md:grid-cols-3">
@@ -393,27 +391,13 @@ function CourseDetail({ course }) {
         <InfoTile label="Prerequisites" value={course.prereq || "None"} />
       </div>
 
-      {links.length > 0 && (
-        <div>
-          <p className="mb-3 text-sm font-bold text-slate-700 dark:text-slate-200">
-            Course Resources
-          </p>
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {links.map((link, index) => (
-              <a
-                key={`${link}-${index}`}
-                href={link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex min-h-11 items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-blue-300 hover:text-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-blue-500 dark:hover:text-blue-300"
-              >
-                Resource {index + 1}
-                <FiExternalLink className="h-4 w-4" aria-hidden="true" />
-              </a>
-            ))}
-          </div>
-        </div>
-      )}
+      <ResourceBrowser
+        title="Course resources"
+        description={`Shared links submitted for ${course.code}.`}
+        courseCode={course.code}
+        framed={false}
+        limit={6}
+      />
     </div>
   );
 }
