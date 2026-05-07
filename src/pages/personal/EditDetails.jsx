@@ -1,9 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import Cookies from "js-cookie";
 import {
+  FiBookOpen,
   FiCamera,
+  FiChevronRight,
   FiEdit3,
   FiExternalLink,
   FiEye,
@@ -38,16 +41,22 @@ const emptyEditData = {
 const emptyResourceForm = {
   course: "",
   links: "",
-  images: "",
 };
+
+const profileSectionKeys = new Set(["details", "resources", "settings"]);
 
 /**
  * Profile settings page for details, avatar, and password updates.
  */
 function EditDetails() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedSection = searchParams.get("tab");
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState(null);
+  const [activeProfileSection, setActiveProfileSection] = useState(() =>
+    profileSectionKeys.has(requestedSection) ? requestedSection : "details",
+  );
   const [isEditing, setIsEditing] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [passwordData, setPasswordData] = useState({
@@ -72,11 +81,18 @@ function EditDetails() {
   });
   const [resourceSubmitting, setResourceSubmitting] = useState(false);
   const [resourceRefreshKey, setResourceRefreshKey] = useState(0);
+  const [resourceCountRefreshKey, setResourceCountRefreshKey] = useState(0);
   const { setUser } = useAuth();
 
   useEffect(() => {
     fetchProfile();
   }, []);
+
+  useEffect(() => {
+    if (profileSectionKeys.has(requestedSection)) {
+      setActiveProfileSection(requestedSection);
+    }
+  }, [requestedSection]);
 
   useEffect(() => {
     return () => {
@@ -123,7 +139,7 @@ function EditDetails() {
       ignoreResult = true;
       window.clearTimeout(timer);
     };
-  }, [resourceForm.course]);
+  }, [resourceForm.course, resourceCountRefreshKey]);
 
   const currentProfile = profile?.[0] || null;
   const avatarInitials = (currentProfile?.name || currentProfile?.id || "U")
@@ -132,6 +148,31 @@ function EditDetails() {
     .join("")
     .slice(0, 2)
     .toUpperCase();
+  const profileNavigation = [
+    {
+      key: "details",
+      title: "Profile details",
+      description: "Update your student information and contact details.",
+      icon: FiUser,
+    },
+    {
+      key: "resources",
+      title: "Resources",
+      description: "Share course links and review your submissions.",
+      icon: FiBookOpen,
+    },
+    {
+      key: "settings",
+      title: "Settings",
+      description: "Change your password from the secure form.",
+      icon: FiLock,
+    },
+  ];
+
+  const handleProfileSectionSelect = (sectionKey) => {
+    setActiveProfileSection(sectionKey);
+    setSearchParams({ tab: sectionKey }, { replace: true });
+  };
 
   const fetchProfile = async () => {
     setLoading(true);
@@ -347,7 +388,6 @@ function EditDetails() {
       const response = await api.post("/api/resources", {
         course: resourceForm.course,
         links: resourceForm.links,
-        images: resourceForm.images,
       });
 
       setResourceForm((current) => ({
@@ -366,6 +406,11 @@ function EditDetails() {
     } finally {
       setResourceSubmitting(false);
     }
+  };
+
+  const handleManagedResourceChange = () => {
+    setResourceRefreshKey((current) => current + 1);
+    setResourceCountRefreshKey((current) => current + 1);
   };
 
   return (
@@ -409,73 +454,87 @@ function EditDetails() {
           />
         </section>
 
+        <section className="mt-6 grid gap-4 md:grid-cols-3">
+          {profileNavigation.map((item) => (
+            <ProfileNavCard
+              key={item.key}
+              item={item}
+              active={activeProfileSection === item.key}
+              onSelect={() => handleProfileSectionSelect(item.key)}
+            />
+          ))}
+        </section>
+
         {loading ? (
           <LoadingState label="Loading profile..." />
         ) : (
-          <section className="mt-8 grid gap-8 lg:grid-cols-[360px_1fr]">
-            <aside className="space-y-5">
-              <div className="surface-card p-5">
-                <div className="flex items-center gap-4">
-                  <span className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-slate-950 text-lg font-black text-white dark:bg-white dark:text-slate-950">
-                    {currentProfile?.profilePic ? (
-                      <img
-                        src={currentProfile.profilePic}
-                        alt=""
-                        className="h-full w-full object-cover"
+          <section className={`mt-8 grid gap-8 ${activeProfileSection === "details" ? "lg:grid-cols-[360px_1fr]" : ""}`}>
+            {activeProfileSection === "details" && (
+              <aside className="space-y-5">
+                <div className="surface-card p-5">
+                  <div className="flex items-center gap-4">
+                    <span className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-slate-950 text-lg font-black text-white dark:bg-white dark:text-slate-950">
+                      {currentProfile?.profilePic ? (
+                        <img
+                          src={currentProfile.profilePic}
+                          alt=""
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        avatarInitials
+                      )}
+                    </span>
+                    <div className="min-w-0">
+                      <h2 className="safe-text text-xl font-bold text-slate-950 dark:text-white">
+                        {currentProfile?.name || "Student"}
+                      </h2>
+                      <p className="safe-text mt-1 text-sm text-slate-500 dark:text-slate-400">
+                        {currentProfile?.email || currentProfile?.id || "Profile"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-5 space-y-3">
+                    <label className="btn-secondary w-full cursor-pointer">
+                      <FiCamera aria-hidden="true" />
+                      Choose image
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handlePhotoSelection}
+                        className="sr-only"
                       />
-                    ) : (
-                      avatarInitials
-                    )}
-                  </span>
-                  <div className="min-w-0">
-                    <h2 className="safe-text text-xl font-bold text-slate-950 dark:text-white">
-                      {currentProfile?.name || "Student"}
-                    </h2>
-                    <p className="safe-text mt-1 text-sm text-slate-500 dark:text-slate-400">
-                      {currentProfile?.email || currentProfile?.id || "Profile"}
-                    </p>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handlePhotoUpload}
+                      disabled={photoLoading || !selectedPhoto}
+                      className="btn-primary w-full"
+                    >
+                      {photoLoading ? "Uploading..." : "Upload image"}
+                    </button>
                   </div>
+
+                  {previewUrl && (
+                    <div className="mt-5">
+                      <p className="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                        Preview
+                      </p>
+                      <img
+                        src={previewUrl}
+                        alt="Selected profile preview"
+                        className="aspect-square w-32 rounded-lg object-cover ring-1 ring-slate-200 dark:ring-slate-800"
+                      />
+                    </div>
+                  )}
                 </div>
 
-                <div className="mt-5 space-y-3">
-                  <label className="btn-secondary w-full cursor-pointer">
-                    <FiCamera aria-hidden="true" />
-                    Choose image
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handlePhotoSelection}
-                      className="sr-only"
-                    />
-                  </label>
-                  <button
-                    type="button"
-                    onClick={handlePhotoUpload}
-                    disabled={photoLoading || !selectedPhoto}
-                    className="btn-primary w-full"
-                  >
-                    {photoLoading ? "Uploading..." : "Upload image"}
-                  </button>
-                </div>
-
-                {previewUrl && (
-                  <div className="mt-5">
-                    <p className="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
-                      Preview
-                    </p>
-                    <img
-                      src={previewUrl}
-                      alt="Selected profile preview"
-                      className="aspect-square w-32 rounded-lg object-cover ring-1 ring-slate-200 dark:ring-slate-800"
-                    />
-                  </div>
-                )}
-              </div>
-
-              <ProfileSummary profile={currentProfile} />
-            </aside>
+                <ProfileSummary profile={currentProfile} />
+              </aside>
+            )}
 
             <div className="space-y-8">
+              {activeProfileSection === "details" && (
               <section className="surface-card p-5">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <SectionHeading kicker="Details" title="Personal information" />
@@ -526,7 +585,10 @@ function EditDetails() {
                   </form>
                 )}
               </section>
+              )}
 
+              {activeProfileSection === "resources" && (
+              <>
               <section className="surface-card p-5">
                 <SectionHeading
                   kicker="Resources"
@@ -592,18 +654,6 @@ function EditDetails() {
                     </div>
                   </FormField>
 
-                  <FormField id="resource-image" label="Image URL" helper="Optional preview image.">
-                    <input
-                      id="resource-image"
-                      name="images"
-                      value={resourceForm.images}
-                      onChange={handleResourceInputChange}
-                      className="form-field"
-                      placeholder="https://..."
-                      type="url"
-                    />
-                  </FormField>
-
                   <div className="flex justify-end">
                     <button
                       type="submit"
@@ -629,12 +679,17 @@ function EditDetails() {
                   framed={false}
                   limit={6}
                   refreshKey={resourceRefreshKey}
+                  manageable
+                  onManagedChange={handleManagedResourceChange}
                 />
               </section>
+              </>
+              )}
 
+              {activeProfileSection === "settings" && (
               <section className="surface-card p-5">
                 <SectionHeading
-                  kicker="Security"
+                  kicker="Settings"
                   title="Change password"
                   description="Use your current password and choose a new one."
                 />
@@ -666,11 +721,40 @@ function EditDetails() {
                   </div>
                 </form>
               </section>
+              )}
             </div>
           </section>
         )}
       </PageShell>
     </div>
+  );
+}
+
+function ProfileNavCard({ item, active, onSelect }) {
+  const Icon = item.icon;
+
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={`interactive-card group p-5 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+        active ? "border-blue-400 bg-blue-50/80 ring-2 ring-blue-500/20 dark:border-blue-500 dark:bg-blue-500/10" : ""
+      }`}
+    >
+      <div className="flex items-start justify-between gap-4">
+        <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-200">
+          <Icon className="h-5 w-5" aria-hidden="true" />
+        </span>
+        <FiChevronRight
+          className="h-5 w-5 text-slate-400 transition group-hover:text-blue-600 dark:group-hover:text-blue-300"
+          aria-hidden="true"
+        />
+      </div>
+      <h2 className="mt-4 text-lg font-bold text-slate-950 dark:text-white">{item.title}</h2>
+      <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-400">
+        {item.description}
+      </p>
+    </button>
   );
 }
 

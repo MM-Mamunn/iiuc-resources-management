@@ -14,6 +14,7 @@ import {
 } from "react-icons/fi";
 import api from "../../api";
 import Header from "../components/Header";
+import ResourceHighlights from "../components/ResourceHighlights";
 import RoutineTable from "../components/RoutineTable";
 import {
   EmptyState,
@@ -312,6 +313,11 @@ const HomePersonal = () => {
             <MetricCard key={stat.label} {...stat} />
           ))}
         </section>
+
+        <ResourceHighlights
+          onAdd={() => navigate("/edit/details?tab=resources")}
+          onFind={() => navigate("/resources")}
+        />
 
         <section className="grid gap-8 xl:grid-cols-[320px_1fr]">
           <aside className="space-y-4">

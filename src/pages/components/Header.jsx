@@ -15,7 +15,6 @@ import {
   FiMenu,
   FiMoon,
   FiSend,
-  FiSettings,
   FiShield,
   FiSun,
   FiUser,
@@ -66,34 +65,15 @@ function Header() {
         ].filter(Boolean),
       },
       {
-        id: "manage",
-        label: "Manage",
-        icon: FiSettings,
-        hidden: !isLoggedIn,
-        paths: ["/courseadddrop", "/showall"],
-        items: [
-          { label: "Add or Drop", to: "/courseadddrop", icon: FiBookOpen },
-          { label: "My Courses", to: "/showall", icon: FiGrid },
-        ],
-      },
-      {
-        id: "rooms",
-        label: "Rooms",
-        icon: FiGrid,
-        paths: ["/classroom"],
-        items: [
-          { label: "Room Routine", to: "/classroom/routine", icon: FiGrid },
-        ],
-      },
-      {
         id: "info",
         label: "Info",
         icon: FiInfo,
-        paths: ["/info"],
+        paths: ["/info", "/classroom"],
         items: [
           { label: "Teacher Info", to: "/info/teacher", icon: FiUsers },
           { label: "Course Info", to: "/info/course", icon: FiBookOpen },
           { label: "Section Info", to: "/info/section", icon: FiGrid },
+          { label: "Room Routine", to: "/classroom/routine", icon: FiGrid },
           { label: "Study Materials", to: "/info/materials", icon: FiBookOpen },
           { label: "Bus Schedule", to: "/info/bus", icon: FiCalendar },
           { label: "Contributors", to: "/info/contributor", icon: FiUsers },
@@ -103,9 +83,16 @@ function Header() {
     [isLoggedIn]
   );
 
+  const profileItems = [
+    { label: "Profile", to: "/edit/details", icon: FiUser },
+    { label: "Add or Drop", to: "/courseadddrop", icon: FiBookOpen },
+    { label: "My Courses", to: "/showall", icon: FiGrid },
+  ];
+
   const topLinks = [
     { label: "Home", to: "/", icon: FiHome },
     isLoggedIn && { label: "Dashboard", to: "/homepersonal", icon: FiGrid },
+    { label: "Resources", to: "/resources", icon: FiBookOpen },
     isCrOrAdmin && { label: "CR", to: "/CR", icon: FiUsers },
     isAdmin && { label: "Admin", to: "/admin/users", icon: FiShield },
   ].filter(Boolean);
@@ -199,14 +186,18 @@ function Header() {
             <ThemeButton theme={theme} onClick={toggleTheme} />
             {isLoggedIn ? (
               <>
-                <Link
-                  to="/edit/details"
-                  onClick={closeMenus}
-                  className="inline-flex min-h-11 items-center gap-3 rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
-                >
-                  <Avatar image={avatarUrl} initials={avatarInitials} />
-                  <span className="max-w-32 truncate">{user?.name || user?.id || "Profile"}</span>
-                </Link>
+                <ProfileDropdown
+                  label={user?.name || user?.id || "Profile"}
+                  image={avatarUrl}
+                  initials={avatarInitials}
+                  items={profileItems}
+                  isOpen={openMenu === "profile"}
+                  isActive={isActivePath(["/edit/details", "/courseadddrop", "/showall"])}
+                  onToggle={() =>
+                    setOpenMenu((current) => (current === "profile" ? null : "profile"))
+                  }
+                  onClose={closeMenus}
+                />
                 <button type="button" onClick={handleLogout} className="btn-secondary">
                   <FiLogOut aria-hidden="true" />
                   Logout
@@ -270,10 +261,12 @@ function Header() {
               <div className="grid gap-2 border-t border-slate-200 pt-4 dark:border-slate-800">
                 {isLoggedIn ? (
                   <>
-                    <MobileLink
-                      item={{ label: user?.name || user?.id || "Profile", to: "/edit/details", icon: FiUser }}
-                      onClick={closeMenus}
-                    />
+                    <p className="px-2 text-xs font-bold text-slate-500 dark:text-slate-400">
+                      Profile
+                    </p>
+                    {profileItems.map((item) => (
+                      <MobileLink key={item.to} item={item} onClick={closeMenus} />
+                    ))}
                     <button type="button" onClick={handleLogout} className="btn-danger justify-start">
                       <FiLogOut aria-hidden="true" />
                       Logout
@@ -333,6 +326,74 @@ function DesktopDropdown({ group, isOpen, isActive, onToggle, onClose }) {
           className="absolute left-0 top-full z-40 mt-2 w-56 animate-enter rounded-lg border border-slate-200 bg-white p-2 shadow-2xl dark:border-slate-800 dark:bg-slate-950"
         >
           {group.items.map((item) => {
+            const ItemIcon = item.icon;
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                onClick={onClose}
+                role="menuitem"
+                className={({ isActive: itemActive }) =>
+                  cx(
+                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
+                    itemActive
+                      ? "bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-200"
+                      : "text-slate-600 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-slate-900 dark:hover:text-white"
+                  )
+                }
+              >
+                <ItemIcon aria-hidden="true" />
+                {item.label}
+              </NavLink>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Authenticated profile menu that owns account and course-management actions.
+ */
+function ProfileDropdown({
+  label,
+  image,
+  initials,
+  items,
+  isOpen,
+  isActive,
+  onToggle,
+  onClose,
+}) {
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={onToggle}
+        className={cx(
+          "inline-flex min-h-11 items-center gap-3 rounded-lg border px-2 py-1 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
+          isActive
+            ? "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200"
+            : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+        )}
+        aria-expanded={isOpen}
+        aria-haspopup="menu"
+      >
+        <Avatar image={image} initials={initials} />
+        <span className="max-w-32 truncate">{label}</span>
+        <FiChevronDown
+          className={cx("transition", isOpen && "rotate-180")}
+          aria-hidden="true"
+        />
+      </button>
+
+      {isOpen && (
+        <div
+          role="menu"
+          className="absolute right-0 top-full z-40 mt-2 w-56 animate-enter rounded-lg border border-slate-200 bg-white p-2 shadow-2xl dark:border-slate-800 dark:bg-slate-950"
+        >
+          {items.map((item) => {
             const ItemIcon = item.icon;
             return (
               <NavLink

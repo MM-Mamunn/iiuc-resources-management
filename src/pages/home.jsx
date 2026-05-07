@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   FiArrowRight,
   FiAward,
@@ -15,7 +16,7 @@ import {
   FiUsers,
 } from "react-icons/fi";
 import Header from "./components/Header";
-import ResourceBrowser from "./components/ResourceBrowser";
+import ResourceHighlights from "./components/ResourceHighlights";
 import RoutineTable from "./components/RoutineTable";
 import {
   EmptyState,
@@ -57,6 +58,7 @@ const SLOT_LABELS = {
  */
 const Home = () => {
   const { isLoggedIn } = useAuth();
+  const navigate = useNavigate();
   const {
     activeSessionName,
     activeSessionLoading,
@@ -546,10 +548,9 @@ const Home = () => {
           </div>
         </section>
 
-        <ResourceBrowser
-          title="Shared course resources"
-          description="Browse links submitted by students across the course catalog."
-          limit={6}
+        <ResourceHighlights
+          onAdd={() => navigate(isLoggedIn ? "/edit/details?tab=resources" : "/auth/login")}
+          onFind={() => navigate("/resources")}
         />
 
         <section className="grid gap-6 lg:grid-cols-[1fr_360px]">

@@ -36,6 +36,7 @@ const AdminRoles = lazy(() => import("./pages/admin/AdminRoles"));
 const SectionRoutine = lazy(() => import("./pages/SectionRoutine"));
 const Semester = lazy(() => import("./pages/info/StudyMaterials"));
 const ClassroomRoutine = lazy(() => import("./pages/room/ClassroomRoutine"));
+const Resources = lazy(() => import("./pages/Resources"));
 
 const AuthContext = createContext(null);
 const ThemeContext = createContext(null);
@@ -257,6 +258,7 @@ function AppRoutes() {
         <Route path="/routine/section" element={<SectionRoutine />} />
         <Route path="/routine/teacher" element={<Fullroutine />} />
         <Route path="/classroom/routine" element={<ClassroomRoutine />} />
+        <Route path="/resources" element={<Resources />} />
         <Route path="/info/teacher" element={<TeacherInfo />} />
         <Route
           path="/info/course"
