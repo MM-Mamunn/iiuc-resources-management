@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { FiArrowRight, FiExternalLink, FiPlus, FiSearch, FiStar } from "react-icons/fi";
 import api from "../../api";
+import { useAuth } from "../../App";
 import { EmptyState, LoadingState, Notice, SectionHeading } from "./ui";
 
 /**
@@ -15,6 +17,8 @@ function ResourceHighlights({
   onFind,
   limit = 3,
 }) {
+  const { isLoggedIn } = useAuth();
+  const navigate = useNavigate();
   const [resources, setResources] = useState([]);
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState(null);
@@ -39,6 +43,13 @@ function ResourceHighlights({
 
     fetchLatestResources();
   }, [limit]);
+
+  const handleResourceOpen = (event) => {
+    if (isLoggedIn) return;
+
+    event.preventDefault();
+    navigate("/auth/login");
+  };
 
   return (
     <section className="surface-card p-6 sm:p-8">
@@ -95,6 +106,7 @@ function ResourceHighlights({
                   href={resource.links}
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={handleResourceOpen}
                   className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-blue-700 hover:underline dark:text-blue-300"
                 >
                   Open resource

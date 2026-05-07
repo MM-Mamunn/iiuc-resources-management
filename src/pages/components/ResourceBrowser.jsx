@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   FiChevronLeft,
   FiChevronRight,
@@ -46,6 +47,7 @@ function ResourceBrowser({
   onManagedChange = () => {},
 }) {
   const { isLoggedIn, user } = useAuth();
+  const navigate = useNavigate();
   const [resources, setResources] = useState([]);
   const [pagination, setPagination] = useState({
     page: 1,
@@ -181,6 +183,13 @@ function ResourceBrowser({
     } finally {
       setRatingSubmitting(false);
     }
+  };
+
+  const handleResourceOpen = (event) => {
+    if (isLoggedIn) return;
+
+    event.preventDefault();
+    navigate("/auth/login");
   };
 
   const openEditResource = (resource) => {
@@ -325,6 +334,7 @@ function ResourceBrowser({
                 onCancelDelete={() => setDeleteConfirmId(null)}
                 deleteConfirming={deleteConfirmId === resource.id}
                 deleting={deleteSubmittingId === resource.id}
+                onOpen={handleResourceOpen}
               />
             ))}
           </div>
@@ -424,6 +434,7 @@ function ResourceCard({
   onDelete,
   deleteConfirming,
   deleting,
+  onOpen,
 }) {
   const studentName = resource.studentName || "Student";
   const studentId = resource.by || "N/A";
@@ -530,6 +541,7 @@ function ResourceCard({
             href={resource.links}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={onOpen}
             className="btn-primary"
           >
             Open
