@@ -2,10 +2,18 @@
 
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FiArrowRight, FiExternalLink, FiPlus, FiSearch, FiStar } from "react-icons/fi";
+import {
+  FiArrowRight,
+  FiChevronRight,
+  FiExternalLink,
+  FiPlus,
+  FiSearch,
+  FiStar,
+} from "react-icons/fi";
 import api from "../../api";
 import { useAuth } from "../../App";
 import { EmptyState, LoadingState, Notice, SectionHeading } from "./ui";
+import { RatingModal } from "./ResourceBrowser";
 
 /**
  * Compact latest-resource preview with navigation actions.
@@ -17,11 +25,17 @@ function ResourceHighlights({
   onFind,
   limit = 3,
 }) {
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, user } = useAuth();
   const navigate = useNavigate();
   const [resources, setResources] = useState([]);
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState(null);
+  const [selectedResource, setSelectedResource] = useState(null);
+  const [ratings, setRatings] = useState([]);
+  const [ratingLoading, setRatingLoading] = useState(false);
+  const [ratingSubmitting, setRatingSubmitting] = useState(false);
+  const [ratingNotice, setRatingNotice] = useState(null);
+  const [ratingForm, setRatingForm] = useState({ star: "5", comments: "" });
 
   useEffect(() => {
     async function fetchLatestResources() {
@@ -49,6 +63,67 @@ function ResourceHighlights({
 
     event.preventDefault();
     navigate("/auth/login");
+  };
+
+  const openRatings = async (resource) => {
+    setSelectedResource(resource);
+    setRatings([]);
+    setRatingNotice(null);
+    setRatingLoading(true);
+
+    try {
+      const response = await api.get(`/api/resources/${resource.id}/stars`);
+      const nextRatings = response.data?.rows ?? [];
+      const myRating = nextRatings.find((rating) => rating.by === user?.id);
+
+      setRatings(nextRatings);
+      setRatingForm({
+        star: String(myRating?.star ?? 5),
+        comments: myRating?.comments || "",
+      });
+    } catch (ratingError) {
+      setRatingNotice({ type: "error", text: getRatingError(ratingError) });
+    } finally {
+      setRatingLoading(false);
+    }
+  };
+
+  const closeRatings = () => {
+    setSelectedResource(null);
+    setRatings([]);
+    setRatingNotice(null);
+    setRatingForm({ star: "5", comments: "" });
+  };
+
+  const handleRatingSubmit = async (event) => {
+    event.preventDefault();
+
+    if (!selectedResource) return;
+
+    setRatingSubmitting(true);
+    setRatingNotice(null);
+
+    try {
+      const response = await api.post(`/api/resources/${selectedResource.id}/star`, {
+        star: Number(ratingForm.star),
+        comments: ratingForm.comments,
+      });
+      const average = response.data?.average ?? selectedResource.star;
+      const nextRatings = response.data?.rows ?? [];
+
+      setRatings(nextRatings);
+      setResources((current) =>
+        current.map((resource) =>
+          resource.id === selectedResource.id ? { ...resource, star: average } : resource,
+        ),
+      );
+      setSelectedResource((current) => (current ? { ...current, star: average } : current));
+      setRatingNotice({ type: "success", text: "Your rating was saved." });
+    } catch (ratingError) {
+      setRatingNotice({ type: "error", text: getRatingError(ratingError) });
+    } finally {
+      setRatingSubmitting(false);
+    }
   };
 
   return (
@@ -96,10 +171,19 @@ function ResourceHighlights({
                       {resource.studentName || resource.by || "Student"}
                     </p>
                   </div>
-                  <span className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2.5 py-1.5 text-sm font-bold text-amber-800 dark:bg-amber-500/10 dark:text-amber-200">
+                  <button
+                    type="button"
+                    onClick={() => openRatings(resource)}
+                    className="group inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2.5 py-1.5 text-sm font-bold text-amber-800 ring-1 ring-amber-200 transition hover:bg-amber-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 dark:bg-amber-500/10 dark:text-amber-200 dark:ring-amber-500/30 dark:hover:bg-amber-500/15"
+                    aria-label={`Rate or view ratings for ${resource.course || "resource"}`}
+                  >
                     <FiStar aria-hidden="true" />
                     {formatStar(resource.star)}
-                  </span>
+                    <FiChevronRight
+                      className="h-4 w-4 transition group-hover:translate-x-0.5"
+                      aria-hidden="true"
+                    />
+                  </button>
                 </div>
 
                 <a
@@ -123,6 +207,23 @@ function ResourceHighlights({
           />
         )}
       </div>
+
+      {selectedResource && (
+        <RatingModal
+          resource={selectedResource}
+          ratings={ratings}
+          loading={ratingLoading}
+          submitting={ratingSubmitting}
+          notice={ratingNotice}
+          ratingForm={ratingForm}
+          isLoggedIn={isLoggedIn}
+          currentUserId={user?.id}
+          onClose={closeRatings}
+          onSubmit={handleRatingSubmit}
+          onFormChange={setRatingForm}
+          onNoticeDismiss={() => setRatingNotice(null)}
+        />
+      )}
     </section>
   );
 }
@@ -137,6 +238,17 @@ function getResourceError(error) {
   if (status === 500) return "Internal server error.";
   if (error.request) return "Network error: unable to connect to the server.";
   return error.response?.data?.message || error.message || "Could not load resources.";
+}
+
+function getRatingError(error) {
+  const status = error.response?.status;
+  if (status === 400) return error.response?.data?.message || "Please check your rating.";
+  if (status === 401) return "Please login again.";
+  if (status === 403) return "Access forbidden.";
+  if (status === 404) return "Resource not found.";
+  if (status === 500) return "Internal server error.";
+  if (error.request) return "Network error: unable to connect to the server.";
+  return error.response?.data?.message || error.message || "Could not save rating.";
 }
 
 export default ResourceHighlights;

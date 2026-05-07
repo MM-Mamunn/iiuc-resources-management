@@ -621,7 +621,7 @@ function EditResourceModal({
   );
 }
 
-function RatingModal({
+export function RatingModal({
   resource,
   ratings,
   loading,
