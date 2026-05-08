@@ -43,7 +43,27 @@ const emptyResourceForm = {
   links: "",
 };
 
+const emptySemesterResourceForm = {
+  semester: "",
+  links: "",
+};
+
+const semesterOptions = Array.from({ length: 8 }, (_, index) => index + 1);
+
 const profileSectionKeys = new Set(["details", "resources", "settings"]);
+
+const resourceEntryModes = [
+  {
+    key: "course",
+    label: "Add to course",
+    description: "Submit one resource link for a single course.",
+  },
+  {
+    key: "semester",
+    label: "Add to semester",
+    description: "Submit one link to multiple semester courses.",
+  },
+];
 
 /**
  * Profile settings page for details, avatar, and password updates.
@@ -57,6 +77,7 @@ function EditDetails() {
   const [activeProfileSection, setActiveProfileSection] = useState(() =>
     profileSectionKeys.has(requestedSection) ? requestedSection : "details",
   );
+  const [resourceEntryMode, setResourceEntryMode] = useState("course");
   const [isEditing, setIsEditing] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [passwordData, setPasswordData] = useState({
@@ -71,6 +92,7 @@ function EditDetails() {
   const [previewUrl, setPreviewUrl] = useState("");
   const [photoLoading, setPhotoLoading] = useState(false);
   const [resourceForm, setResourceForm] = useState(emptyResourceForm);
+  const [semesterResourceForm, setSemesterResourceForm] = useState(emptySemesterResourceForm);
   const [resourceSuggestions, setResourceSuggestions] = useState([]);
   const [resourceCourseLoading, setResourceCourseLoading] = useState(false);
   const [resourceCountLoading, setResourceCountLoading] = useState(false);
@@ -80,6 +102,11 @@ function EditDetails() {
     remaining: 5,
   });
   const [resourceSubmitting, setResourceSubmitting] = useState(false);
+  const [semesterCourses, setSemesterCourses] = useState([]);
+  const [selectedSemesterCourses, setSelectedSemesterCourses] = useState([]);
+  const [semesterCoursesLoading, setSemesterCoursesLoading] = useState(false);
+  const [semesterResourceSubmitting, setSemesterResourceSubmitting] = useState(false);
+  const [semesterNotice, setSemesterNotice] = useState(null);
   const [resourceRefreshKey, setResourceRefreshKey] = useState(0);
   const [resourceCountRefreshKey, setResourceCountRefreshKey] = useState(0);
   const { setUser } = useAuth();
@@ -140,6 +167,48 @@ function EditDetails() {
       window.clearTimeout(timer);
     };
   }, [resourceForm.course, resourceCountRefreshKey]);
+
+  useEffect(() => {
+    const semester = semesterResourceForm.semester;
+
+    if (!semester) {
+      setSemesterCourses([]);
+      setSelectedSemesterCourses([]);
+      setSemesterNotice(null);
+      return undefined;
+    }
+
+    let ignoreResult = false;
+    const loadSemesterCourses = async () => {
+      setSemesterCoursesLoading(true);
+      setSemesterNotice(null);
+
+      try {
+        const response = await api.get(`/api/resources/semester/${semester}/courses`);
+
+        if (!ignoreResult) {
+          setSemesterCourses(response.data?.rows ?? []);
+          setSelectedSemesterCourses([]);
+        }
+      } catch (semesterError) {
+        if (!ignoreResult) {
+          setSemesterCourses([]);
+          setSelectedSemesterCourses([]);
+          setSemesterNotice({ type: "error", text: getResourceSubmitError(semesterError) });
+        }
+      } finally {
+        if (!ignoreResult) {
+          setSemesterCoursesLoading(false);
+        }
+      }
+    };
+
+    loadSemesterCourses();
+
+    return () => {
+      ignoreResult = true;
+    };
+  }, [semesterResourceForm.semester]);
 
   const currentProfile = profile?.[0] || null;
   const avatarInitials = (currentProfile?.name || currentProfile?.id || "U")
@@ -370,6 +439,27 @@ function EditDetails() {
     setResourceForm((current) => ({ ...current, [name]: value }));
   };
 
+  const handleSemesterResourceInputChange = (event) => {
+    const { name, value } = event.target;
+    setSemesterResourceForm((current) => ({ ...current, [name]: value }));
+  };
+
+  const toggleSemesterCourse = (courseCode) => {
+    setSelectedSemesterCourses((current) =>
+      current.includes(courseCode)
+        ? current.filter((selectedCode) => selectedCode !== courseCode)
+        : [...current, courseCode],
+    );
+  };
+
+  const selectAllSemesterCourses = () => {
+    setSelectedSemesterCourses(semesterCourses.map((courseItem) => courseItem.code));
+  };
+
+  const clearSemesterCourses = () => {
+    setSelectedSemesterCourses([]);
+  };
+
   const handleResourceSubmit = async (event) => {
     event.preventDefault();
 
@@ -408,9 +498,54 @@ function EditDetails() {
     }
   };
 
+  const handleSemesterResourceSubmit = async (event) => {
+    event.preventDefault();
+    setSemesterNotice(null);
+
+    if (!semesterResourceForm.semester) {
+      setSemesterNotice({ type: "error", text: "Choose a semester first." });
+      return;
+    }
+
+    if (selectedSemesterCourses.length === 0) {
+      setSemesterNotice({ type: "error", text: "Select at least one course covered by the link." });
+      return;
+    }
+
+    setSemesterResourceSubmitting(true);
+
+    try {
+      const response = await api.post("/api/resources/semester", {
+        semester: semesterResourceForm.semester,
+        links: semesterResourceForm.links,
+        courses: selectedSemesterCourses,
+      });
+      const addedCount = response.data?.total ?? selectedSemesterCourses.length;
+
+      setSemesterResourceForm((current) => ({ ...current, links: "" }));
+      setSelectedSemesterCourses([]);
+      setResourceRefreshKey((current) => current + 1);
+      setResourceCountRefreshKey((current) => current + 1);
+      setSemesterNotice({
+        type: "success",
+        text: `${addedCount} course resource${addedCount === 1 ? "" : "s"} added successfully.`,
+      });
+    } catch (semesterError) {
+      setSemesterNotice({ type: "error", text: getSemesterResourceError(semesterError) });
+    } finally {
+      setSemesterResourceSubmitting(false);
+    }
+  };
+
   const handleManagedResourceChange = () => {
     setResourceRefreshKey((current) => current + 1);
     setResourceCountRefreshKey((current) => current + 1);
+  };
+
+  const handleResourceEntryModeChange = (mode) => {
+    setResourceEntryMode(mode);
+    setNotice(null);
+    setSemesterNotice(null);
   };
 
   return (
@@ -592,8 +727,46 @@ function EditDetails() {
               <section className="surface-card p-5">
                 <SectionHeading
                   kicker="Resources"
-                  title="Share a course resource"
-                  description="Add links for a course and keep track of what you have submitted."
+                  title="Add resources"
+                  description="Choose whether this link belongs to one course or multiple courses in a semester."
+                />
+
+                <div
+                  className="mt-6 grid rounded-lg border border-slate-200 bg-slate-50 p-1 dark:border-slate-800 dark:bg-slate-900 sm:grid-cols-2"
+                  role="tablist"
+                  aria-label="Resource entry mode"
+                >
+                  {resourceEntryModes.map((mode) => {
+                    const active = resourceEntryMode === mode.key;
+                    return (
+                      <button
+                        key={mode.key}
+                        type="button"
+                        onClick={() => handleResourceEntryModeChange(mode.key)}
+                        className={`rounded-md px-4 py-3 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                          active
+                            ? "bg-white text-blue-700 shadow-sm dark:bg-slate-950 dark:text-blue-200"
+                            : "text-slate-600 hover:bg-white/70 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
+                        }`}
+                        role="tab"
+                        aria-selected={active}
+                      >
+                        <span className="block text-sm font-black">{mode.label}</span>
+                        <span className="mt-1 block text-xs font-medium leading-5">
+                          {mode.description}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+
+              {resourceEntryMode === "course" && (
+              <section className="surface-card p-5">
+                <SectionHeading
+                  kicker="Course-wise"
+                  title="Add resource to one course"
+                  description="Search a course code, paste the link, and submit it for that course."
                 />
 
                 <form onSubmit={handleResourceSubmit} className="mt-6 grid gap-5">
@@ -670,6 +843,151 @@ function EditDetails() {
                   </div>
                 </form>
               </section>
+              )}
+
+              {resourceEntryMode === "semester" && (
+              <section className="surface-card p-5">
+                <SectionHeading
+                  kicker="Semester-wise"
+                  title="Add one link to multiple courses"
+                  description="Choose a semester, confirm the covered courses, and submit the same resource link for each selected course."
+                />
+
+                {semesterNotice && (
+                  <div className="mt-5">
+                    <Notice type={semesterNotice.type} onDismiss={() => setSemesterNotice(null)}>
+                      {semesterNotice.text}
+                    </Notice>
+                  </div>
+                )}
+
+                <form onSubmit={handleSemesterResourceSubmit} className="mt-6 grid gap-5">
+                  <div className="grid gap-5 lg:grid-cols-[220px_1fr]">
+                    <FormField id="semester-resource-semester" label="Semester">
+                      <select
+                        id="semester-resource-semester"
+                        name="semester"
+                        value={semesterResourceForm.semester}
+                        onChange={handleSemesterResourceInputChange}
+                        className="form-field"
+                        required
+                      >
+                        <option value="">Select semester</option>
+                        {semesterOptions.map((semester) => (
+                          <option key={semester} value={semester}>
+                            Semester {semester}
+                          </option>
+                        ))}
+                      </select>
+                    </FormField>
+
+                    <FormField id="semester-resource-link" label="Resource link">
+                      <div className="relative">
+                        <FiExternalLink
+                          className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"
+                          aria-hidden="true"
+                        />
+                        <input
+                          id="semester-resource-link"
+                          name="links"
+                          value={semesterResourceForm.links}
+                          onChange={handleSemesterResourceInputChange}
+                          className="form-field pl-12"
+                          placeholder="https://drive.google.com/..."
+                          type="url"
+                          required
+                        />
+                      </div>
+                    </FormField>
+                  </div>
+
+                  <div className="rounded-lg border border-slate-200 p-4 dark:border-slate-800">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <p className="text-sm font-bold text-slate-950 dark:text-white">
+                          Covered courses
+                        </p>
+                        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                          {semesterCoursesLoading
+                            ? "Loading courses..."
+                            : semesterResourceForm.semester
+                              ? `${selectedSemesterCourses.length} of ${semesterCourses.length} selected`
+                              : "Select a semester to load courses"}
+                        </p>
+                      </div>
+                      {semesterCourses.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          <button type="button" onClick={selectAllSemesterCourses} className="btn-secondary">
+                            Select all
+                          </button>
+                          <button type="button" onClick={clearSemesterCourses} className="btn-secondary">
+                            Clear
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="mt-4">
+                      {semesterCoursesLoading ? (
+                        <div className="rounded-lg bg-slate-50 px-4 py-5 text-sm font-semibold text-slate-600 dark:bg-slate-900 dark:text-slate-300">
+                          Loading semester courses...
+                        </div>
+                      ) : semesterCourses.length > 0 ? (
+                        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                          {semesterCourses.map((courseItem) => {
+                            const checked = selectedSemesterCourses.includes(courseItem.code);
+                            return (
+                              <label
+                                key={courseItem.code}
+                                className={`flex min-h-24 cursor-pointer gap-3 rounded-lg border p-4 transition ${
+                                  checked
+                                    ? "border-blue-400 bg-blue-50 text-blue-950 dark:border-blue-500 dark:bg-blue-500/10 dark:text-blue-100"
+                                    : "border-slate-200 bg-white text-slate-900 hover:border-blue-300 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={checked}
+                                  onChange={() => toggleSemesterCourse(courseItem.code)}
+                                  className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                />
+                                <span className="min-w-0">
+                                  <span className="safe-text block text-base font-black">
+                                    {courseItem.code}
+                                  </span>
+                                  <span className="safe-text mt-1 block text-sm text-slate-600 dark:text-slate-300">
+                                    {courseItem.title || courseItem.short_name || "Course"}
+                                  </span>
+                                </span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="rounded-lg bg-slate-50 px-4 py-5 text-sm font-semibold text-slate-600 dark:bg-slate-900 dark:text-slate-300">
+                          No courses loaded yet.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end">
+                    <button
+                      type="submit"
+                      disabled={
+                        semesterResourceSubmitting ||
+                        semesterCoursesLoading ||
+                        selectedSemesterCourses.length === 0
+                      }
+                      className="btn-primary"
+                    >
+                      <FiPlus aria-hidden="true" />
+                      {semesterResourceSubmitting ? "Adding..." : "Add semester resource"}
+                    </button>
+                  </div>
+                </form>
+              </section>
+              )}
 
               <section className="surface-card p-5">
                 <ResourceBrowser
@@ -851,6 +1169,19 @@ function getResourceSubmitError(error) {
   if (status === 500) return "Internal server error. Please try again later.";
   if (error.request) return "Network error: unable to connect to the server.";
   return error.response?.data?.message || error.message || "Could not submit resource.";
+}
+
+function getSemesterResourceError(error) {
+  const status = error.response?.status;
+  if (status === 409) {
+    const blockedCourses = error.response?.data?.blockedCourses ?? [];
+    const courseList = blockedCourses.map((courseItem) => courseItem.course).join(", ");
+    return `${error.response?.data?.message || "Some courses reached the resource limit."}${
+      courseList ? ` Limit reached for: ${courseList}.` : ""
+    }`;
+  }
+
+  return getResourceSubmitError(error);
 }
 
 export default EditDetails;

@@ -61,6 +61,7 @@ function Resources() {
             title="Resource Library"
             description="Use search and sorting to find resources quickly. Click the rating panel on any card to review feedback or add your own."
             limit={9}
+            enableCourseFilters
           />
         </div>
       </PageShell>

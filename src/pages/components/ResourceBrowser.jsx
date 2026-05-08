@@ -31,6 +31,8 @@ const SORT_OPTIONS = [
 ];
 
 const RATING_OPTIONS = [-1, 0, 1, 2, 3, 4, 5];
+const SEMESTER_FILTER_OPTIONS = Array.from({ length: 8 }, (_, index) => String(index + 1));
+const CREDIT_FILTER_OPTIONS = ["1", "1.5", "2", "2.5", "3", "3.5", "4"];
 
 /**
  * Searchable, sortable, paginated resource list used across resource surfaces.
@@ -44,6 +46,7 @@ function ResourceBrowser({
   limit = 6,
   refreshKey = 0,
   manageable = false,
+  enableCourseFilters = false,
   onManagedChange = () => {},
 }) {
   const { isLoggedIn, user } = useAuth();
@@ -58,6 +61,8 @@ function ResourceBrowser({
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [sort, setSort] = useState("latest");
+  const [semesterFilter, setSemesterFilter] = useState("");
+  const [creditFilter, setCreditFilter] = useState("");
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState(null);
   const [selectedResource, setSelectedResource] = useState(null);
@@ -86,6 +91,8 @@ function ResourceBrowser({
           sort,
           search,
           course: courseCode,
+          semester: enableCourseFilters ? semesterFilter : "",
+          credit: enableCourseFilters ? creditFilter : "",
         },
       });
 
@@ -109,11 +116,16 @@ function ResourceBrowser({
   useEffect(() => {
     fetchResources(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [courseCode, mine, sort, search, limit, refreshKey]);
+  }, [courseCode, mine, sort, search, semesterFilter, creditFilter, limit, refreshKey]);
 
   const handleSearchSubmit = (event) => {
     event.preventDefault();
     setSearch(searchInput.trim());
+  };
+
+  const handleClearFilters = () => {
+    setSemesterFilter("");
+    setCreditFilter("");
   };
 
   const handlePageChange = (nextPage) => {
@@ -267,10 +279,7 @@ function ResourceBrowser({
         }
       />
 
-      <form
-        onSubmit={handleSearchSubmit}
-        className="mt-6 grid gap-4 lg:grid-cols-[1fr_220px_auto] lg:items-end"
-      >
+      <form onSubmit={handleSearchSubmit} className="mt-6 grid gap-4 lg:items-end">
         <FormField id={`${controlPrefix}-resource-search`} label="Search resources">
           <div className="relative">
             <FiSearch
@@ -288,26 +297,88 @@ function ResourceBrowser({
           </div>
         </FormField>
 
-        <FormField id={`${controlPrefix}-resource-sort`} label="Sort">
-          <select
-            id={`${controlPrefix}-resource-sort`}
-            value={sort}
-            onChange={(event) => setSort(event.target.value)}
-            className="form-field"
-          >
-            {SORT_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </FormField>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-[180px_160px_160px_auto_auto] xl:items-end">
+          <FormField id={`${controlPrefix}-resource-sort`} label="Sort">
+            <select
+              id={`${controlPrefix}-resource-sort`}
+              value={sort}
+              onChange={(event) => setSort(event.target.value)}
+              className="form-field"
+            >
+              {SORT_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </FormField>
 
-        <button type="submit" className="btn-primary" disabled={loading}>
-          <FiSearch aria-hidden="true" />
-          Search
-        </button>
+          {enableCourseFilters && (
+            <>
+              <FormField id={`${controlPrefix}-resource-semester-filter`} label="Semester filter">
+                <select
+                  id={`${controlPrefix}-resource-semester-filter`}
+                  value={semesterFilter}
+                  onChange={(event) => setSemesterFilter(event.target.value)}
+                  className="form-field"
+                >
+                  <option value="">All semesters</option>
+                  {SEMESTER_FILTER_OPTIONS.map((semester) => (
+                    <option key={semester} value={semester}>
+                      Semester {semester}
+                    </option>
+                  ))}
+                </select>
+              </FormField>
+
+              <FormField id={`${controlPrefix}-resource-credit-filter`} label="Credit filter">
+                <select
+                  id={`${controlPrefix}-resource-credit-filter`}
+                  value={creditFilter}
+                  onChange={(event) => setCreditFilter(event.target.value)}
+                  className="form-field"
+                >
+                  <option value="">All credits</option>
+                  {CREDIT_FILTER_OPTIONS.map((credit) => (
+                    <option key={credit} value={credit}>
+                      {credit} credit{credit === "1" ? "" : "s"}
+                    </option>
+                  ))}
+                </select>
+              </FormField>
+
+              <button
+                type="button"
+                onClick={handleClearFilters}
+                disabled={!semesterFilter && !creditFilter}
+                className="btn-secondary"
+              >
+                Clear filters
+              </button>
+            </>
+          )}
+
+          <button type="submit" className="btn-primary" disabled={loading}>
+            <FiSearch aria-hidden="true" />
+            Search
+          </button>
+        </div>
       </form>
+
+      {enableCourseFilters && (semesterFilter || creditFilter) && (
+        <div className="mt-4 flex flex-wrap gap-2">
+          {semesterFilter && (
+            <span className="status-pill border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200">
+              Semester {semesterFilter}
+            </span>
+          )}
+          {creditFilter && (
+            <span className="status-pill border-teal-200 bg-teal-50 text-teal-800 dark:border-teal-500/30 dark:bg-teal-500/10 dark:text-teal-200">
+              {creditFilter} credit{creditFilter === "1" ? "" : "s"}
+            </span>
+          )}
+        </div>
+      )}
 
       {notice && (
         <div className="mt-5">
