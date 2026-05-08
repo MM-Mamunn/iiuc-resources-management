@@ -7,6 +7,7 @@ import {
   FiChevronRight,
   FiEdit3,
   FiExternalLink,
+  FiMail,
   FiMessageSquare,
   FiRefreshCw,
   FiSave,
@@ -63,6 +64,12 @@ function ResourceBrowser({
   const [sort, setSort] = useState("latest");
   const [semesterFilter, setSemesterFilter] = useState("");
   const [creditFilter, setCreditFilter] = useState("");
+  const [contributorFilterMode, setContributorFilterMode] = useState("off");
+  const [contributorInput, setContributorInput] = useState("");
+  const [contributorId, setContributorId] = useState("");
+  const [contributorProfile, setContributorProfile] = useState(null);
+  const [contributorLoading, setContributorLoading] = useState(false);
+  const [contributorNotice, setContributorNotice] = useState(null);
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState(null);
   const [selectedResource, setSelectedResource] = useState(null);
@@ -93,6 +100,7 @@ function ResourceBrowser({
           course: courseCode,
           semester: enableCourseFilters ? semesterFilter : "",
           credit: enableCourseFilters ? creditFilter : "",
+          by: enableCourseFilters ? contributorId : "",
         },
       });
 
@@ -116,7 +124,71 @@ function ResourceBrowser({
   useEffect(() => {
     fetchResources(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [courseCode, mine, sort, search, semesterFilter, creditFilter, limit, refreshKey]);
+  }, [
+    courseCode,
+    mine,
+    sort,
+    search,
+    semesterFilter,
+    creditFilter,
+    contributorId,
+    limit,
+    refreshKey,
+  ]);
+
+  useEffect(() => {
+    if (!enableCourseFilters || contributorFilterMode !== "by") {
+      setContributorId("");
+      setContributorProfile(null);
+      setContributorNotice(null);
+      setContributorLoading(false);
+      return undefined;
+    }
+
+    const nextContributorId = contributorInput.trim().toUpperCase();
+
+    if (!nextContributorId) {
+      setContributorId("");
+      setContributorProfile(null);
+      setContributorNotice(null);
+      setContributorLoading(false);
+      return undefined;
+    }
+
+    let ignoreResult = false;
+    const timer = window.setTimeout(async () => {
+      setContributorLoading(true);
+      setContributorNotice(null);
+      setContributorId(nextContributorId);
+
+      try {
+        const response = await api.get(
+          `/api/resources/contributor/${encodeURIComponent(nextContributorId)}`,
+        );
+
+        if (!ignoreResult) {
+          setContributorProfile(response.data?.row ?? null);
+        }
+      } catch (contributorError) {
+        if (!ignoreResult) {
+          setContributorProfile(null);
+          setContributorNotice({
+            type: contributorError.response?.status === 404 ? "info" : "error",
+            text: getContributorError(contributorError),
+          });
+        }
+      } finally {
+        if (!ignoreResult) {
+          setContributorLoading(false);
+        }
+      }
+    }, 350);
+
+    return () => {
+      ignoreResult = true;
+      window.clearTimeout(timer);
+    };
+  }, [enableCourseFilters, contributorFilterMode, contributorInput]);
 
   const handleSearchSubmit = (event) => {
     event.preventDefault();
@@ -126,6 +198,19 @@ function ResourceBrowser({
   const handleClearFilters = () => {
     setSemesterFilter("");
     setCreditFilter("");
+    setContributorFilterMode("off");
+    setContributorInput("");
+    setContributorId("");
+    setContributorProfile(null);
+    setContributorNotice(null);
+  };
+
+  const clearContributorFilter = () => {
+    setContributorFilterMode("off");
+    setContributorInput("");
+    setContributorId("");
+    setContributorProfile(null);
+    setContributorNotice(null);
   };
 
   const handlePageChange = (nextPage) => {
@@ -297,7 +382,7 @@ function ResourceBrowser({
           </div>
         </FormField>
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-[180px_160px_160px_auto_auto] xl:items-end">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-[180px_160px_160px_190px_auto_auto] xl:items-end">
           <FormField id={`${controlPrefix}-resource-sort`} label="Sort">
             <select
               id={`${controlPrefix}-resource-sort`}
@@ -347,10 +432,28 @@ function ResourceBrowser({
                 </select>
               </FormField>
 
+              <FormField id={`${controlPrefix}-resource-contributor-mode`} label="Contributor filter">
+                <select
+                  id={`${controlPrefix}-resource-contributor-mode`}
+                  value={contributorFilterMode}
+                  onChange={(event) => {
+                    const nextMode = event.target.value;
+                    setContributorFilterMode(nextMode);
+                    if (nextMode !== "by") {
+                      clearContributorFilter();
+                    }
+                  }}
+                  className="form-field"
+                >
+                  <option value="off">All contributors</option>
+                  <option value="by">By student ID</option>
+                </select>
+              </FormField>
+
               <button
                 type="button"
                 onClick={handleClearFilters}
-                disabled={!semesterFilter && !creditFilter}
+                disabled={!semesterFilter && !creditFilter && !contributorId && contributorFilterMode === "off"}
                 className="btn-secondary"
               >
                 Clear filters
@@ -365,7 +468,49 @@ function ResourceBrowser({
         </div>
       </form>
 
-      {enableCourseFilters && (semesterFilter || creditFilter) && (
+      {enableCourseFilters && contributorFilterMode === "by" && (
+        <section className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900">
+          <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
+            <FormField
+              id={`${controlPrefix}-resource-contributor-input`}
+              label="Contributor ID"
+              helper="Filter resources shared by a specific student."
+            >
+              <input
+                id={`${controlPrefix}-resource-contributor-input`}
+                value={contributorInput}
+                onChange={(event) => setContributorInput(event.target.value.toUpperCase())}
+                className="form-field uppercase"
+                placeholder="Example: C221046"
+                autoComplete="off"
+              />
+            </FormField>
+            <button type="button" onClick={clearContributorFilter} className="btn-secondary">
+              Clear contributor
+            </button>
+          </div>
+
+          <div className="mt-4">
+            {contributorLoading ? (
+              <div className="rounded-lg bg-white px-4 py-4 text-sm font-semibold text-slate-600 dark:bg-slate-950 dark:text-slate-300">
+                Loading contributor profile...
+              </div>
+            ) : contributorProfile ? (
+              <ContributorPreview profile={contributorProfile} />
+            ) : contributorNotice ? (
+              <Notice type={contributorNotice.type} onDismiss={() => setContributorNotice(null)}>
+                {contributorNotice.text}
+              </Notice>
+            ) : (
+              <div className="rounded-lg bg-white px-4 py-4 text-sm font-semibold text-slate-500 dark:bg-slate-950 dark:text-slate-400">
+                Enter a student ID to preview the contributor.
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
+      {enableCourseFilters && (semesterFilter || creditFilter || contributorId) && (
         <div className="mt-4 flex flex-wrap gap-2">
           {semesterFilter && (
             <span className="status-pill border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200">
@@ -375,6 +520,11 @@ function ResourceBrowser({
           {creditFilter && (
             <span className="status-pill border-teal-200 bg-teal-50 text-teal-800 dark:border-teal-500/30 dark:bg-teal-500/10 dark:text-teal-200">
               {creditFilter} credit{creditFilter === "1" ? "" : "s"}
+            </span>
+          )}
+          {contributorId && (
+            <span className="status-pill border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+              By {contributorId}
             </span>
           )}
         </div>
@@ -621,6 +771,35 @@ function ResourceCard({
         </div>
       </div>
     </article>
+  );
+}
+
+function ContributorPreview({ profile }) {
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950">
+      <div className="flex items-center gap-4">
+        <Avatar image={profile.profilePic} name={profile.name || profile.id} />
+        <div className="min-w-0">
+          <p className="safe-text text-base font-black text-slate-950 dark:text-white">
+            {profile.name || "Student"}
+          </p>
+          {profile.email && (
+            <p className="safe-text mt-1 flex items-center gap-2 text-sm font-semibold text-slate-600 dark:text-slate-300">
+              <FiMail className="shrink-0 text-slate-400 dark:text-slate-500" aria-hidden="true" />
+              {profile.email}
+            </p>
+          )}
+          <div className="mt-2 flex flex-wrap gap-2">
+            <span className="status-pill border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
+              ID {profile.id}
+            </span>
+            <span className="status-pill border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200">
+              Section {profile.sec || "N/A"}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -906,6 +1085,15 @@ function getRatingError(error) {
   if (status === 500) return "Internal server error.";
   if (error.request) return "Network error: unable to connect to the server.";
   return error.response?.data?.message || error.message || "Could not save rating.";
+}
+
+function getContributorError(error) {
+  const status = error.response?.status;
+  if (status === 404) return "No student found for this ID.";
+  if (status === 400) return error.response?.data?.message || "Enter a valid student ID.";
+  if (status === 500) return "Internal server error.";
+  if (error.request) return "Network error: unable to connect to the server.";
+  return error.response?.data?.message || error.message || "Could not load contributor.";
 }
 
 export default ResourceBrowser;
