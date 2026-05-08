@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import Cookies from "js-cookie";
 import {
@@ -12,9 +12,11 @@ import {
   FiEye,
   FiEyeOff,
   FiLock,
+  FiMessageSquare,
   FiPlus,
   FiSave,
   FiSearch,
+  FiSend,
   FiUser,
 } from "react-icons/fi";
 import api from "../../api";
@@ -48,9 +50,22 @@ const emptySemesterResourceForm = {
   links: "",
 };
 
+const emptySubmissionForm = {
+  type: "CR",
+  description: "",
+};
+
 const semesterOptions = Array.from({ length: 8 }, (_, index) => index + 1);
 
-const profileSectionKeys = new Set(["details", "resources", "settings"]);
+const profileSectionKeys = new Set(["details", "resources", "applications", "settings"]);
+const submissionTypes = ["CR", "Feedback", "Suggestion", "Complaint", "Request"];
+const SUBMISSION_PAGE_SIZE = 5;
+const DEFAULT_SUBMISSION_PAGINATION = {
+  page: 1,
+  limit: SUBMISSION_PAGE_SIZE,
+  total: 0,
+  totalPages: 1,
+};
 
 const resourceEntryModes = [
   {
@@ -109,7 +124,47 @@ function EditDetails() {
   const [semesterNotice, setSemesterNotice] = useState(null);
   const [resourceRefreshKey, setResourceRefreshKey] = useState(0);
   const [resourceCountRefreshKey, setResourceCountRefreshKey] = useState(0);
+  const [submissionForm, setSubmissionForm] = useState(emptySubmissionForm);
+  const [submissionSubmitting, setSubmissionSubmitting] = useState(false);
+  const [submissionNotice, setSubmissionNotice] = useState(null);
+  const [submissions, setSubmissions] = useState([]);
+  const [submissionsLoading, setSubmissionsLoading] = useState(false);
+  const [submissionPagination, setSubmissionPagination] = useState(DEFAULT_SUBMISSION_PAGINATION);
   const { setUser } = useAuth();
+
+  const fetchMySubmissions = useCallback(async (page = 1) => {
+    setSubmissionsLoading(true);
+
+    try {
+      const response = await api.get("/api/submissions/mine", {
+        params: { page, limit: SUBMISSION_PAGE_SIZE },
+      });
+      const rows = response.data?.rows ?? [];
+      const pagination = response.data?.pagination ?? {
+        page,
+        limit: SUBMISSION_PAGE_SIZE,
+        total: rows.length,
+        totalPages: Math.max(Math.ceil(rows.length / SUBMISSION_PAGE_SIZE), 1),
+      };
+
+      if (rows.length === 0 && pagination.total > 0 && page > 1) {
+        await fetchMySubmissions(page - 1);
+        return;
+      }
+
+      setSubmissions(rows);
+      setSubmissionPagination(pagination);
+    } catch (submissionError) {
+      setSubmissions([]);
+      setSubmissionPagination(DEFAULT_SUBMISSION_PAGINATION);
+      setSubmissionNotice({
+        type: "error",
+        text: getSubmissionError(submissionError),
+      });
+    } finally {
+      setSubmissionsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     fetchProfile();
@@ -120,6 +175,12 @@ function EditDetails() {
       setActiveProfileSection(requestedSection);
     }
   }, [requestedSection]);
+
+  useEffect(() => {
+    if (activeProfileSection === "applications") {
+      fetchMySubmissions(1);
+    }
+  }, [activeProfileSection, fetchMySubmissions]);
 
   useEffect(() => {
     return () => {
@@ -229,6 +290,12 @@ function EditDetails() {
       title: "Resources",
       description: "Share course links and review your submissions.",
       icon: FiBookOpen,
+    },
+    {
+      key: "applications",
+      title: "Applications & Feedback",
+      description: "Send requests, feedback, complaints, and CR applications.",
+      icon: FiMessageSquare,
     },
     {
       key: "settings",
@@ -548,6 +615,46 @@ function EditDetails() {
     setSemesterNotice(null);
   };
 
+  const handleSubmissionFormChange = (field, value) => {
+    setSubmissionForm((current) => ({
+      ...current,
+      [field]: field === "description" ? value.slice(0, 200) : value,
+    }));
+    setSubmissionNotice(null);
+  };
+
+  const handleSubmissionSubmit = async (event) => {
+    event.preventDefault();
+    const description = submissionForm.description.trim();
+
+    if (!description) {
+      setSubmissionNotice({ type: "error", text: "Description is required." });
+      return;
+    }
+
+    if (description.length > 200) {
+      setSubmissionNotice({ type: "error", text: "Description must be 200 characters or fewer." });
+      return;
+    }
+
+    setSubmissionSubmitting(true);
+    setSubmissionNotice(null);
+
+    try {
+      await api.post("/api/submissions", {
+        type: submissionForm.type,
+        description,
+      });
+      setSubmissionForm((current) => ({ ...current, description: "" }));
+      setSubmissionNotice({ type: "success", text: "Your submission was sent." });
+      await fetchMySubmissions(1);
+    } catch (submissionError) {
+      setSubmissionNotice({ type: "error", text: getSubmissionError(submissionError) });
+    } finally {
+      setSubmissionSubmitting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen">
       <Header />
@@ -568,7 +675,7 @@ function EditDetails() {
           </div>
         )}
 
-        <section className="mt-6 grid gap-4 md:grid-cols-3">
+        <section className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <MetricCard
             icon={<FiUser className="h-5 w-5" aria-hidden="true" />}
             label="Student ID"
@@ -1004,6 +1111,22 @@ function EditDetails() {
               </>
               )}
 
+              {activeProfileSection === "applications" && (
+                <ApplicationsFeedbackSection
+                  form={submissionForm}
+                  submissions={submissions}
+                  loading={submissionsLoading}
+                  submitting={submissionSubmitting}
+                  notice={submissionNotice}
+                  pagination={submissionPagination}
+                  onFormChange={handleSubmissionFormChange}
+                  onSubmit={handleSubmissionSubmit}
+                  onRefresh={() => fetchMySubmissions(submissionPagination.page)}
+                  onNoticeDismiss={() => setSubmissionNotice(null)}
+                  onPageChange={fetchMySubmissions}
+                />
+              )}
+
               {activeProfileSection === "settings" && (
               <section className="surface-card p-5">
                 <SectionHeading
@@ -1073,6 +1196,188 @@ function ProfileNavCard({ item, active, onSelect }) {
         {item.description}
       </p>
     </button>
+  );
+}
+
+function ApplicationsFeedbackSection({
+  form,
+  submissions,
+  loading,
+  submitting,
+  notice,
+  pagination,
+  onFormChange,
+  onSubmit,
+  onRefresh,
+  onNoticeDismiss,
+  onPageChange,
+}) {
+  return (
+    <>
+      <section className="surface-card p-5">
+        <SectionHeading
+          kicker="Applications & Feedback"
+          title="Send a Submission"
+          description="Apply for CR or send feedback, suggestions, complaints, and requests to the admin team."
+        />
+
+        {notice && (
+          <div className="mt-5">
+            <Notice type={notice.type} onDismiss={onNoticeDismiss}>
+              {notice.text}
+            </Notice>
+          </div>
+        )}
+
+        <form onSubmit={onSubmit} className="mt-6 grid gap-5">
+          <div className="grid gap-5 lg:grid-cols-[240px_1fr]">
+            <FormField id="submission-type" label="Submission type">
+              <select
+                id="submission-type"
+                value={form.type}
+                onChange={(event) => onFormChange("type", event.target.value)}
+                className="form-field"
+              >
+                {submissionTypes.map((type) => (
+                  <option key={type} value={type}>
+                    {type === "CR" ? "CR application" : type}
+                  </option>
+                ))}
+              </select>
+            </FormField>
+
+            <FormField
+              id="submission-description"
+              label="Description"
+              helper={`${form.description.length}/200 characters`}
+            >
+              <textarea
+                id="submission-description"
+                value={form.description}
+                onChange={(event) => onFormChange("description", event.target.value)}
+                maxLength={200}
+                className="form-field min-h-28 resize-y"
+                placeholder="Write your message..."
+                required
+              />
+            </FormField>
+          </div>
+
+          <div className="flex justify-end">
+            <button type="submit" disabled={submitting} className="btn-primary">
+              <FiSend aria-hidden="true" />
+              {submitting ? "Sending..." : "Submit"}
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <section className="table-shell">
+        <div className="flex flex-col gap-4 border-b border-slate-200 bg-white px-5 py-5 sm:flex-row sm:items-end sm:justify-between dark:border-slate-800 dark:bg-slate-900">
+          <div>
+            <p className="section-kicker">Tracking</p>
+            <h2 className="mt-1 text-2xl font-bold text-slate-950 dark:text-white">
+              My submissions
+            </h2>
+            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+              {pagination.total} submission{pagination.total === 1 ? "" : "s"} found
+            </p>
+          </div>
+          <button type="button" onClick={onRefresh} className="btn-secondary" disabled={loading}>
+            <FiSearch aria-hidden="true" />
+            Refresh
+          </button>
+        </div>
+
+        {loading ? (
+          <LoadingState label="Loading submissions..." />
+        ) : submissions.length === 0 ? (
+          <div className="px-5 py-10 text-center text-sm font-semibold text-slate-500 dark:text-slate-400">
+            No submissions yet.
+          </div>
+        ) : (
+          <div className="grid gap-4 p-5">
+            {submissions.map((submission) => (
+              <article
+                key={submission.id}
+                className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950"
+              >
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="status-pill border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200">
+                        {submission.type}
+                      </span>
+                      <SubmissionStatus resolved={submission.resolved} />
+                    </div>
+                    <p className="mt-3 break-words text-sm leading-6 text-slate-700 dark:text-slate-300">
+                      {submission.description}
+                    </p>
+                  </div>
+                  <span className="shrink-0 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                    {formatSubmissionDate(submission.createdAt)}
+                  </span>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+
+        <SubmissionPagination
+          pagination={pagination}
+          disabled={loading}
+          onPageChange={onPageChange}
+        />
+      </section>
+    </>
+  );
+}
+
+function SubmissionStatus({ resolved }) {
+  return (
+    <span
+      className={
+        resolved
+          ? "status-pill border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200"
+          : "status-pill border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200"
+      }
+    >
+      {resolved ? "Resolved" : "Pending"}
+    </span>
+  );
+}
+
+function SubmissionPagination({ pagination, disabled, onPageChange }) {
+  const page = pagination?.page || 1;
+  const totalPages = pagination?.totalPages || 1;
+  const total = pagination?.total || 0;
+
+  if (total === 0) return null;
+
+  return (
+    <div className="flex flex-col gap-3 border-t border-slate-200 px-5 py-4 text-sm sm:flex-row sm:items-center sm:justify-between dark:border-slate-800">
+      <p className="font-semibold text-slate-600 dark:text-slate-300">
+        Page {page} of {totalPages}
+      </p>
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={() => onPageChange(page - 1)}
+          disabled={disabled || page <= 1}
+          className="btn-secondary"
+        >
+          Previous
+        </button>
+        <button
+          type="button"
+          onClick={() => onPageChange(page + 1)}
+          disabled={disabled || page >= totalPages}
+          className="btn-secondary"
+        >
+          Next
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -1182,6 +1487,31 @@ function getSemesterResourceError(error) {
   }
 
   return getResourceSubmitError(error);
+}
+
+function formatSubmissionDate(value) {
+  if (!value) return "No date";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "No date";
+
+  return date.toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function getSubmissionError(error) {
+  const status = error.response?.status;
+  if (status === 400) return error.response?.data?.message || "Please check your submission.";
+  if (status === 401) return "Unauthorized. Please login again.";
+  if (status === 403) return "Access forbidden.";
+  if (status === 500) return "Internal server error. Please try again later.";
+  if (error.request) return "Network error: unable to connect to the server.";
+  return error.response?.data?.message || error.message || "Could not process submission.";
 }
 
 export default EditDetails;

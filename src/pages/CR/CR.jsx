@@ -6,11 +6,13 @@ import {
   FiArrowRight,
   FiBookOpen,
   FiCalendar,
+  FiCheckCircle,
   FiEdit3,
   FiGrid,
   FiPlus,
   FiSearch,
   FiTrash2,
+  FiUserPlus,
 } from "react-icons/fi";
 import api from "../../api";
 import { useActiveSession } from "../../App";
@@ -33,6 +35,34 @@ const dayNames = {
   4: "Thursday",
   5: "Friday",
   6: "Saturday",
+};
+
+const emptyFacultyForm = {
+  code: "",
+  name: "",
+  desig: "",
+  type: "",
+  email: "",
+  phone: "",
+};
+
+const FACULTY_SEARCH_MODES = {
+  code: {
+    label: "Code",
+    placeholder: "Search by faculty code",
+    suggestionEndpoint: "/api/lookLike/facultyLookLike",
+    searchEndpoint: (query) => `/api/teacher/search/${encodeURIComponent(query)}`,
+    getSuggestionValue: (faculty) => faculty.code || "",
+    maxLength: 20,
+  },
+  name: {
+    label: "Name",
+    placeholder: "Search by faculty name",
+    suggestionEndpoint: "/api/lookLike/facultyNameLookLike",
+    searchEndpoint: (query) => `/api/teacher/search/name/${encodeURIComponent(query)}`,
+    getSuggestionValue: (faculty) => faculty.name || "",
+    maxLength: 80,
+  },
 };
 
 /**
@@ -75,6 +105,13 @@ function CR() {
       to: "/courseadddrop",
       icon: FiBookOpen,
       tone: "amber",
+    },
+    {
+      title: "Faculty management",
+      description: "Add new faculty or update teacher information.",
+      action: () => document.getElementById("faculty-management")?.scrollIntoView({ behavior: "smooth" }),
+      icon: FiUserPlus,
+      tone: "teal",
     },
   ];
 
@@ -221,15 +258,15 @@ function CR() {
           </div>
         )}
 
-        <section className="mt-6 grid gap-4 md:grid-cols-3">
+        <section className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {navigationCards.map((item) => {
             const Icon = item.icon;
 
             return (
               <button
-                key={item.to}
+                key={item.to || item.title}
                 type="button"
-                onClick={() => navigate(item.to)}
+                onClick={() => (item.action ? item.action() : navigate(item.to))}
                 className="interactive-card group p-5 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
               >
                 <div className="flex items-start justify-between gap-4">
@@ -253,6 +290,8 @@ function CR() {
             );
           })}
         </section>
+
+        <FacultyManagementSection />
 
         <section className="mt-6 grid gap-4 md:grid-cols-3">
           <MetricCard
@@ -332,6 +371,412 @@ function CR() {
 /**
  * One label/value row in a CR course card.
  */
+function FacultyManagementSection() {
+  const [addForm, setAddForm] = useState(emptyFacultyForm);
+  const [addSubmitting, setAddSubmitting] = useState(false);
+  const [addNotice, setAddNotice] = useState(null);
+  const [searchMode, setSearchMode] = useState("code");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchSuggestions, setSearchSuggestions] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [updateForm, setUpdateForm] = useState(emptyFacultyForm);
+  const [selectedFacultyCode, setSelectedFacultyCode] = useState("");
+  const [updateSubmitting, setUpdateSubmitting] = useState(false);
+  const [updateNotice, setUpdateNotice] = useState(null);
+  const searchConfig = FACULTY_SEARCH_MODES[searchMode];
+
+  const handleAddFormChange = (field, value) => {
+    setAddForm((current) => ({
+      ...current,
+      [field]: field === "code" ? value.toUpperCase() : value,
+    }));
+    setAddNotice(null);
+  };
+
+  const handleUpdateFormChange = (field, value) => {
+    setUpdateForm((current) => ({
+      ...current,
+      [field]: field === "code" ? value.toUpperCase() : value,
+    }));
+    setUpdateNotice(null);
+  };
+
+  const handleAddFaculty = async (event) => {
+    event.preventDefault();
+
+    if (!addForm.code.trim()) {
+      setAddNotice({ type: "error", text: "Faculty code is required." });
+      return;
+    }
+
+    setAddSubmitting(true);
+    setAddNotice(null);
+
+    try {
+      const response = await api.post("/api/cr/faculty", getFacultyPayload(addForm));
+      const savedFaculty = response.data?.row;
+
+      setAddForm(emptyFacultyForm);
+      setAddNotice({
+        type: "success",
+        text: `${formatFacultyLabel(savedFaculty)} added successfully.`,
+      });
+    } catch (facultyError) {
+      setAddNotice({ type: "error", text: getFacultyError(facultyError) });
+    } finally {
+      setAddSubmitting(false);
+    }
+  };
+
+  const handleSearchModeChange = (nextMode) => {
+    if (nextMode === searchMode) return;
+
+    setSearchMode(nextMode);
+    setSearchQuery("");
+    setSearchSuggestions([]);
+    setSelectedFacultyCode("");
+    setUpdateForm(emptyFacultyForm);
+    setUpdateNotice(null);
+  };
+
+  const handleSearchChange = async (event) => {
+    const value = event.target.value;
+    setSearchQuery(value);
+    setSearchSuggestions([]);
+    setSelectedFacultyCode("");
+    setUpdateForm(emptyFacultyForm);
+    setUpdateNotice(null);
+
+    if (value.length < 1 || value.length > searchConfig.maxLength) {
+      return;
+    }
+
+    setSearchLoading(true);
+    try {
+      const response = await api.get(
+        `${searchConfig.suggestionEndpoint}/${encodeURIComponent(value)}`,
+      );
+      setSearchSuggestions(response.data?.rows ?? []);
+    } catch {
+      setSearchSuggestions([]);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  const loadFacultyForUpdate = async (faculty) => {
+    const facultyCode = faculty?.code || "";
+    setSearchLoading(true);
+    setUpdateNotice(null);
+
+    try {
+      const endpoint = facultyCode
+        ? `/api/teacher/search/${encodeURIComponent(facultyCode)}`
+        : searchConfig.searchEndpoint(searchConfig.getSuggestionValue(faculty));
+      const response = await api.get(endpoint, { params: { limit: 1 } });
+      const selectedFaculty = response.data?.rows?.[0] || faculty;
+
+      if (!selectedFaculty?.code) {
+        setUpdateNotice({ type: "error", text: "Could not load this faculty." });
+        return;
+      }
+
+      setUpdateForm(getFacultyFormFromRow(selectedFaculty));
+      setSelectedFacultyCode(selectedFaculty.code);
+      setSearchQuery(searchConfig.getSuggestionValue(selectedFaculty));
+      setSearchSuggestions([]);
+    } catch (facultyError) {
+      setUpdateNotice({ type: "error", text: getFacultyError(facultyError) });
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  const handleSearchSubmit = async (event) => {
+    event.preventDefault();
+    const query = searchQuery.trim();
+
+    if (!query) {
+      setUpdateNotice({ type: "error", text: "Enter a faculty code or name." });
+      return;
+    }
+
+    setSearchLoading(true);
+    setUpdateNotice(null);
+
+    try {
+      const response = await api.get(searchConfig.searchEndpoint(query), {
+        params: { limit: 5 },
+      });
+      const rows = response.data?.rows ?? [];
+
+      if (rows.length === 0) {
+        setSearchSuggestions([]);
+        setUpdateForm(emptyFacultyForm);
+        setSelectedFacultyCode("");
+        setUpdateNotice({ type: "info", text: "No matching faculty found." });
+        return;
+      }
+
+      setSearchSuggestions(rows);
+      await loadFacultyForUpdate(rows[0]);
+    } catch (facultyError) {
+      setUpdateNotice({ type: "error", text: getFacultyError(facultyError) });
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  const handleUpdateFaculty = async (event) => {
+    event.preventDefault();
+
+    if (!selectedFacultyCode) {
+      setUpdateNotice({ type: "error", text: "Search and select a faculty first." });
+      return;
+    }
+
+    setUpdateSubmitting(true);
+    setUpdateNotice(null);
+
+    try {
+      const response = await api.put(
+        `/api/cr/faculty/${encodeURIComponent(selectedFacultyCode)}`,
+        getFacultyPayload(updateForm),
+      );
+      const savedFaculty = response.data?.row;
+
+      setUpdateForm(getFacultyFormFromRow(savedFaculty));
+      setSelectedFacultyCode(savedFaculty?.code || selectedFacultyCode);
+      setUpdateNotice({
+        type: "success",
+        text: `${formatFacultyLabel(savedFaculty)} updated successfully.`,
+      });
+    } catch (facultyError) {
+      setUpdateNotice({ type: "error", text: getFacultyError(facultyError) });
+    } finally {
+      setUpdateSubmitting(false);
+    }
+  };
+
+  return (
+    <section id="faculty-management" className="mt-8 surface-card p-6 sm:p-8">
+      <SectionHeading
+        kicker="Faculty management"
+        title="Add or Update Faculty"
+        description="Create faculty records for routine entry, or search by name/code and update existing teacher information."
+      />
+
+      <div className="mt-6 grid gap-6 xl:grid-cols-2">
+        <div className="rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-950">
+          <SectionHeading kicker="Add faculty" title="New Faculty Entry" />
+
+          {addNotice && (
+            <div className="mt-5">
+              <Notice type={addNotice.type} onDismiss={() => setAddNotice(null)}>
+                {addNotice.text}
+              </Notice>
+            </div>
+          )}
+
+          <form onSubmit={handleAddFaculty} className="mt-6 grid gap-5">
+            <FacultyFormFields
+              idPrefix="add-faculty"
+              form={addForm}
+              onChange={handleAddFormChange}
+            />
+            <div className="flex justify-end">
+              <button type="submit" className="btn-primary" disabled={addSubmitting}>
+                <FiPlus aria-hidden="true" />
+                {addSubmitting ? "Adding..." : "Add Faculty"}
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <div className="rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-950">
+          <SectionHeading kicker="Update faculty" title="Search and Edit" />
+
+          <form onSubmit={handleSearchSubmit} className="mt-6">
+            <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1 dark:border-slate-800 dark:bg-slate-900">
+              {Object.entries(FACULTY_SEARCH_MODES).map(([mode, config]) => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => handleSearchModeChange(mode)}
+                  className={`min-h-10 rounded-md px-3 py-2 text-sm font-bold transition ${
+                    searchMode === mode
+                      ? "bg-white text-blue-700 shadow-sm dark:bg-slate-800 dark:text-blue-200"
+                      : "text-slate-600 hover:text-slate-950 dark:text-slate-400 dark:hover:text-white"
+                  }`}
+                >
+                  {config.label}
+                </button>
+              ))}
+            </div>
+
+            <FormField
+              id="faculty-search"
+              label="Find faculty"
+              helper={searchLoading ? "Loading faculty..." : "Search by faculty name or code before editing."}
+              className="mt-4"
+            >
+              <div className="relative">
+                <FiSearch
+                  className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"
+                  aria-hidden="true"
+                />
+                <input
+                  id="faculty-search"
+                  value={searchQuery}
+                  onChange={handleSearchChange}
+                  placeholder={searchConfig.placeholder}
+                  className={`form-field pl-12 ${searchMode === "code" ? "uppercase" : ""}`}
+                  autoComplete="off"
+                />
+                <SuggestionList
+                  suggestions={searchSuggestions}
+                  getLabel={(faculty) => formatFacultyLabel(faculty)}
+                  onSelect={loadFacultyForUpdate}
+                />
+              </div>
+            </FormField>
+
+            <div className="mt-4 flex justify-end">
+              <button type="submit" className="btn-secondary" disabled={searchLoading}>
+                <FiSearch aria-hidden="true" />
+                {searchLoading ? "Searching..." : "Search"}
+              </button>
+            </div>
+          </form>
+
+          {updateNotice && (
+            <div className="mt-5">
+              <Notice type={updateNotice.type} onDismiss={() => setUpdateNotice(null)}>
+                {updateNotice.text}
+              </Notice>
+            </div>
+          )}
+
+          <form onSubmit={handleUpdateFaculty} className="mt-6 grid gap-5">
+            {selectedFacultyCode ? (
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-100">
+                <span className="inline-flex items-center gap-2">
+                  <FiCheckCircle aria-hidden="true" />
+                  Selected {formatFacultyLabel(updateForm)}
+                </span>
+              </div>
+            ) : (
+              <Notice type="info">Select a faculty to enable the update form.</Notice>
+            )}
+
+            <FacultyFormFields
+              idPrefix="update-faculty"
+              form={updateForm}
+              onChange={handleUpdateFormChange}
+              readOnlyCode
+              disabled={!selectedFacultyCode}
+            />
+            <div className="flex justify-end">
+              <button
+                type="submit"
+                className="btn-primary"
+                disabled={updateSubmitting || !selectedFacultyCode}
+              >
+                <FiEdit3 aria-hidden="true" />
+                {updateSubmitting ? "Saving..." : "Save Changes"}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function FacultyFormFields({
+  idPrefix,
+  form,
+  onChange,
+  readOnlyCode = false,
+  disabled = false,
+}) {
+  return (
+    <>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <FormField id={`${idPrefix}-code`} label="Faculty code" helper="Required. Example: JAA">
+          <input
+            id={`${idPrefix}-code`}
+            value={form.code}
+            onChange={(event) => onChange("code", event.target.value)}
+            className="form-field uppercase"
+            placeholder="JAA"
+            readOnly={readOnlyCode}
+            disabled={disabled}
+            required
+          />
+        </FormField>
+        <FormField id={`${idPrefix}-name`} label="Faculty name">
+          <input
+            id={`${idPrefix}-name`}
+            value={form.name}
+            onChange={(event) => onChange("name", event.target.value)}
+            className="form-field"
+            placeholder="Faculty name"
+            disabled={disabled}
+          />
+        </FormField>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <FormField id={`${idPrefix}-designation`} label="Designation">
+          <input
+            id={`${idPrefix}-designation`}
+            value={form.desig}
+            onChange={(event) => onChange("desig", event.target.value)}
+            className="form-field"
+            placeholder="Lecturer"
+            disabled={disabled}
+          />
+        </FormField>
+        <FormField id={`${idPrefix}-type`} label="Department / Type">
+          <input
+            id={`${idPrefix}-type`}
+            value={form.type}
+            onChange={(event) => onChange("type", event.target.value)}
+            className="form-field"
+            placeholder="CSE"
+            disabled={disabled}
+          />
+        </FormField>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <FormField id={`${idPrefix}-email`} label="Email">
+          <input
+            id={`${idPrefix}-email`}
+            value={form.email}
+            onChange={(event) => onChange("email", event.target.value)}
+            className="form-field"
+            placeholder="name@example.com"
+            type="email"
+            disabled={disabled}
+          />
+        </FormField>
+        <FormField id={`${idPrefix}-phone`} label="Phone">
+          <input
+            id={`${idPrefix}-phone`}
+            value={form.phone}
+            onChange={(event) => onChange("phone", event.target.value)}
+            className="form-field"
+            placeholder="+880..."
+            disabled={disabled}
+          />
+        </FormField>
+      </div>
+    </>
+  );
+}
+
 function CourseField({ label, value }) {
   return (
     <div className="flex items-center justify-between gap-4 rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-900">
@@ -351,6 +796,53 @@ function getActionTone(tone) {
   };
 
   return tones[tone] || tones.blue;
+}
+
+function getFacultyFormFromRow(faculty) {
+  return {
+    code: faculty?.code || "",
+    name: faculty?.name || "",
+    desig: faculty?.desig || "",
+    type: faculty?.type || "",
+    email: faculty?.email || "",
+    phone: faculty?.phone || "",
+  };
+}
+
+function getFacultyPayload(form) {
+  return {
+    code: String(form.code || "").trim().toUpperCase(),
+    name: String(form.name || "").trim(),
+    desig: String(form.desig || "").trim(),
+    type: String(form.type || "").trim(),
+    email: String(form.email || "").trim(),
+    phone: String(form.phone || "").trim(),
+  };
+}
+
+function formatFacultyLabel(faculty) {
+  if (!faculty) return "Faculty";
+
+  const code = faculty.code || "";
+  const name = faculty.name || "";
+
+  if (code && name) return `${name} (${code})`;
+  return code || name || "Faculty";
+}
+
+function getFacultyError(error) {
+  const status = error.response?.status;
+  const message = error.response?.data?.message || error.response?.data?.msg;
+
+  if (message) return message;
+  if (status === 400) return "Please check the faculty information.";
+  if (status === 401) return "Unauthorized. Please login again.";
+  if (status === 403) return "Access forbidden.";
+  if (status === 404) return "Faculty not found.";
+  if (status === 409) return "Faculty code already exists.";
+  if (status === 500) return "Internal server error.";
+  if (error.request) return "Network error: unable to connect to the server.";
+  return error.message || "Could not save faculty.";
 }
 
 function getLoadError(error) {

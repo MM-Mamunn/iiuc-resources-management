@@ -1,10 +1,15 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
+  FiBell,
   FiCalendar,
+  FiCheckCircle,
   FiChevronLeft,
   FiChevronRight,
+  FiClock,
   FiEdit3,
+  FiEye,
+  FiMessageSquare,
   FiPlus,
   FiRefreshCw,
   FiSave,
@@ -41,6 +46,14 @@ const DEFAULT_CR_PAGINATION = {
   total: 0,
   totalPages: 1,
 };
+const SUBMISSION_PAGE_SIZE = 8;
+const DEFAULT_SUBMISSION_PAGINATION = {
+  page: 1,
+  limit: SUBMISSION_PAGE_SIZE,
+  total: 0,
+  totalPages: 1,
+};
+const SUBMISSION_TYPES = ["CR", "Feedback", "Suggestion", "Complaint", "Request"];
 const emptySessionForm = {
   session: "",
   start: "",
@@ -64,6 +77,18 @@ const AdminRoles = () => {
   const [customType, setCustomType] = useState("student");
   const [sessions, setSessions] = useState([]);
   const [sessionsLoading, setSessionsLoading] = useState(false);
+  const [loginLogs, setLoginLogs] = useState([]);
+  const [loginLogsLoading, setLoginLogsLoading] = useState(false);
+  const [submissions, setSubmissions] = useState([]);
+  const [submissionsLoading, setSubmissionsLoading] = useState(false);
+  const [submissionPagination, setSubmissionPagination] = useState(DEFAULT_SUBMISSION_PAGINATION);
+  const [submissionFilters, setSubmissionFilters] = useState({
+    type: "",
+    viewed: "",
+    resolved: "",
+  });
+  const [unviewedSubmissionCount, setUnviewedSubmissionCount] = useState(0);
+  const [expandedSubmissionId, setExpandedSubmissionId] = useState(null);
   const [sessionSaving, setSessionSaving] = useState(false);
   const [editingSession, setEditingSession] = useState(null);
   const [sessionForm, setSessionForm] = useState(emptySessionForm);
@@ -117,9 +142,79 @@ const AdminRoles = () => {
     }
   }, []);
 
+  const fetchLoginLogs = useCallback(async () => {
+    setLoginLogsLoading(true);
+    try {
+      const response = await api.get("/api/admin/login-logs");
+      setLoginLogs(response.data?.rows || []);
+    } catch (loginLogError) {
+      setLoginLogs([]);
+      setMessage({
+        type: "error",
+        text: loginLogError.response?.data?.msg || "Failed to load login history.",
+      });
+    } finally {
+      setLoginLogsLoading(false);
+    }
+  }, []);
+
+  const fetchSubmissionNotifications = useCallback(async () => {
+    try {
+      const response = await api.get("/api/admin/submissions/unviewed-count");
+      setUnviewedSubmissionCount(response.data?.total ?? 0);
+    } catch {
+      setUnviewedSubmissionCount(0);
+    }
+  }, []);
+
+  const fetchAdminSubmissions = useCallback(async (page = 1, filters = submissionFilters) => {
+    setSubmissionsLoading(true);
+
+    try {
+      const response = await api.get("/api/admin/submissions", {
+        params: {
+          page,
+          limit: SUBMISSION_PAGE_SIZE,
+          type: filters.type,
+          viewed: filters.viewed,
+          resolved: filters.resolved,
+        },
+      });
+      const rows = response.data?.rows || [];
+      const pagination = response.data?.pagination || {
+        page,
+        limit: SUBMISSION_PAGE_SIZE,
+        total: rows.length,
+        totalPages: Math.max(Math.ceil(rows.length / SUBMISSION_PAGE_SIZE), 1),
+      };
+
+      if (rows.length === 0 && pagination.total > 0 && page > 1) {
+        await fetchAdminSubmissions(page - 1, filters);
+        return;
+      }
+
+      setSubmissions(rows);
+      setSubmissionPagination(pagination);
+    } catch (submissionError) {
+      setSubmissions([]);
+      setSubmissionPagination(DEFAULT_SUBMISSION_PAGINATION);
+      setMessage({
+        type: "error",
+        text: submissionError.response?.data?.msg || "Failed to load submissions.",
+      });
+    } finally {
+      setSubmissionsLoading(false);
+    }
+  }, [submissionFilters]);
+
   const refreshAdminData = useCallback(async () => {
-    await Promise.all([fetchCrUsers(1), fetchSessions()]);
-  }, [fetchCrUsers, fetchSessions]);
+    await Promise.all([
+      fetchCrUsers(1),
+      fetchSessions(),
+      fetchLoginLogs(),
+      fetchSubmissionNotifications(),
+    ]);
+  }, [fetchCrUsers, fetchLoginLogs, fetchSessions, fetchSubmissionNotifications]);
 
   useEffect(() => {
     if (!isLoggedIn) {
@@ -139,6 +234,12 @@ const AdminRoles = () => {
 
     refreshAdminData();
   }, [isLoggedIn, navigate, refreshAdminData, user]);
+
+  useEffect(() => {
+    if (activeFeature === "submissions") {
+      fetchAdminSubmissions(1);
+    }
+  }, [activeFeature, fetchAdminSubmissions]);
 
   const updateRole = async (studentId, role) => {
     setMessage(null);
@@ -167,6 +268,45 @@ const AdminRoles = () => {
     }
 
     await updateRole(customId.trim(), customType);
+  };
+
+  const handleSubmissionFilterChange = async (field, value) => {
+    const nextFilters = { ...submissionFilters, [field]: value };
+    setSubmissionFilters(nextFilters);
+    await fetchAdminSubmissions(1, nextFilters);
+  };
+
+  const clearSubmissionFilters = async () => {
+    const nextFilters = { type: "", viewed: "", resolved: "" };
+    setSubmissionFilters(nextFilters);
+    await fetchAdminSubmissions(1, nextFilters);
+  };
+
+  const updateSubmissionStatus = async (submissionId, updates, { quiet = false } = {}) => {
+    try {
+      await api.patch(`/api/admin/submissions/${submissionId}`, updates);
+      await Promise.all([
+        fetchAdminSubmissions(submissionPagination.page),
+        fetchSubmissionNotifications(),
+      ]);
+
+      if (!quiet) {
+        setMessage({ type: "success", text: "Submission updated." });
+      }
+    } catch (submissionError) {
+      setMessage({
+        type: "error",
+        text: submissionError.response?.data?.msg || "Failed to update submission.",
+      });
+    }
+  };
+
+  const openSubmission = async (submission) => {
+    setExpandedSubmissionId((current) => (current === submission.id ? null : submission.id));
+
+    if (!submission.view) {
+      await updateSubmissionStatus(submission.id, { view: true }, { quiet: true });
+    }
   };
 
   const updateSessionForm = (field, value) => {
@@ -258,6 +398,20 @@ const AdminRoles = () => {
       description: "Review CR accounts with paginated controls.",
     },
     {
+      id: "loginLogs",
+      icon: FiClock,
+      title: "Latest Logins",
+      value: loginLogsLoading ? "..." : loginLogs.length,
+      description: "See the latest 10 successful student login records.",
+    },
+    {
+      id: "submissions",
+      icon: FiBell,
+      title: `Notifications (${unviewedSubmissionCount})`,
+      value: submissionsLoading ? "..." : unviewedSubmissionCount,
+      description: "Review applications, feedback, requests, and complaints.",
+    },
+    {
       id: "roleUpdate",
       icon: FiShield,
       title: "Role Update",
@@ -291,9 +445,9 @@ const AdminRoles = () => {
               type="button"
               onClick={refreshAdminData}
               className="btn-secondary border-white/20 bg-white/10 text-white hover:bg-white/20 dark:border-white/20 dark:bg-white/10 dark:text-white"
-              disabled={loading || sessionsLoading}
+              disabled={loading || sessionsLoading || loginLogsLoading || submissionsLoading}
             >
-              <FiRefreshCw className={loading || sessionsLoading ? "animate-spin" : ""} aria-hidden="true" />
+              <FiRefreshCw className={loading || sessionsLoading || loginLogsLoading || submissionsLoading ? "animate-spin" : ""} aria-hidden="true" />
               Refresh
             </button>
           </div>
@@ -361,6 +515,31 @@ const AdminRoles = () => {
             />
           )}
 
+          {activeFeature === "loginLogs" && (
+            <LoginLogsFeature
+              loginLogs={loginLogs}
+              loading={loginLogsLoading}
+              onRefresh={fetchLoginLogs}
+            />
+          )}
+
+          {activeFeature === "submissions" && (
+            <SubmissionManagementFeature
+              submissions={submissions}
+              loading={submissionsLoading}
+              pagination={submissionPagination}
+              filters={submissionFilters}
+              expandedSubmissionId={expandedSubmissionId}
+              unviewedCount={unviewedSubmissionCount}
+              onRefresh={() => fetchAdminSubmissions(submissionPagination.page)}
+              onPageChange={fetchAdminSubmissions}
+              onFilterChange={handleSubmissionFilterChange}
+              onClearFilters={clearSubmissionFilters}
+              onOpenSubmission={openSubmission}
+              onStatusChange={updateSubmissionStatus}
+            />
+          )}
+
           {activeFeature === "roleUpdate" && (
             <DirectRoleFeature
               customId={customId}
@@ -381,7 +560,7 @@ const AdminRoles = () => {
  */
 function FeatureNavigation({ features, activeFeature, onSelect }) {
   return (
-    <section className="mt-8 grid gap-4 md:grid-cols-3" aria-label="Admin features">
+    <section className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-5" aria-label="Admin features">
       {features.map((feature) => {
         const Icon = feature.icon;
         const isActive = activeFeature === feature.id;
@@ -679,6 +858,319 @@ function CrUsersFeature({
 }
 
 /**
+ * Recent login history panel.
+ */
+function LoginLogsFeature({ loginLogs, loading, onRefresh }) {
+  return (
+    <section className="table-shell">
+      <div className="flex flex-col gap-4 border-b border-slate-200 bg-white px-5 py-5 sm:flex-row sm:items-end sm:justify-between dark:border-slate-800 dark:bg-slate-900">
+        <div>
+          <p className="section-kicker">Login history</p>
+          <h2 className="mt-1 text-2xl font-bold text-slate-950 dark:text-white">
+            Latest 10 Logged In
+          </h2>
+          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+            Showing the newest successful login records from the login log.
+          </p>
+        </div>
+        <button type="button" onClick={onRefresh} className="btn-secondary" disabled={loading}>
+          <FiRefreshCw className={loading ? "animate-spin" : ""} aria-hidden="true" />
+          Refresh
+        </button>
+      </div>
+
+      {loading ? (
+        <LoadingState label="Loading latest logins..." />
+      ) : loginLogs.length === 0 ? (
+        <EmptyState
+          icon={<FiClock className="h-7 w-7" aria-hidden="true" />}
+          title="No login records found"
+          description="Recent successful logins will appear here."
+        />
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[820px] text-left text-sm">
+            <caption className="sr-only">Latest login records</caption>
+            <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
+              <tr>
+                <th scope="col" className="px-5 py-4 font-bold">Student</th>
+                <th scope="col" className="px-5 py-4 font-bold">Section</th>
+                <th scope="col" className="px-5 py-4 font-bold">Role</th>
+                <th scope="col" className="px-5 py-4 font-bold">Login time</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+              {loginLogs.map((entry, index) => (
+                <tr
+                  key={`${entry.id}-${entry.loginTime || index}`}
+                  className="transition hover:bg-blue-50/60 dark:hover:bg-slate-900"
+                >
+                  <td className="px-5 py-4">
+                    <div className="flex items-center gap-3">
+                      <AdminAvatar image={entry.profilePic} name={entry.studentName || entry.id} />
+                      <div className="min-w-0">
+                        <p className="safe-text font-bold text-slate-950 dark:text-white">
+                          {entry.studentName || "Unknown student"}
+                        </p>
+                        <p className="safe-text mt-1 text-xs text-slate-500 dark:text-slate-400">
+                          ID: {entry.id}
+                        </p>
+                        {entry.email && (
+                          <p className="safe-text mt-1 text-xs text-slate-500 dark:text-slate-400">
+                            {entry.email}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </td>
+                  <td className="safe-text px-5 py-4 font-semibold text-slate-700 dark:text-slate-200">
+                    {entry.sec || "N/A"}
+                  </td>
+                  <td className="px-5 py-4">
+                    <span className="status-pill border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
+                      {entry.type || "N/A"}
+                    </span>
+                  </td>
+                  <td className="safe-text px-5 py-4 font-semibold text-slate-700 dark:text-slate-200">
+                    {formatLoginTime(entry.loginTime)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function SubmissionManagementFeature({
+  submissions,
+  loading,
+  pagination,
+  filters,
+  expandedSubmissionId,
+  unviewedCount,
+  onRefresh,
+  onPageChange,
+  onFilterChange,
+  onClearFilters,
+  onOpenSubmission,
+  onStatusChange,
+}) {
+  return (
+    <section className="table-shell">
+      <div className="flex flex-col gap-4 border-b border-slate-200 bg-white px-5 py-5 dark:border-slate-800 dark:bg-slate-900">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="section-kicker">Notifications ({unviewedCount})</p>
+            <h2 className="mt-1 text-2xl font-bold text-slate-950 dark:text-white">
+              Submission Management
+            </h2>
+            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+              Review CR applications, feedback, suggestions, complaints, and requests.
+            </p>
+          </div>
+          <button type="button" onClick={onRefresh} className="btn-secondary" disabled={loading}>
+            <FiRefreshCw className={loading ? "animate-spin" : ""} aria-hidden="true" />
+            Refresh
+          </button>
+        </div>
+
+        <div className="grid gap-3 lg:grid-cols-[1fr_1fr_1fr_auto]">
+          <FormField id="submission-filter-type" label="Type">
+            <select
+              id="submission-filter-type"
+              value={filters.type}
+              onChange={(event) => onFilterChange("type", event.target.value)}
+              className="form-field"
+            >
+              <option value="">All types</option>
+              {SUBMISSION_TYPES.map((type) => (
+                <option key={type} value={type}>
+                  {type === "CR" ? "CR application" : type}
+                </option>
+              ))}
+            </select>
+          </FormField>
+
+          <FormField id="submission-filter-viewed" label="Viewed">
+            <select
+              id="submission-filter-viewed"
+              value={filters.viewed}
+              onChange={(event) => onFilterChange("viewed", event.target.value)}
+              className="form-field"
+            >
+              <option value="">All</option>
+              <option value="false">Unviewed</option>
+              <option value="true">Viewed</option>
+            </select>
+          </FormField>
+
+          <FormField id="submission-filter-resolved" label="Resolved">
+            <select
+              id="submission-filter-resolved"
+              value={filters.resolved}
+              onChange={(event) => onFilterChange("resolved", event.target.value)}
+              className="form-field"
+            >
+              <option value="">All</option>
+              <option value="false">Pending</option>
+              <option value="true">Resolved</option>
+            </select>
+          </FormField>
+
+          <div className="flex items-end">
+            <button type="button" onClick={onClearFilters} className="btn-secondary w-full">
+              Clear filters
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {loading ? (
+        <LoadingState label="Loading submissions..." />
+      ) : submissions.length === 0 ? (
+        <EmptyState
+          icon={<FiMessageSquare className="h-7 w-7" aria-hidden="true" />}
+          title="No submissions found"
+          description="New user submissions will appear here."
+        />
+      ) : (
+        <div className="grid gap-4 p-5">
+          {submissions.map((submission) => {
+            const isExpanded = expandedSubmissionId === submission.id;
+
+            return (
+              <article
+                key={submission.id}
+                className={`rounded-lg border p-4 transition ${
+                  submission.view
+                    ? "border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950"
+                    : "border-blue-300 bg-blue-50/70 dark:border-blue-500/40 dark:bg-blue-500/10"
+                }`}
+              >
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="status-pill border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200">
+                        {submission.type}
+                      </span>
+                      <ViewedStatus viewed={submission.view} />
+                      <ResolvedStatus resolved={submission.resolved} />
+                    </div>
+                    <h3 className="safe-text mt-3 text-base font-bold text-slate-950 dark:text-white">
+                      {submission.studentName || "Student"} ({submission.by})
+                    </h3>
+                    <p className="mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                      {submission.studentSection || "No section"} - {formatLoginTime(submission.createdAt)}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => onOpenSubmission(submission)}
+                      className="btn-secondary"
+                    >
+                      <FiEye aria-hidden="true" />
+                      {isExpanded ? "Hide" : "View"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onStatusChange(submission.id, { resolved: !submission.resolved })}
+                      className={submission.resolved ? "btn-secondary" : "btn-primary"}
+                    >
+                      <FiCheckCircle aria-hidden="true" />
+                      {submission.resolved ? "Unresolve" : "Resolve"}
+                    </button>
+                  </div>
+                </div>
+
+                {isExpanded && (
+                  <div className="mt-4 rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950">
+                    <div className="grid gap-4 lg:grid-cols-[1fr_260px]">
+                      <div>
+                        <p className="section-kicker">Description</p>
+                        <p className="mt-2 break-words text-sm leading-6 text-slate-700 dark:text-slate-300">
+                          {submission.description}
+                        </p>
+                      </div>
+                      <div className="grid gap-2 text-sm">
+                        <InfoLine label="Email" value={submission.studentEmail || "N/A"} />
+                        <InfoLine label="Phone" value={submission.studentPhone || "N/A"} />
+                        <InfoLine label="Updated" value={formatLoginTime(submission.updatedAt)} />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </article>
+            );
+          })}
+        </div>
+      )}
+
+      <PaginationControls
+        pagination={pagination}
+        disabled={loading}
+        onPageChange={onPageChange}
+      />
+    </section>
+  );
+}
+
+function ViewedStatus({ viewed }) {
+  return (
+    <span
+      className={
+        viewed
+          ? "status-pill border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+          : "status-pill border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200"
+      }
+    >
+      {viewed ? "Viewed" : "Unviewed"}
+    </span>
+  );
+}
+
+function ResolvedStatus({ resolved }) {
+  return (
+    <span
+      className={
+        resolved
+          ? "status-pill border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200"
+          : "status-pill border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200"
+      }
+    >
+      {resolved ? "Resolved" : "Pending"}
+    </span>
+  );
+}
+
+function InfoLine({ label, value }) {
+  return (
+    <div className="flex items-center justify-between gap-4 rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-900">
+      <span className="font-semibold text-slate-500 dark:text-slate-400">{label}</span>
+      <span className="safe-text text-right font-bold text-slate-950 dark:text-white">
+        {value}
+      </span>
+    </div>
+  );
+}
+
+function AdminAvatar({ image, name }) {
+  return (
+    <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-950 text-sm font-black text-white ring-1 ring-slate-200 dark:bg-white dark:text-slate-950 dark:ring-slate-700">
+      {image ? (
+        <img src={image} alt="" className="h-full w-full object-cover" />
+      ) : (
+        getInitials(name)
+      )}
+    </span>
+  );
+}
+
+/**
  * Direct user role update feature panel.
  */
 function DirectRoleFeature({
@@ -785,6 +1277,31 @@ function PaginationControls({ pagination, disabled, onPageChange }) {
       </div>
     </div>
   );
+}
+
+function getInitials(value) {
+  return String(value || "U")
+    .split(" ")
+    .filter(Boolean)
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+}
+
+function formatLoginTime(value) {
+  if (!value) return "No time recorded";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "No time recorded";
+
+  return date.toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
 
 function getSessionError(error) {

@@ -13,6 +13,7 @@ import {
   FiTrash2,
   FiType,
   FiUser,
+  FiUserPlus,
   FiX,
 } from "react-icons/fi";
 import api from "../../api";
@@ -68,6 +69,14 @@ const emptyBulkClassForm = {
   slot: "",
 };
 
+const emptyQuickFacultyForm = {
+  code: "",
+  name: "",
+  desig: "",
+  email: "",
+  phone: "",
+};
+
 const FACULTY_SEARCH_MODES = {
   code: {
     label: "Code",
@@ -119,6 +128,7 @@ const CrRoutine = () => {
   const [formSubmitting, setFormSubmitting] = useState(false);
   const [notice, setNotice] = useState(null);
   const [formError, setFormError] = useState(null);
+  const [classFacultyQuickAddAvailable, setClassFacultyQuickAddAvailable] = useState(false);
   const [facultySearchMode, setFacultySearchMode] = useState("code");
   const [facultyQuery, setFacultyQuery] = useState("");
   const [selectedFaculty, setSelectedFaculty] = useState(null);
@@ -131,6 +141,10 @@ const CrRoutine = () => {
   const [bulkWarning, setBulkWarning] = useState(null);
   const [bulkChecking, setBulkChecking] = useState(false);
   const [bulkSubmitting, setBulkSubmitting] = useState(false);
+  const [quickFacultyModal, setQuickFacultyModal] = useState({ open: false, target: "bulk" });
+  const [quickFacultyForm, setQuickFacultyForm] = useState(emptyQuickFacultyForm);
+  const [quickFacultyNotice, setQuickFacultyNotice] = useState(null);
+  const [quickFacultySaving, setQuickFacultySaving] = useState(false);
   const { user } = useAuth();
 
   const userSection = user?.sec;
@@ -281,16 +295,29 @@ const CrRoutine = () => {
 
     if (value.length < 1 || value.length > maxLength) {
       setSuggestions((current) => ({ ...current, [key]: [] }));
+      if (key === "faculty") {
+        setClassFacultyQuickAddAvailable(false);
+      }
       return;
+    }
+
+    if (key === "faculty") {
+      setClassFacultyQuickAddAvailable(false);
     }
 
     setLoadingField(key);
     try {
-      const response = await api.get(`${endpoint}/${value}`);
+      const response = await api.get(`${endpoint}/${encodeURIComponent(value)}`);
       const nextSuggestions = response.data?.rows?.map(mapValue) ?? [];
       setSuggestions((current) => ({ ...current, [key]: nextSuggestions }));
+      if (key === "faculty") {
+        setClassFacultyQuickAddAvailable(nextSuggestions.length === 0);
+      }
     } catch {
       setSuggestions((current) => ({ ...current, [key]: [] }));
+      if (key === "faculty") {
+        setClassFacultyQuickAddAvailable(false);
+      }
     } finally {
       setLoadingField("");
     }
@@ -299,6 +326,9 @@ const CrRoutine = () => {
   const chooseSuggestion = (key, value) => {
     setFormData((current) => ({ ...current, [key]: value }));
     setSuggestions((current) => ({ ...current, [key]: [] }));
+    if (key === "faculty") {
+      setClassFacultyQuickAddAvailable(false);
+    }
   };
 
   const handleFacultySearchModeChange = (nextMode) => {
@@ -348,6 +378,84 @@ const CrRoutine = () => {
     setBulkQueue([]);
     setBulkForm(emptyBulkClassForm);
     setBulkWarning(null);
+  };
+
+  const openQuickFacultyModal = (target) => {
+    const seedValue = target === "bulk" ? facultyQuery.trim() : formData.faculty.trim();
+    const seedForm = {
+      ...emptyQuickFacultyForm,
+      code: target === "bulk" && facultySearchMode === "name" ? "" : seedValue.toUpperCase(),
+      name: target === "bulk" && facultySearchMode === "name" ? seedValue : "",
+    };
+
+    setQuickFacultyForm(seedForm);
+    setQuickFacultyModal({ open: true, target });
+    setQuickFacultyNotice(null);
+  };
+
+  const closeQuickFacultyModal = () => {
+    setQuickFacultyModal({ open: false, target: "bulk" });
+    setQuickFacultyForm(emptyQuickFacultyForm);
+    setQuickFacultyNotice(null);
+    setQuickFacultySaving(false);
+  };
+
+  const handleQuickFacultyChange = (field, value) => {
+    setQuickFacultyForm((current) => ({
+      ...current,
+      [field]: field === "code" ? value.toUpperCase() : value,
+    }));
+    setQuickFacultyNotice(null);
+  };
+
+  const handleQuickFacultySubmit = async (event) => {
+    event.preventDefault();
+
+    if (!quickFacultyForm.code.trim()) {
+      setQuickFacultyNotice({ type: "error", text: "Faculty code is required." });
+      return;
+    }
+
+    setQuickFacultySaving(true);
+    setQuickFacultyNotice(null);
+
+    try {
+      const response = await api.post("/api/cr/faculty", getQuickFacultyPayload(quickFacultyForm));
+      const savedFaculty = response.data?.row;
+      const facultyCode = savedFaculty?.code || quickFacultyForm.code.trim().toUpperCase();
+
+      if (quickFacultyModal.target === "bulk") {
+        setSelectedFaculty({
+          code: facultyCode,
+          name: savedFaculty?.name || quickFacultyForm.name,
+        });
+        setFacultyQuery(
+          facultySearchMode === "name"
+            ? savedFaculty?.name || quickFacultyForm.name || facultyCode
+            : facultyCode,
+        );
+        setFacultySuggestions([]);
+        setBulkWarning({
+          type: "success",
+          text: `${formatFacultyLabel(savedFaculty || { code: facultyCode })} is ready for this bulk entry.`,
+        });
+      } else {
+        setFormData((current) => ({ ...current, faculty: facultyCode }));
+        setSuggestions((current) => ({ ...current, faculty: [] }));
+        setClassFacultyQuickAddAvailable(false);
+        setFormError(null);
+        setNotice({
+          type: "success",
+          text: `${formatFacultyLabel(savedFaculty || { code: facultyCode })} added and selected.`,
+        });
+      }
+
+      closeQuickFacultyModal();
+    } catch (facultyError) {
+      setQuickFacultyNotice({ type: "error", text: getFacultyError(facultyError) });
+    } finally {
+      setQuickFacultySaving(false);
+    }
   };
 
   const updateBulkSuggestions = async ({ key, value, endpoint, mapValue, maxLength }) => {
@@ -504,6 +612,7 @@ const CrRoutine = () => {
     });
     setShowAddForm(true);
     setFormError(null);
+    setClassFacultyQuickAddAvailable(false);
   };
 
   const handleEditClass = (classItem) => {
@@ -518,6 +627,7 @@ const CrRoutine = () => {
     });
     setShowAddForm(true);
     setFormError(null);
+    setClassFacultyQuickAddAvailable(false);
   };
 
   const handleFormSubmit = async (event) => {
@@ -755,6 +865,24 @@ const CrRoutine = () => {
                   />
                 </div>
               </FormField>
+
+              {facultyQuery.trim() && !facultyLoading && !selectedFaculty && facultySuggestions.length === 0 && (
+                <div className="mt-3 rounded-lg border border-dashed border-blue-300 bg-blue-50 p-3 dark:border-blue-500/40 dark:bg-blue-500/10">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="text-sm font-semibold text-blue-900 dark:text-blue-100">
+                      Faculty not found?
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => openQuickFacultyModal("bulk")}
+                      className="btn-secondary"
+                    >
+                      <FiUserPlus aria-hidden="true" />
+                      Add Faculty Quickly
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950">
                 <div className="flex items-center justify-between gap-3">
@@ -999,7 +1127,19 @@ const CrRoutine = () => {
           onSubmit={handleFormSubmit}
           onChange={updateSuggestions}
           onSelect={chooseSuggestion}
+          onAddFacultyQuick={() => openQuickFacultyModal("class")}
+          canAddFacultyQuick={classFacultyQuickAddAvailable}
           submitLabel={isEditMode ? "Update class" : "Add class"}
+        />
+      )}
+      {quickFacultyModal.open && (
+        <QuickFacultyModal
+          form={quickFacultyForm}
+          notice={quickFacultyNotice}
+          saving={quickFacultySaving}
+          onClose={closeQuickFacultyModal}
+          onChange={handleQuickFacultyChange}
+          onSubmit={handleQuickFacultySubmit}
         />
       )}
     </div>
@@ -1021,6 +1161,8 @@ function ClassModal({
   onSubmit,
   onChange,
   onSelect,
+  onAddFacultyQuick,
+  canAddFacultyQuick,
   submitLabel,
 }) {
   return (
@@ -1080,6 +1222,9 @@ function ClassModal({
               })
             }
             onSelect={(value) => onSelect("faculty", value)}
+            showEmptyAction={canAddFacultyQuick}
+            emptyActionLabel="Add Faculty Quickly"
+            onEmptyAction={onAddFacultyQuick}
           />
           <AutocompleteField
             id="room"
@@ -1123,6 +1268,110 @@ function ClassModal({
   );
 }
 
+function QuickFacultyModal({
+  form,
+  notice,
+  saving,
+  onClose,
+  onChange,
+  onSubmit,
+}) {
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm">
+      <section className="surface-card max-h-[90vh] w-full max-w-xl overflow-y-auto p-6">
+        <div className="flex items-start justify-between gap-4">
+          <SectionHeading
+            kicker="Quick faculty"
+            title="Add Faculty Quickly"
+            description="Create the teacher record, then continue routine entry without refreshing."
+          />
+          <button
+            type="button"
+            onClick={onClose}
+            className="btn-secondary px-3"
+            aria-label="Close quick faculty form"
+          >
+            <FiX aria-hidden="true" />
+          </button>
+        </div>
+
+        {notice && (
+          <div className="mt-5">
+            <Notice type={notice.type}>{notice.text}</Notice>
+          </div>
+        )}
+
+        <form onSubmit={onSubmit} className="mt-6 grid gap-5">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FormField id="quick-faculty-code" label="Faculty code" helper="Required">
+              <input
+                id="quick-faculty-code"
+                value={form.code}
+                onChange={(event) => onChange("code", event.target.value)}
+                className="form-field uppercase"
+                placeholder="JAA"
+                autoFocus
+                required
+              />
+            </FormField>
+            <FormField id="quick-faculty-name" label="Faculty name">
+              <input
+                id="quick-faculty-name"
+                value={form.name}
+                onChange={(event) => onChange("name", event.target.value)}
+                className="form-field"
+                placeholder="Faculty name"
+              />
+            </FormField>
+          </div>
+
+          <FormField id="quick-faculty-designation" label="Designation">
+            <input
+              id="quick-faculty-designation"
+              value={form.desig}
+              onChange={(event) => onChange("desig", event.target.value)}
+              className="form-field"
+              placeholder="Lecturer"
+            />
+          </FormField>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FormField id="quick-faculty-email" label="Email">
+              <input
+                id="quick-faculty-email"
+                value={form.email}
+                onChange={(event) => onChange("email", event.target.value)}
+                className="form-field"
+                placeholder="name@example.com"
+                type="email"
+              />
+            </FormField>
+            <FormField id="quick-faculty-phone" label="Phone">
+              <input
+                id="quick-faculty-phone"
+                value={form.phone}
+                onChange={(event) => onChange("phone", event.target.value)}
+                className="form-field"
+                placeholder="+880..."
+              />
+            </FormField>
+          </div>
+
+          <div className="flex flex-wrap justify-end gap-3">
+            <button type="button" onClick={onClose} className="btn-secondary" disabled={saving}>
+              Cancel
+            </button>
+            <button type="submit" className="btn-primary" disabled={saving}>
+              <FiUserPlus aria-hidden="true" />
+              {saving ? "Adding..." : "Add Faculty"}
+            </button>
+          </div>
+        </form>
+      </section>
+    </div>
+  );
+}
+
 /**
  * Autocomplete field for class metadata.
  */
@@ -1135,6 +1384,9 @@ function AutocompleteField({
   suggestions,
   onChange,
   onSelect,
+  showEmptyAction = false,
+  emptyActionLabel = "",
+  onEmptyAction,
 }) {
   return (
     <FormField id={id} label={label} helper={loading ? "Loading suggestions..." : ""}>
@@ -1151,6 +1403,19 @@ function AutocompleteField({
           required
         />
         <SuggestionList suggestions={suggestions} onSelect={onSelect} />
+        {showEmptyAction && (
+          <div className="mt-2 rounded-lg border border-dashed border-blue-300 bg-blue-50 p-3 dark:border-blue-500/40 dark:bg-blue-500/10">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm font-semibold text-blue-900 dark:text-blue-100">
+                No matching faculty found.
+              </p>
+              <button type="button" onClick={onEmptyAction} className="btn-secondary">
+                <FiUserPlus aria-hidden="true" />
+                {emptyActionLabel}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </FormField>
   );
@@ -1186,12 +1451,36 @@ function formatFacultyLabel(faculty) {
   return code || name || "Faculty";
 }
 
+function getQuickFacultyPayload(form) {
+  return {
+    code: String(form.code || "").trim().toUpperCase(),
+    name: String(form.name || "").trim(),
+    desig: String(form.desig || "").trim(),
+    email: String(form.email || "").trim(),
+    phone: String(form.phone || "").trim(),
+  };
+}
+
 function findQueuedCell(queue, day, slot) {
   return queue.find(
     (classItem) =>
       Number(classItem.day) === Number(day) &&
       Number(classItem.slot) === Number(slot),
   );
+}
+
+function getFacultyError(error) {
+  const status = error.response?.status;
+  const message = error.response?.data?.message || error.response?.data?.msg;
+
+  if (message) return message;
+  if (status === 400) return "Faculty code is required.";
+  if (status === 401) return "Unauthorized. Please login again.";
+  if (status === 403) return "Access forbidden.";
+  if (status === 409) return "Faculty code already exists.";
+  if (status === 500) return "Internal server error.";
+  if (error.request) return "Network error: unable to connect to the server.";
+  return error.message || "Could not add faculty.";
 }
 
 function getClassConflictError(error) {
