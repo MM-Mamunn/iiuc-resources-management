@@ -26,6 +26,11 @@ import {
   listSessions,
   updateSession,
 } from "../../services/sessionService";
+import {
+  isValidPeriodRange,
+  listPeriods,
+  updatePeriod,
+} from "../../services/periodService";
 import Header from "../components/Header";
 import {
   EmptyState,
@@ -92,6 +97,9 @@ const AdminRoles = () => {
   const [sessionSaving, setSessionSaving] = useState(false);
   const [editingSession, setEditingSession] = useState(null);
   const [sessionForm, setSessionForm] = useState(emptySessionForm);
+  const [periods, setPeriods] = useState([]);
+  const [periodsLoading, setPeriodsLoading] = useState(false);
+  const [periodSavingKey, setPeriodSavingKey] = useState("");
 
   const fetchCrUsers = useCallback(async (page = 1) => {
     setLoading(true);
@@ -158,6 +166,21 @@ const AdminRoles = () => {
     }
   }, []);
 
+  const fetchPeriods = useCallback(async () => {
+    setPeriodsLoading(true);
+    try {
+      setPeriods(await listPeriods());
+    } catch (periodError) {
+      setPeriods([]);
+      setMessage({
+        type: "error",
+        text: periodError.response?.data?.message || periodError.response?.data?.msg || "Failed to load periods.",
+      });
+    } finally {
+      setPeriodsLoading(false);
+    }
+  }, []);
+
   const fetchSubmissionNotifications = useCallback(async () => {
     try {
       const response = await api.get("/api/admin/submissions/unviewed-count");
@@ -212,9 +235,10 @@ const AdminRoles = () => {
       fetchCrUsers(1),
       fetchSessions(),
       fetchLoginLogs(),
+      fetchPeriods(),
       fetchSubmissionNotifications(),
     ]);
-  }, [fetchCrUsers, fetchLoginLogs, fetchSessions, fetchSubmissionNotifications]);
+  }, [fetchCrUsers, fetchLoginLogs, fetchPeriods, fetchSessions, fetchSubmissionNotifications]);
 
   useEffect(() => {
     if (!isLoggedIn) {
@@ -382,6 +406,47 @@ const AdminRoles = () => {
     }
   };
 
+  const updatePeriodDraft = (targetPeriod, field, value) => {
+    setPeriods((current) =>
+      current.map((periodItem) =>
+        getPeriodKey(periodItem) === getPeriodKey(targetPeriod)
+          ? { ...periodItem, [field]: value }
+          : periodItem,
+      ),
+    );
+  };
+
+  const handlePeriodSave = async (periodItem) => {
+    if (!isValidPeriodRange(periodItem.startTime, periodItem.stopTime)) {
+      setMessage({ type: "error", text: "Start time must not be after stop time." });
+      return;
+    }
+
+    const periodKey = getPeriodKey(periodItem);
+    setPeriodSavingKey(periodKey);
+    setMessage(null);
+
+    try {
+      const savedPeriod = await updatePeriod(periodItem);
+      setPeriods((current) =>
+        current.map((entry) =>
+          getPeriodKey(entry) === periodKey ? savedPeriod : entry,
+        ),
+      );
+      setMessage({
+        type: "success",
+        text: `${capitalize(savedPeriod.gender)} period ${savedPeriod.no} updated.`,
+      });
+    } catch (periodError) {
+      setMessage({
+        type: "error",
+        text: periodError.response?.data?.message || periodError.response?.data?.msg || "Failed to update period.",
+      });
+    } finally {
+      setPeriodSavingKey("");
+    }
+  };
+
   const features = [
     {
       id: "sessions",
@@ -403,6 +468,13 @@ const AdminRoles = () => {
       title: "Latest Logins",
       value: loginLogsLoading ? "..." : loginLogs.length,
       description: "See the latest 10 successful student login records.",
+    },
+    {
+      id: "periods",
+      icon: FiCalendar,
+      title: "Periods",
+      value: periodsLoading ? "..." : periods.length || 12,
+      description: "Edit male and female routine period times.",
     },
     {
       id: "submissions",
@@ -445,9 +517,12 @@ const AdminRoles = () => {
               type="button"
               onClick={refreshAdminData}
               className="btn-secondary border-white/20 bg-white/10 text-white hover:bg-white/20 dark:border-white/20 dark:bg-white/10 dark:text-white"
-              disabled={loading || sessionsLoading || loginLogsLoading || submissionsLoading}
+              disabled={loading || sessionsLoading || loginLogsLoading || periodsLoading || submissionsLoading}
             >
-              <FiRefreshCw className={loading || sessionsLoading || loginLogsLoading || submissionsLoading ? "animate-spin" : ""} aria-hidden="true" />
+              <FiRefreshCw
+                className={loading || sessionsLoading || loginLogsLoading || periodsLoading || submissionsLoading ? "animate-spin" : ""}
+                aria-hidden="true"
+              />
               Refresh
             </button>
           </div>
@@ -523,6 +598,17 @@ const AdminRoles = () => {
             />
           )}
 
+          {activeFeature === "periods" && (
+            <PeriodManagementFeature
+              periods={periods}
+              loading={periodsLoading}
+              savingKey={periodSavingKey}
+              onRefresh={fetchPeriods}
+              onChange={updatePeriodDraft}
+              onSave={handlePeriodSave}
+            />
+          )}
+
           {activeFeature === "submissions" && (
             <SubmissionManagementFeature
               submissions={submissions}
@@ -560,7 +646,7 @@ const AdminRoles = () => {
  */
 function FeatureNavigation({ features, activeFeature, onSelect }) {
   return (
-    <section className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-5" aria-label="Admin features">
+    <section className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-6" aria-label="Admin features">
       {features.map((feature) => {
         const Icon = feature.icon;
         const isActive = activeFeature === feature.id;
@@ -1171,6 +1257,137 @@ function AdminAvatar({ image, name }) {
 }
 
 /**
+ * Admin editor for configurable routine periods.
+ */
+function PeriodManagementFeature({
+  periods,
+  loading,
+  savingKey,
+  onRefresh,
+  onChange,
+  onSave,
+}) {
+  const genders = ["male", "female"];
+
+  return (
+    <section className="table-shell">
+      <div className="flex flex-col gap-4 border-b border-slate-200 bg-white px-5 py-5 sm:flex-row sm:items-end sm:justify-between dark:border-slate-800 dark:bg-slate-900">
+        <div>
+          <p className="section-kicker">Routine periods</p>
+          <h2 className="mt-1 text-2xl font-bold text-slate-950 dark:text-white">
+            Period Time Management
+          </h2>
+          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+            Update the 12-hour time windows used by routine pages and live class detection.
+          </p>
+        </div>
+        <button type="button" onClick={onRefresh} className="btn-secondary" disabled={loading}>
+          <FiRefreshCw className={loading ? "animate-spin" : ""} aria-hidden="true" />
+          Refresh
+        </button>
+      </div>
+
+      {loading ? (
+        <LoadingState label="Loading periods..." />
+      ) : periods.length === 0 ? (
+        <EmptyState
+          icon={<FiClock className="h-7 w-7" aria-hidden="true" />}
+          title="No periods found"
+          description="Run the latest migration to create and seed the period table."
+        />
+      ) : (
+        <div className="grid gap-5 p-5 lg:grid-cols-2">
+          {genders.map((gender) => {
+            const rows = periods
+              .filter((periodItem) => periodItem.gender === gender)
+              .sort((first, second) => Number(first.no) - Number(second.no));
+
+            return (
+              <div
+                key={gender}
+                className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950"
+              >
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="section-kicker">{gender} shift</p>
+                    <h3 className="mt-1 text-xl font-bold capitalize text-slate-950 dark:text-white">
+                      {gender} periods
+                    </h3>
+                  </div>
+                  <span className="status-pill border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
+                    {rows.length} slots
+                  </span>
+                </div>
+
+                <div className="grid gap-3">
+                  {rows.map((periodItem) => {
+                    const periodKey = getPeriodKey(periodItem);
+                    const invalid = !isValidPeriodRange(periodItem.startTime, periodItem.stopTime);
+                    const saving = savingKey === periodKey;
+
+                    return (
+                      <article
+                        key={periodKey}
+                        className="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900"
+                      >
+                        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-black text-slate-950 dark:text-white">
+                              Period {periodItem.no}
+                            </p>
+                            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                              <FormField id={`${periodKey}-start`} label="Start time">
+                                <input
+                                  id={`${periodKey}-start`}
+                                  value={periodItem.startTime}
+                                  onChange={(event) => onChange(periodItem, "startTime", event.target.value)}
+                                  className="form-field"
+                                  placeholder="10:40 AM"
+                                  autoComplete="off"
+                                />
+                              </FormField>
+                              <FormField id={`${periodKey}-stop`} label="Stop time">
+                                <input
+                                  id={`${periodKey}-stop`}
+                                  value={periodItem.stopTime}
+                                  onChange={(event) => onChange(periodItem, "stopTime", event.target.value)}
+                                  className="form-field"
+                                  placeholder="11:30 AM"
+                                  autoComplete="off"
+                                />
+                              </FormField>
+                            </div>
+                            {invalid && (
+                              <p className="mt-2 text-sm font-semibold text-rose-600 dark:text-rose-300">
+                                Start time must not be after stop time.
+                              </p>
+                            )}
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => onSave(periodItem)}
+                            disabled={saving || invalid}
+                            className="btn-primary md:self-end"
+                          >
+                            <FiSave aria-hidden="true" />
+                            {saving ? "Saving..." : "Save"}
+                          </button>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+
+/**
  * Direct user role update feature panel.
  */
 function DirectRoleFeature({
@@ -1277,6 +1494,15 @@ function PaginationControls({ pagination, disabled, onPageChange }) {
       </div>
     </div>
   );
+}
+
+function getPeriodKey(periodItem) {
+  return `${periodItem.gender}-${periodItem.no}`;
+}
+
+function capitalize(value) {
+  const text = String(value || "");
+  return text ? text.charAt(0).toUpperCase() + text.slice(1) : "";
 }
 
 function getInitials(value) {

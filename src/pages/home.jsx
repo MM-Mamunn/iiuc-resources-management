@@ -29,29 +29,10 @@ import {
 import routineImage from "../assets/iiuc.webp";
 import api from "../api";
 import { useActiveSession, useAuth } from "../App";
+import { getRoutineTimeSlots, usePeriods } from "../services/periodService";
 
 const DAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 const DISPLAY_DAYS = ["sat", "sun", "mon", "tue", "wed"];
-
-const SLOT_LABELS = {
-  1: [
-    "10.40-11.30",
-    "11.30-12.20",
-    "12.20-1.10",
-    "Break",
-    "1.50-2.40",
-    "2.40-3.30",
-    "3.30-4.20",
-  ],
-  2: [
-    "8.20-9.10",
-    "9.10-10.00",
-    "10.00-10.50",
-    "10.50-11.40",
-    "11.40-12.30",
-    "12.30-1.20",
-  ],
-};
 
 /**
  * Public landing and section routine lookup page.
@@ -78,8 +59,9 @@ const Home = () => {
   const [notice, setNotice] = useState(null);
   const [topContributors, setTopContributors] = useState([]);
   const [contributorsLoading, setContributorsLoading] = useState(false);
+  const { periods } = usePeriods();
 
-  const timeSlots = SLOT_LABELS[shift] ?? SLOT_LABELS[1];
+  const timeSlots = getRoutineTimeSlots(periods, shift);
   const normalizedSection = section.toUpperCase().trim();
   const normalizedSession = session.toUpperCase().trim();
   const sessionLabel = session || activeSessionName || "No active session";
@@ -362,7 +344,7 @@ const Home = () => {
               {summaryStats.map((stat) => (
                 <div
                   key={stat.label}
-                  className="rounded-lg border border-white/15 bg-white/10 p-4 backdrop-blur"
+                  className="hero-glass-card p-4"
                 >
                   <div className="mb-3 text-teal-200">{stat.icon}</div>
                   <p className="text-sm text-slate-300">{stat.label}</p>
@@ -372,10 +354,10 @@ const Home = () => {
             </div>
           </div>
 
-          <form onSubmit={handleSearch} className="surface-card p-5 text-slate-900 dark:text-white">
+          <form onSubmit={handleSearch} className="hero-glass-card hero-form-card p-5 text-white">
             <div className="mb-5">
-              <p className="section-kicker">Routine lookup</p>
-              <h2 className="mt-2 text-2xl font-bold text-slate-950 dark:text-white">
+              <p className="text-sm font-semibold text-teal-200">Routine lookup</p>
+              <h2 className="mt-2 text-2xl font-bold text-white">
                 Search a section
               </h2>
             </div>
@@ -385,10 +367,12 @@ const Home = () => {
                 id="section"
                 label="Section"
                 helper={sectionLoading ? "Searching sections..." : "Example: 7BM"}
+                labelClassName="!text-slate-100"
+                helperClassName="!text-slate-300"
               >
                 <div className="relative">
                   <FiSearch
-                    className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"
+                    className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-300"
                     aria-hidden="true"
                   />
                   <input
@@ -414,10 +398,12 @@ const Home = () => {
                 id="session"
                 label="Session"
                 helper={sessionLoading ? "Searching sessions..." : sessionHelper}
+                labelClassName="!text-slate-100"
+                helperClassName="!text-slate-300"
               >
                 <div className="relative">
                   <FiCalendar
-                    className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"
+                    className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-300"
                     aria-hidden="true"
                   />
                   <input
@@ -678,11 +664,14 @@ function ContributorCard({ contributor, rank }) {
  */
 function getCourseActionError(error, action) {
   const status = error.response?.status;
+  const apiMessage = getApiErrorMessage(error);
+
+  if (apiMessage) return apiMessage;
 
   if (action === "add") {
     if (status === 409) return "This course already exists in your routine.";
-    if (status === 401) return "You cannot add more than three courses in this slot.";
-    if (status === 402 || status === 403) return "This class is not available for your personal routine.";
+    if (status === 422) return "You cannot add more than three courses in this slot.";
+    if (status === 402 || status === 403 || status === 404) return "This class is not available for your personal routine.";
   }
 
   if (action === "remove") {
@@ -691,7 +680,14 @@ function getCourseActionError(error, action) {
   }
 
   if (status === 500) return "The server could not complete the request. Please try later.";
-  return error.response?.data?.message || "The request could not be completed.";
+  return "The request could not be completed.";
+}
+
+function getApiErrorMessage(error) {
+  const data = error.response?.data;
+
+  if (typeof data === "string" && data.trim()) return data;
+  return data?.message || data?.msg || "";
 }
 
 /**

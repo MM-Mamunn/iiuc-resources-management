@@ -13,6 +13,7 @@ import {
   FiUser,
 } from "react-icons/fi";
 import api from "../../api";
+import campusImage from "../../assets/iiuc.webp";
 import Header from "../components/Header";
 import ResourceHighlights from "../components/ResourceHighlights";
 import RoutineTable from "../components/RoutineTable";
@@ -25,29 +26,14 @@ import {
   cx,
 } from "../components/ui";
 import { useActiveSession, useAuth } from "../../App";
+import {
+  getCurrentRoutineClass,
+  getRoutineTimeSlots,
+  usePeriods,
+} from "../../services/periodService";
 
 const DAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 const DISPLAY_DAYS = ["sat", "sun", "mon", "tue", "wed"];
-
-const SLOT_LABELS = {
-  1: [
-    "10.40-11.30",
-    "11.31-12.20",
-    "12.21-1.10",
-    "Break",
-    "1.50-2.40",
-    "2.41-3.30",
-    "3.31-4.20",
-  ],
-  2: [
-    "8.20-9.10",
-    "9.10-10.00",
-    "10.00-10.50",
-    "10.50-11.40",
-    "11.40-12.30",
-    "12.30-1.20",
-  ],
-};
 
 const ROUTINE_VIEW_OPTIONS = [
   { key: "personal", label: "Personal routine", icon: FiUser },
@@ -74,23 +60,30 @@ const HomePersonal = () => {
   const [sectionShift, setSectionShift] = useState(1);
   const [routineView, setRoutineView] = useState("personal");
   const [notice, setNotice] = useState(null);
+  const { periods } = usePeriods();
+  const [currentTime, setCurrentTime] = useState(new Date());
 
-  const timeSlots = SLOT_LABELS[shift] ?? SLOT_LABELS[1];
-  const sectionTimeSlots = SLOT_LABELS[sectionShift] ?? SLOT_LABELS[1];
+  const timeSlots = getRoutineTimeSlots(periods, shift);
+  const sectionTimeSlots = getRoutineTimeSlots(periods, sectionShift);
   const sessionLabel = activeSessionName || "No active session";
   const sectionLabel = profile?.sec || user?.sec || "N/A";
   const normalizedSection = (profile?.sec || user?.sec || "").toUpperCase().trim();
   const currentClass = useMemo(
-    () => getCurrentClass(schedule, shift),
-    [schedule, shift]
+    () => getCurrentRoutineClass(schedule, shift, periods, currentTime),
+    [schedule, shift, periods, currentTime]
   );
   const sectionCurrentClass = useMemo(
-    () => getCurrentClass(sectionSchedule, sectionShift),
-    [sectionSchedule, sectionShift]
+    () => getCurrentRoutineClass(sectionSchedule, sectionShift, periods, currentTime),
+    [sectionSchedule, sectionShift, periods, currentTime]
   );
   const selectedCurrentClass =
     routineView === "personal" ? currentClass : sectionCurrentClass;
-  const highlightedDay = getHighlightedDay();
+  const highlightedDay = getHighlightedDay(currentTime);
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 60000);
+    return () => clearInterval(timer);
+  }, []);
 
   /**
    * Fetches the current student's profile.
@@ -269,14 +262,21 @@ const HomePersonal = () => {
           </Notice>
         )}
 
-        <section className="surface-card overflow-hidden">
-          <div className="grid gap-8 p-6 lg:grid-cols-[1fr_320px] lg:p-8">
+        <section className="relative isolate overflow-hidden rounded-lg bg-slate-950 px-6 py-8 text-white shadow-2xl sm:px-8">
+          <img
+            src={campusImage}
+            alt=""
+            className="absolute inset-0 -z-20 h-full w-full object-cover opacity-45"
+          />
+          <div className="absolute inset-0 -z-10 bg-slate-950/72" />
+
+          <div className="grid gap-8 lg:grid-cols-[1fr_320px] lg:items-end">
             <div>
-              <p className="section-kicker">Personal dashboard</p>
-              <h1 className="mt-3 text-3xl font-black text-slate-950 sm:text-5xl dark:text-white">
+              <p className="text-sm font-bold text-teal-200">Personal dashboard</p>
+              <h1 className="mt-3 text-3xl font-black text-white sm:text-5xl">
                 Welcome back{profile?.name ? `, ${profile.name}` : ""}.
               </h1>
-              <p className="mt-4 max-w-2xl text-base leading-7 text-slate-600 dark:text-slate-300">
+              <p className="mt-4 max-w-2xl text-base leading-7 text-slate-200">
                 Your routine, courses, and key academic actions are gathered into one calm workspace.
               </p>
               <div className="mt-6 flex flex-wrap gap-3">
@@ -291,7 +291,7 @@ const HomePersonal = () => {
                 <button
                   type="button"
                   onClick={loadDashboard}
-                  className="btn-secondary"
+                  className="btn-secondary border-white/20 bg-white/10 text-white hover:bg-white/20 dark:border-white/20 dark:bg-white/10 dark:text-white"
                   disabled={loading}
                 >
                   <FiRefreshCw className={loading ? "animate-spin" : ""} aria-hidden="true" />
@@ -375,7 +375,7 @@ const HomePersonal = () => {
                     label: day === highlightedDay.day ? highlightedDay.label : "",
                   })}
                   getCellMeta={(day, item) => ({
-                    active: isCurrentRoutineCell(currentClass, day, item),
+                    active: isCurrentRoutineCell(currentClass, day, item, currentTime),
                   })}
                 />
               ) : (
@@ -404,7 +404,7 @@ const HomePersonal = () => {
                   label: day === highlightedDay.day ? highlightedDay.label : "",
                 })}
                 getCellMeta={(day, item) => ({
-                  active: isCurrentRoutineCell(sectionCurrentClass, day, item),
+                  active: isCurrentRoutineCell(sectionCurrentClass, day, item, currentTime),
                 })}
               />
             ) : (
@@ -465,14 +465,14 @@ function CurrentClassPanel({ currentClass, sectionCurrentClass, sectionLabel }) 
   const hasLiveClass = Boolean(currentClass || sectionCurrentClass);
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-900">
+    <div className="rounded-lg border border-white/15 bg-white/10 p-5 backdrop-blur">
       <div className="flex items-center gap-3">
-        <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-teal-100 text-teal-700 dark:bg-teal-500/10 dark:text-teal-200">
+        <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-teal-300/20 text-teal-100">
           <FiClock className="h-5 w-5" aria-hidden="true" />
         </span>
         <div>
-          <p className="text-sm text-slate-500 dark:text-slate-400">Now</p>
-          <h2 className="text-lg font-bold text-slate-950 dark:text-white">
+          <p className="text-sm text-slate-300">Now</p>
+          <h2 className="text-lg font-bold text-white">
             {hasLiveClass ? "Class in progress" : "No live class"}
           </h2>
         </div>
@@ -491,7 +491,7 @@ function CurrentClassPanel({ currentClass, sectionCurrentClass, sectionLabel }) 
           />
         </div>
       ) : (
-        <p className="mt-5 text-sm leading-6 text-slate-600 dark:text-slate-400">
+        <p className="mt-5 text-sm leading-6 text-slate-200">
           Your next active slot will be highlighted automatically when class time arrives.
         </p>
       )}
@@ -553,24 +553,24 @@ function ProfilePanel({ profile, loading, onEdit }) {
  */
 function LiveClassDetails({ label, classInfo, emptyText }) {
   return (
-    <div className="border-t border-slate-200 pt-3 first:border-t-0 first:pt-0 dark:border-slate-800">
-      <p className="text-xs font-bold uppercase text-slate-500 dark:text-slate-400">
+    <div className="border-t border-white/15 pt-3 first:border-t-0 first:pt-0">
+      <p className="text-xs font-bold uppercase text-teal-100">
         {label}
       </p>
       {classInfo ? (
         <div className="mt-2 space-y-1">
-          <p className="font-bold text-blue-700 dark:text-blue-300">
+          <p className="font-bold text-white">
             {classInfo.code}
           </p>
-          <p className="text-slate-600 dark:text-slate-300">
+          <p className="text-slate-200">
             {classInfo.short_name || classInfo.name || classInfo.faculty}
           </p>
-          <p className="text-slate-500 dark:text-slate-400">
+          <p className="text-slate-300">
             Room {classInfo.room || "N/A"}
           </p>
         </div>
       ) : (
-        <p className="mt-2 text-slate-500 dark:text-slate-400">{emptyText}</p>
+        <p className="mt-2 text-slate-300">{emptyText}</p>
       )}
     </div>
   );
@@ -668,10 +668,10 @@ function buildRoutineDaySchedule({ schedule, shift, day }) {
 /**
  * Marks the routine cell that matches the current class slot.
  */
-function isCurrentRoutineCell(currentClass, day, item) {
+function isCurrentRoutineCell(currentClass, day, item, now = new Date()) {
   return (
     Boolean(currentClass) &&
-    day === DAYS[new Date().getDay()] &&
+    day === DAYS[now.getDay()] &&
     item.subject !== "-" &&
     !item.isBreak &&
     currentClass.slot >= item.slotStart &&
@@ -682,54 +682,11 @@ function isCurrentRoutineCell(currentClass, day, item) {
 /**
  * Finds the current class by matching local time against class slots.
  */
-function getCurrentClass(schedule, shift) {
-  const now = new Date();
-  const currentDay = now.getDay();
-  const currentTime = now.getHours() * 60 + now.getMinutes();
-  const dayName = DAYS[currentDay];
-
-  if (!DISPLAY_DAYS.includes(dayName)) return null;
-
-  const timeSlots =
-    shift === 1
-      ? [
-          { start: 10 * 60 + 40, end: 11 * 60 + 30, slot: 1 },
-          { start: 11 * 60 + 31, end: 12 * 60 + 20, slot: 2 },
-          { start: 12 * 60 + 21, end: 13 * 60 + 10, slot: 3 },
-          { start: 13 * 60 + 50, end: 14 * 60 + 40, slot: 4 },
-          { start: 14 * 60 + 41, end: 15 * 60 + 30, slot: 5 },
-          { start: 15 * 60 + 31, end: 16 * 60 + 20, slot: 6 },
-        ]
-      : [
-          { start: 8 * 60 + 20, end: 9 * 60 + 10, slot: 1 },
-          { start: 9 * 60 + 10, end: 10 * 60, slot: 2 },
-          { start: 10 * 60, end: 10 * 60 + 50, slot: 3 },
-          { start: 10 * 60 + 50, end: 11 * 60 + 40, slot: 4 },
-          { start: 11 * 60 + 40, end: 12 * 60 + 30, slot: 5 },
-          { start: 12 * 60 + 30, end: 13 * 60 + 20, slot: 6 },
-        ];
-
-  const currentSlot = timeSlots.find(
-    (slot) => currentTime >= slot.start && currentTime <= slot.end
-  );
-  if (!currentSlot) return null;
-
-  return (
-    schedule
-      .filter((item) => item.day === currentDay)
-      .find(
-        (item) =>
-          currentSlot.slot >= Number(item.slot) &&
-          currentSlot.slot < Number(item.slot) + Number(item.count || 1)
-      ) || null
-  );
-}
-
 /**
  * Chooses the day highlighted in the routine table.
  */
-function getHighlightedDay() {
-  const today = DAYS[new Date().getDay()];
+function getHighlightedDay(now = new Date()) {
+  const today = DAYS[now.getDay()];
 
   if (DISPLAY_DAYS.includes(today)) {
     return { day: today, label: "Today" };

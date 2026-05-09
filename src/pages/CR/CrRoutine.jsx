@@ -18,6 +18,12 @@ import {
 } from "react-icons/fi";
 import api from "../../api";
 import { useActiveSession, useAuth } from "../../App";
+import {
+  getPeriodLabel,
+  getPeriodNumbers,
+  getRoutineTimeSlots,
+  usePeriods,
+} from "../../services/periodService";
 import Header from "../components/Header";
 import RoutineTable from "../components/RoutineTable";
 import {
@@ -34,25 +40,6 @@ import {
 
 const DAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 const DISPLAY_DAYS = ["sat", "sun", "mon", "tue", "wed"];
-const SLOT_LABELS = {
-  1: [
-    "10.30-11.20",
-    "11.20-12.10",
-    "12.10-1.00",
-    "Break",
-    "1.40-2.30",
-    "2.30-3.20",
-    "3.20-4.10",
-  ],
-  2: [
-    "8.20-9.10",
-    "9.10-10.00",
-    "10.00-10.50",
-    "10.50-11.40",
-    "11.40-12.30",
-    "12.30-1.20",
-  ],
-};
 
 const emptyClassForm = {
   code: "",
@@ -146,10 +133,11 @@ const CrRoutine = () => {
   const [quickFacultyNotice, setQuickFacultyNotice] = useState(null);
   const [quickFacultySaving, setQuickFacultySaving] = useState(false);
   const { user } = useAuth();
+  const { periods } = usePeriods();
 
   const userSection = user?.sec;
-  const timeSlots = SLOT_LABELS[shift] ?? SLOT_LABELS[1];
-  const slotOptions = getSlotOptions(shift);
+  const timeSlots = getRoutineTimeSlots(periods, shift);
+  const slotOptions = getPeriodNumbers(periods, shift);
   const facultySearchConfig = FACULTY_SEARCH_MODES[facultySearchMode];
   const selectedFacultyCode =
     selectedFaculty?.code ||
@@ -968,7 +956,7 @@ const CrRoutine = () => {
                       <option value="">Select slot</option>
                       {slotOptions.map((slot) => (
                         <option key={slot} value={slot}>
-                          Slot {slot} - {getSlotLabel(shift, slot)}
+                          Slot {slot} - {getPeriodLabel(periods, shift, slot)}
                         </option>
                       ))}
                     </select>
@@ -1423,18 +1411,6 @@ function AutocompleteField({
 
 function getShiftFromSection(section) {
   return String(section || "").trim().toUpperCase().endsWith("M") ? 1 : 2;
-}
-
-function getSlotOptions() {
-  return [1, 2, 3, 4, 5, 6];
-}
-
-function getSlotLabel(shift, slot) {
-  const numericSlot = Number(slot);
-  const labels = SLOT_LABELS[shift] ?? SLOT_LABELS[1];
-  const labelIndex = shift === 1 && numericSlot >= 4 ? numericSlot : numericSlot - 1;
-
-  return labels[labelIndex] || `Slot ${numericSlot}`;
 }
 
 function getDayLabel(day) {

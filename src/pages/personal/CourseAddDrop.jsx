@@ -569,13 +569,17 @@ function getSearchError(error) {
 
 function getAddError(error) {
   const status = error.response?.status;
-  if (status === 401) return "You cannot add more than three courses in the same slot.";
+  const apiMessage = getApiErrorMessage(error);
+
+  if (apiMessage) return apiMessage;
+
+  if (status === 422) return "You cannot add more than three courses in the same slot.";
   if (status === 409) return "This course is already in your personal schedule.";
-  if (status === 405 || status === 402) return "No such class exists in your personal routine.";
+  if (status === 405 || status === 404 || status === 402) return "No such class exists in your personal routine.";
   if (status === 403) return "Access forbidden.";
   if (status === 500) return "Server error. Please try again later.";
   if (error.request) return "Network error: unable to connect to the server.";
-  return error.response?.data?.message || error.message || "Could not add class.";
+  return error.message || "Could not add class.";
 }
 
 function getDeleteError(error) {
@@ -596,6 +600,13 @@ function getConflictError(error) {
   if (status === 500) return "Server error. Please try again later.";
   if (error.request) return "Network error: unable to connect to the server.";
   return error.response?.data?.message || error.message || "Could not check conflicts.";
+}
+
+function getApiErrorMessage(error) {
+  const data = error.response?.data;
+
+  if (typeof data === "string" && data.trim()) return data;
+  return data?.message || data?.msg || "";
 }
 
 export default PersonalCourseManage;

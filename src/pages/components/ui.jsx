@@ -50,15 +50,17 @@ export function FormField({
   error,
   children,
   className = "",
+  labelClassName = "",
+  helperClassName = "",
 }) {
   return (
     <div className={className}>
-      <label htmlFor={id} className="field-label">
+      <label htmlFor={id} className={cx("field-label", labelClassName)}>
         {label}
       </label>
       {children}
       {helper && !error && (
-        <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+        <p className={cx("mt-2 text-xs text-slate-500 dark:text-slate-400", helperClassName)}>
           {helper}
         </p>
       )}

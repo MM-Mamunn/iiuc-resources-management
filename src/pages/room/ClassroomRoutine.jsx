@@ -13,6 +13,7 @@ import {
 } from "react-icons/fi";
 import api from "../../api";
 import { useActiveSession } from "../../App";
+import { getRoutineTimeSlots, usePeriods } from "../../services/periodService";
 import Header from "../components/Header";
 import ResourceBrowser from "../components/ResourceBrowser";
 import {
@@ -35,16 +36,6 @@ const DAYS = [
   "Thursday",
   "Friday",
   "Saturday",
-];
-
-const TIME_SLOTS = [
-  "10.30-11.20",
-  "11.20-12.10",
-  "12.10-1.00",
-  "Break",
-  "1.40-2.30",
-  "2.30-3.20",
-  "3.20-4.10",
 ];
 
 /**
@@ -71,8 +62,10 @@ const ClassroomRoutine = () => {
   const [facultyModal, setFacultyModal] = useState({ open: false, data: null, loading: false });
   const [courseModal, setCourseModal] = useState({ open: false, data: null, loading: false });
   const [notice, setNotice] = useState(null);
+  const { periods } = usePeriods();
 
   const schedule = useMemo(() => buildSchedule(routineData), [routineData]);
+  const timeSlots = getRoutineTimeSlots(periods, "male");
   const displayDay = getDisplayDay(formData.day);
   const sessionHelper = activeSessionLoading
     ? "Loading active session..."
@@ -329,6 +322,7 @@ const ClassroomRoutine = () => {
               session={formData.session}
               displayDay={displayDay}
               schedule={schedule}
+              timeSlots={timeSlots}
               onFacultyClick={handleFacultyClick}
               onCourseClick={handleCourseClick}
             />
@@ -419,6 +413,7 @@ function ClassroomTable({
   session,
   displayDay,
   schedule,
+  timeSlots,
   onCourseClick,
   onFacultyClick,
 }) {
@@ -455,7 +450,7 @@ function ClassroomTable({
                 <th scope="col" className="w-36 px-4 py-4 font-bold">
                   Day
                 </th>
-                {TIME_SLOTS.map((slot) => (
+                {timeSlots.map((slot) => (
                   <th key={slot} scope="col" className="px-4 py-4 text-center font-bold">
                     {slot}
                   </th>

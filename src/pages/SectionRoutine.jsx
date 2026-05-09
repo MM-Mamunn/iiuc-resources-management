@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { FiCalendar, FiDownload, FiPlus, FiSearch, FiTrash2 } from "react-icons/fi";
 import api from "../api";
 import { useActiveSession, useAuth } from "../App";
+import { getRoutineTimeSlots, usePeriods } from "../services/periodService";
 import Header from "./components/Header";
 import RoutineTable from "./components/RoutineTable";
 import {
@@ -18,25 +19,6 @@ import {
 
 const DAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 const DISPLAY_DAYS = ["sat", "sun", "mon", "tue", "wed"];
-const SLOT_LABELS = {
-  1: [
-    "10.40-11.30",
-    "11.30-12.20",
-    "12.20-1.10",
-    "Break",
-    "1.50-2.40",
-    "2.40-3.30",
-    "3.30-4.20",
-  ],
-  2: [
-    "8.20-9.10",
-    "9.10-10.00",
-    "10.00-10.50",
-    "10.50-11.40",
-    "11.40-12.30",
-    "12.30-1.20",
-  ],
-};
 
 /**
  * Public section-routine lookup page.
@@ -59,8 +41,9 @@ const SectionRoutine = () => {
   const [hasSearched, setHasSearched] = useState(false);
   const [busyCourses, setBusyCourses] = useState({});
   const [notice, setNotice] = useState(null);
+  const { periods } = usePeriods();
 
-  const timeSlots = SLOT_LABELS[shift] ?? SLOT_LABELS[1];
+  const timeSlots = getRoutineTimeSlots(periods, shift);
   const normalizedSection = section.toUpperCase().trim();
   const normalizedSession = session.toUpperCase().trim();
   const sessionHelper = activeSessionLoading
@@ -148,7 +131,7 @@ const SectionRoutine = () => {
     } catch (courseError) {
       setNotice({
         type: "error",
-        text: courseError.response?.data?.message || "Could not update personal routine.",
+        text: getCourseActionError(courseError),
       });
     } finally {
       setBusyCourses((current) => ({ ...current, [key]: false }));
@@ -382,5 +365,12 @@ const SectionRoutine = () => {
     </div>
   );
 };
+
+function getCourseActionError(error) {
+  const data = error.response?.data;
+
+  if (typeof data === "string" && data.trim()) return data;
+  return data?.message || data?.msg || error.message || "Could not update personal routine.";
+}
 
 export default SectionRoutine;

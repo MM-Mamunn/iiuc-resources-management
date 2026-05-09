@@ -90,6 +90,28 @@
     box-shadow: 0 24px 70px rgba(0, 0, 0, 0.28);
   }
 
+  .hero-glass-card {
+    @apply rounded-lg border border-white/15 bg-white/10 backdrop-blur;
+  }
+
+  .hero-form-card .form-field,
+  .home-lookup-card .form-field {
+    border-color: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+  }
+
+  .hero-form-card .form-field::placeholder,
+  .home-lookup-card .form-field::placeholder {
+    color: rgb(203 213 225);
+  }
+
+  .hero-form-card .form-field:focus,
+  .home-lookup-card .form-field:focus {
+    border-color: rgb(94 234 212);
+    box-shadow: 0 0 0 4px rgba(94, 234, 212, 0.18);
+  }
+
   .subtle-card {
     @apply rounded-lg border border-slate-200 bg-white shadow-sm transition duration-200 dark:border-slate-800 dark:bg-slate-900;
   }

@@ -4,6 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import { FiCalendar, FiClock, FiDownload, FiSearch } from "react-icons/fi";
 import api from "../../api";
 import { useActiveSession } from "../../App";
+import {
+  getCurrentRoutineClass,
+  getRoutineTimeSlots,
+  usePeriods,
+} from "../../services/periodService";
 import Header from "../components/Header";
 import RoutineTable from "../components/RoutineTable";
 import {
@@ -19,25 +24,6 @@ import {
 
 const DAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 const DISPLAY_DAYS = ["sat", "sun", "mon", "tue", "wed"];
-const SLOT_LABELS = {
-  1: [
-    "10.40-11.30",
-    "11.31-12.20",
-    "12.21-1.10",
-    "Break",
-    "1.50-2.40",
-    "2.41-3.30",
-    "3.31-4.20",
-  ],
-  2: [
-    "8.20-9.10",
-    "9.10-10.00",
-    "10.00-10.50",
-    "10.50-11.40",
-    "11.40-12.30",
-    "12.30-1.20",
-  ],
-};
 
 /**
  * Personal routine lookup by session.
@@ -57,16 +43,17 @@ const PersonalRoutine = () => {
   const [shift, setShift] = useState(1);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [notice, setNotice] = useState(null);
+  const { periods } = usePeriods();
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
     return () => clearInterval(timer);
   }, []);
 
-  const timeSlots = SLOT_LABELS[shift] ?? SLOT_LABELS[1];
+  const timeSlots = getRoutineTimeSlots(periods, shift);
   const currentClass = useMemo(
-    () => getCurrentClass(schedule, shift, currentTime),
-    [schedule, shift, currentTime]
+    () => getCurrentRoutineClass(schedule, shift, periods, currentTime),
+    [schedule, shift, periods, currentTime]
   );
   const sessionHelper = activeSessionLoading
     ? "Loading active session..."
@@ -280,7 +267,7 @@ const PersonalRoutine = () => {
                 getCellMeta={(day, item) => ({
                   active:
                     Boolean(currentClass) &&
-                    day === DAYS[new Date().getDay()] &&
+                    day === DAYS[currentTime.getDay()] &&
                     item.subject !== "-" &&
                     !item.isBreak &&
                     currentClass.slot >= item.slotStart &&
@@ -310,42 +297,5 @@ const PersonalRoutine = () => {
     </div>
   );
 };
-
-function getCurrentClass(schedule, shift, now) {
-  const dayIndex = now.getDay();
-  const minutes = now.getHours() * 60 + now.getMinutes();
-
-  const slots =
-    shift === 1
-      ? [
-          { start: 10 * 60 + 40, end: 11 * 60 + 30, slot: 1 },
-          { start: 11 * 60 + 31, end: 12 * 60 + 20, slot: 2 },
-          { start: 12 * 60 + 21, end: 13 * 60 + 10, slot: 3 },
-          { start: 13 * 60 + 50, end: 14 * 60 + 40, slot: 4 },
-          { start: 14 * 60 + 41, end: 15 * 60 + 30, slot: 5 },
-          { start: 15 * 60 + 31, end: 16 * 60 + 20, slot: 6 },
-        ]
-      : [
-          { start: 8 * 60 + 20, end: 9 * 60 + 10, slot: 1 },
-          { start: 9 * 60 + 10, end: 10 * 60, slot: 2 },
-          { start: 10 * 60, end: 10 * 60 + 50, slot: 3 },
-          { start: 10 * 60 + 50, end: 11 * 60 + 40, slot: 4 },
-          { start: 11 * 60 + 40, end: 12 * 60 + 30, slot: 5 },
-          { start: 12 * 60 + 30, end: 13 * 60 + 20, slot: 6 },
-        ];
-
-  const currentSlot = slots.find((slot) => minutes >= slot.start && minutes <= slot.end);
-  if (!currentSlot) return null;
-
-  return (
-    schedule
-      .filter((item) => item.day === dayIndex)
-      .find(
-        (item) =>
-          currentSlot.slot >= Number(item.slot) &&
-          currentSlot.slot < Number(item.slot) + Number(item.count || 1)
-      ) || null
-  );
-}
 
 export default PersonalRoutine;
