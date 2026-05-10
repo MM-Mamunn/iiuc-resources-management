@@ -55,7 +55,7 @@ function Resources() {
           <MetricCard
             icon={<FiBookOpen className="h-5 w-5" aria-hidden="true" />}
             label="Browse mode"
-            value="Cards"
+            value="Rows"
             tone="blue"
           />
           <MetricCard
@@ -75,7 +75,7 @@ function Resources() {
         <div className="mt-8">
           <ResourceBrowser
             title="Resource Library"
-            description="Use search and sorting to find resources quickly. Click the rating panel on any card to review feedback or add your own."
+            description="Use search and sorting to find resources quickly. Click the rating control on any row to review feedback or add your own."
             limit={9}
             enableCourseFilters
           />

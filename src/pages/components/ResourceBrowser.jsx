@@ -542,23 +542,18 @@ function ResourceBrowser({
         {loading ? (
           <LoadingState label="Loading resources..." />
         ) : resources.length > 0 ? (
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {resources.map((resource) => (
-              <ResourceCard
-                key={resource.id}
-                resource={resource}
-                onRate={() => openRatings(resource)}
-                manageable={manageable}
-                onEdit={() => openEditResource(resource)}
-                onDelete={() => handleResourceDelete(resource)}
-                onConfirmDelete={() => setDeleteConfirmId(resource.id)}
-                onCancelDelete={() => setDeleteConfirmId(null)}
-                deleteConfirming={deleteConfirmId === resource.id}
-                deleting={deleteSubmittingId === resource.id}
-                onOpen={handleResourceOpen}
-              />
-            ))}
-          </div>
+          <ResourceTable
+            resources={resources}
+            manageable={manageable}
+            deleteConfirmId={deleteConfirmId}
+            deleteSubmittingId={deleteSubmittingId}
+            onRate={openRatings}
+            onEdit={openEditResource}
+            onDelete={handleResourceDelete}
+            onConfirmDelete={(resource) => setDeleteConfirmId(resource.id)}
+            onCancelDelete={() => setDeleteConfirmId(null)}
+            onOpen={handleResourceOpen}
+          />
         ) : (
           <EmptyState
             icon={<FiSearch className="h-7 w-7" aria-hidden="true" />}
@@ -645,7 +640,56 @@ function ResourceBrowser({
   );
 }
 
-function ResourceCard({
+function ResourceTable({
+  resources,
+  manageable,
+  deleteConfirmId,
+  deleteSubmittingId,
+  onRate,
+  onEdit,
+  onConfirmDelete,
+  onCancelDelete,
+  onDelete,
+  onOpen,
+}) {
+  return (
+    <div className="overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[980px] text-left text-sm">
+          <caption className="sr-only">Resource list</caption>
+          <thead className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
+            <tr>
+              <th scope="col" className="px-5 py-4 font-bold">Course Code</th>
+              <th scope="col" className="px-5 py-4 font-bold">Course Title</th>
+              <th scope="col" className="px-5 py-4 font-bold">Uploaded by</th>
+              <th scope="col" className="px-5 py-4 font-bold">Rating</th>
+              <th scope="col" className="px-5 py-4 text-right font-bold">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+            {resources.map((resource) => (
+              <ResourceRow
+                key={resource.id}
+                resource={resource}
+                manageable={manageable}
+                deleteConfirming={deleteConfirmId === resource.id}
+                deleting={deleteSubmittingId === resource.id}
+                onRate={() => onRate(resource)}
+                onEdit={() => onEdit(resource)}
+                onDelete={() => onDelete(resource)}
+                onConfirmDelete={() => onConfirmDelete(resource)}
+                onCancelDelete={onCancelDelete}
+                onOpen={onOpen}
+              />
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function ResourceRow({
   resource,
   onRate,
   manageable,
@@ -662,68 +706,80 @@ function ResourceCard({
   const profilePic = resource.studentProfilePic || resource.profilePic || "";
   const courseCode = resource.course || "Course";
   const resourceTitle = resource.courseTitle || resource.courseShortName || "Shared resource";
+  const isFiveStarResource = Number(resource.star || 0) >= 5;
 
   return (
-    <article className="subtle-card p-5">
-      <div className="flex items-start justify-between gap-4">
+    <tr
+      className={`transition ${
+        isFiveStarResource
+          ? "bg-amber-50/90 hover:bg-amber-100 dark:bg-amber-500/10 dark:hover:bg-amber-500/15"
+          : "hover:bg-blue-50/60 dark:hover:bg-slate-900"
+      }`}
+    >
+      <td className="px-5 py-5 align-top">
         <div className="min-w-0">
-          <p className="section-kicker">Course Code</p>
-          <h3 className="safe-text mt-2 text-3xl font-black text-blue-700 dark:text-blue-200">
+          <h3 className="safe-text mt-1 text-2xl font-black text-blue-700 dark:text-blue-200">
             {courseCode}
           </h3>
+          {isFiveStarResource && (
+            <span className="mt-2 inline-flex items-center gap-1 rounded-lg bg-amber-200 px-2 py-1 text-xs font-black text-amber-950 ring-1 ring-amber-300 dark:bg-amber-400/20 dark:text-amber-100 dark:ring-amber-400/30">
+              <FiStar aria-hidden="true" />
+              Top rated
+            </span>
+          )}
         </div>
-        <span className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-amber-50 px-3 py-2 text-sm font-black text-amber-800 ring-1 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-200 dark:ring-amber-500/30">
-          <FiStar aria-hidden="true" />
-          {formatStar(resource.star)}
-        </span>
-      </div>
+      </td>
 
-      <h4 className="safe-text mt-4 text-lg font-bold text-slate-950 dark:text-white">
-        {resourceTitle}
-      </h4>
+      <td className="px-5 py-5 align-top">
+        <p className="safe-text max-w-80 text-sm font-bold text-slate-950 dark:text-white">
+          {resourceTitle}
+        </p>
+        <p className="safe-text mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">
+          Resource available via Open action
+        </p>
+      </td>
 
-      <div className="mt-4 flex items-center gap-4 rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900/70">
-        <Avatar image={profilePic} name={studentName} />
-        <div className="min-w-0">
-          <p className="safe-text text-sm font-bold text-slate-900 dark:text-white">
-            {studentName}
-          </p>
-          <p className="safe-text mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">
-            ID {studentId}
-          </p>
-          <p className="safe-text mt-1 text-xs text-slate-500 dark:text-slate-400">
-            {getLinkHost(resource.links)}
-          </p>
+      <td className="px-5 py-5 align-top">
+        <div className="flex min-w-56 items-center gap-3">
+          <Avatar image={profilePic} name={studentName} />
+          <div className="min-w-0">
+            <p className="safe-text text-sm font-bold text-slate-950 dark:text-white">
+              {studentName}
+            </p>
+            <p className="safe-text mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">
+              ID {studentId}
+            </p>
+            <p className="safe-text mt-1 text-xs text-slate-500 dark:text-slate-400">
+              Uploaded {formatDate(resource.date)}
+            </p>
+          </div>
         </div>
-      </div>
+      </td>
 
-      <button
-        type="button"
-        onClick={onRate}
-        className="group mt-5 flex w-full items-center justify-between gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-left text-amber-950 shadow-sm shadow-amber-500/10 transition hover:-translate-y-0.5 hover:border-amber-400 hover:bg-amber-100 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-100 dark:hover:bg-amber-500/15"
-      >
-        <span className="inline-flex items-center gap-2 text-sm font-bold">
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-200 text-amber-900 dark:bg-amber-400/20 dark:text-amber-100">
+      <td className="px-5 py-5 align-top">
+        <button
+          type="button"
+          onClick={onRate}
+          className="group inline-flex min-w-44 items-center justify-between gap-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-left text-amber-950 shadow-sm shadow-amber-500/10 transition hover:border-amber-400 hover:bg-amber-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-100 dark:hover:bg-amber-500/15"
+        >
+          <span className="inline-flex items-center gap-2">
             <FiStar aria-hidden="true" />
-          </span>
-          <span>
-            <span className="block">Rate / view ratings</span>
-            <span className="text-xs font-semibold text-amber-700 dark:text-amber-200">
-              Average {formatStar(resource.star)}
+            <span>
+              <span className="block text-sm font-black">{formatStar(resource.star)}</span>
+              <span className="block text-xs font-semibold text-amber-700 dark:text-amber-200">
+                Rate / view
+              </span>
             </span>
           </span>
-        </span>
-        <FiChevronRight
-          className="h-5 w-5 shrink-0 transition group-hover:translate-x-0.5"
-          aria-hidden="true"
-        />
-      </button>
+          <FiChevronRight
+            className="h-4 w-4 shrink-0 transition group-hover:translate-x-0.5"
+            aria-hidden="true"
+          />
+        </button>
+      </td>
 
-      <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-          {formatDate(resource.date)}
-        </span>
-        <div className="flex flex-wrap justify-end gap-2">
+      <td className="px-5 py-5 align-top">
+        <div className="flex min-w-52 flex-wrap justify-end gap-2">
           {manageable && (
             <>
               <button type="button" onClick={onEdit} className="btn-secondary">
@@ -769,8 +825,8 @@ function ResourceCard({
             <FiExternalLink aria-hidden="true" />
           </a>
         </div>
-      </div>
-    </article>
+      </td>
+    </tr>
   );
 }
 
@@ -1043,14 +1099,6 @@ function getInitials(value) {
     .join("")
     .slice(0, 2)
     .toUpperCase();
-}
-
-function getLinkHost(value) {
-  try {
-    return new URL(value).hostname.replace(/^www\./, "");
-  } catch {
-    return "Resource link";
-  }
 }
 
 function formatDate(value) {
