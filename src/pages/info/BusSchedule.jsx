@@ -391,12 +391,12 @@ const BusSchedule = () => {
           />
         </div>
 
-        <footer className="mt-10 border-t border-slate-200 pt-6 text-center text-sm text-slate-600 dark:border-slate-800 dark:text-slate-400">
+        <section className="mt-10 border-t border-slate-200 pt-6 text-center text-sm text-slate-600 dark:border-slate-800 dark:text-slate-400">
           <p className="font-semibold text-slate-800 dark:text-slate-200">
             Transport Management Division
           </p>
           <p className="mt-1">International Islamic University Chittagong</p>
-        </footer>
+        </section>
       </PageShell>
     </div>
   );

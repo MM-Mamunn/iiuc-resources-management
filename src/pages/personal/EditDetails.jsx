@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import Cookies from "js-cookie";
 import {
+  FiAlertTriangle,
   FiBookOpen,
   FiCamera,
   FiChevronRight,
@@ -18,6 +19,7 @@ import {
   FiSearch,
   FiSend,
   FiUser,
+  FiX,
 } from "react-icons/fi";
 import api from "../../api";
 import { useAuth } from "../../App";
@@ -103,6 +105,10 @@ function EditDetails() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [editData, setEditData] = useState(emptyEditData);
+  const [sectionSuggestions, setSectionSuggestions] = useState([]);
+  const [sectionLoading, setSectionLoading] = useState(false);
+  const [pendingProfileUpdate, setPendingProfileUpdate] = useState(null);
+  const [sectionWarningAccepted, setSectionWarningAccepted] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [previewUrl, setPreviewUrl] = useState("");
   const [photoLoading, setPhotoLoading] = useState(false);
@@ -337,8 +343,39 @@ function EditDetails() {
     setEditData((current) => ({ ...current, [name]: value }));
   };
 
+  const handleSectionChange = async (event) => {
+    const value = event.target.value.toUpperCase();
+    setEditData((current) => ({ ...current, sec: value }));
+
+    if (value.length < 1 || value.length > 4) {
+      setSectionSuggestions([]);
+      return;
+    }
+
+    setSectionLoading(true);
+    try {
+      const response = await api.get(
+        `/api/lookLike/sectionLookLike/${encodeURIComponent(value)}`,
+      );
+      const suggestions = response.data?.rows?.map((row) => row.sec) ?? [];
+      setSectionSuggestions(suggestions);
+    } catch {
+      setSectionSuggestions([]);
+    } finally {
+      setSectionLoading(false);
+    }
+  };
+
+  const chooseSectionSuggestion = (sectionCode) => {
+    setEditData((current) => ({ ...current, sec: sectionCode }));
+    setSectionSuggestions([]);
+  };
+
   const handleCancel = () => {
     setIsEditing(false);
+    setSectionSuggestions([]);
+    setPendingProfileUpdate(null);
+    setSectionWarningAccepted(false);
     if (currentProfile) {
       setEditData({
         name: currentProfile.name || "",
@@ -349,35 +386,79 @@ function EditDetails() {
     }
   };
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
+  const submitProfileUpdate = async (submitData) => {
     setUpdating(true);
     setNotice(null);
+    setSectionSuggestions([]);
 
     try {
-      const submitData = {};
-      Object.entries(editData).forEach(([key, value]) => {
-        if (value && value.trim() !== "") submitData[key] = value.trim();
-      });
-
       const response = await api.post("/api/change/data", submitData);
-      setProfile(response.data);
+      const updatedRows = Array.isArray(response.data)
+        ? response.data
+        : response.data?.rows ?? [];
+
+      if (response.data?.jwtToken) {
+        Cookies.set("jwtToken", response.data.jwtToken);
+      }
+
+      setProfile(updatedRows);
       setNotice({ type: "success", text: "Profile updated successfully." });
       setIsEditing(false);
+      setPendingProfileUpdate(null);
+      setSectionWarningAccepted(false);
 
-      if (response.data?.length > 0) {
+      if (updatedRows.length > 0) {
         setEditData({
-          name: response.data[0].name || "",
-          sec: response.data[0].sec || "",
-          email: response.data[0].email || "",
-          phone: response.data[0].phone || "",
+          name: updatedRows[0].name || "",
+          sec: updatedRows[0].sec || "",
+          email: updatedRows[0].email || "",
+          phone: updatedRows[0].phone || "",
         });
+        setUser((current) => (current ? { ...current, ...updatedRows[0] } : updatedRows[0]));
       }
     } catch (updateError) {
       setNotice({ type: "error", text: getProfileError(updateError) });
     } finally {
       setUpdating(false);
     }
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+
+    const submitData = {};
+    Object.entries(editData).forEach(([key, value]) => {
+      if (value && value.trim() !== "") {
+        submitData[key] = key === "sec" ? value.trim().toUpperCase() : value.trim();
+      }
+    });
+
+    const currentSection = String(currentProfile?.sec || "").trim().toUpperCase();
+    const nextSection = String(submitData.sec || currentSection).trim().toUpperCase();
+    const sectionChanged = Boolean(nextSection && currentSection && nextSection !== currentSection);
+
+    if (sectionChanged) {
+      setSectionSuggestions([]);
+      setPendingProfileUpdate({
+        ...submitData,
+        sec: nextSection,
+        confirmSectionChange: true,
+      });
+      setSectionWarningAccepted(false);
+      return;
+    }
+
+    await submitProfileUpdate(submitData);
+  };
+
+  const confirmSectionUpdate = async () => {
+    if (!sectionWarningAccepted || !pendingProfileUpdate) return;
+    await submitProfileUpdate(pendingProfileUpdate);
+  };
+
+  const cancelSectionUpdate = () => {
+    setPendingProfileUpdate(null);
+    setSectionWarningAccepted(false);
   };
 
   const handlePasswordChange = (event) => {
@@ -805,8 +886,26 @@ function EditDetails() {
                       <FormField id="name" label="Name">
                         <input id="name" type="text" name="name" value={editData.name} onChange={handleInputChange} className="form-field" />
                       </FormField>
-                      <FormField id="sec" label="Section">
-                        <input id="sec" type="text" name="sec" value={editData.sec} onChange={handleInputChange} className="form-field uppercase" />
+                      <FormField
+                        id="sec"
+                        label="Section"
+                        helper={sectionLoading ? "Searching sections..." : "Start typing to see matching sections."}
+                      >
+                        <div className="relative">
+                          <input
+                            id="sec"
+                            type="text"
+                            name="sec"
+                            value={editData.sec}
+                            onChange={handleSectionChange}
+                            className="form-field uppercase"
+                            autoComplete="off"
+                          />
+                          <SuggestionList
+                            suggestions={sectionSuggestions}
+                            onSelect={chooseSectionSuggestion}
+                          />
+                        </div>
                       </FormField>
                       <FormField id="phone" label="Phone">
                         <input id="phone" type="text" name="phone" value={editData.phone} onChange={handleInputChange} className="form-field" />
@@ -1167,6 +1266,102 @@ function EditDetails() {
           </section>
         )}
       </PageShell>
+
+      {pendingProfileUpdate && (
+        <SectionChangeWarningModal
+          currentSection={currentProfile?.sec}
+          nextSection={pendingProfileUpdate.sec}
+          currentRole={currentProfile?.type}
+          accepted={sectionWarningAccepted}
+          submitting={updating}
+          onAcceptedChange={setSectionWarningAccepted}
+          onConfirm={confirmSectionUpdate}
+          onCancel={cancelSectionUpdate}
+        />
+      )}
+    </div>
+  );
+}
+
+function SectionChangeWarningModal({
+  currentSection,
+  nextSection,
+  currentRole,
+  accepted,
+  submitting,
+  onAcceptedChange,
+  onConfirm,
+  onCancel,
+}) {
+  const isCurrentCr = String(currentRole || "").toLowerCase() === "cr";
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/75 p-4 backdrop-blur-sm">
+      <section className="surface-card w-full max-w-xl overflow-hidden">
+        <div className="border-b border-amber-200 bg-amber-50 px-6 py-5 text-amber-950 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-200">
+                <FiAlertTriangle className="h-6 w-6" aria-hidden="true" />
+              </span>
+              <div>
+                <p className="text-sm font-black uppercase">Section change warning</p>
+                <h2 className="mt-1 text-2xl font-black">Confirm before updating</h2>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={onCancel}
+              className="rounded-lg p-2 text-amber-700 transition hover:bg-amber-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-600 dark:text-amber-200 dark:hover:bg-amber-500/15"
+              aria-label="Cancel section change"
+            >
+              <FiX aria-hidden="true" />
+            </button>
+          </div>
+        </div>
+
+        <div className="grid gap-5 px-6 py-6">
+          <p className="text-sm leading-6 text-slate-700 dark:text-slate-300">
+            You are changing your section from{" "}
+            <strong>{currentSection || "current section"}</strong> to{" "}
+            <strong>{nextSection || "new section"}</strong>.
+          </p>
+          <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold leading-6 text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-100">
+            {isCurrentCr
+              ? "You currently have the CR role. Changing section will automatically change your role to student."
+              : "If your account currently has the CR role, changing section will automatically change your role to student."}
+            <span className="mt-2 block">
+              After that, you must apply for CR again if you want the role back.
+            </span>
+          </div>
+
+          <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 bg-white p-4 text-sm font-semibold text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200">
+            <input
+              type="checkbox"
+              checked={accepted}
+              onChange={(event) => onAcceptedChange(event.target.checked)}
+              className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-900"
+            />
+            <span>
+              I understand that changing my section will set my account type to student, and I will need to apply again for CR access.
+            </span>
+          </label>
+
+          <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+            <button type="button" onClick={onCancel} className="btn-secondary">
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={onConfirm}
+              disabled={!accepted || submitting}
+              className="btn-danger"
+            >
+              {submitting ? "Updating..." : "Confirm section change"}
+            </button>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
@@ -1446,6 +1641,7 @@ function PasswordField({ id, label, name, value, show, onToggle, onChange }) {
 
 function getProfileError(error) {
   const status = error.response?.status;
+  if (status === 409) return error.response?.data?.message || "Confirm the section change first.";
   if (status === 404) return "The requested endpoint was not found.";
   if (status === 401) return "Unauthorized. Please login again.";
   if (status === 403) return "Access forbidden.";

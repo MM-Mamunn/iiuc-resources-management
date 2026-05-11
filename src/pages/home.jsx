@@ -593,14 +593,6 @@ const Home = () => {
         </section>
       </main>
 
-      <footer className="border-t border-slate-200 bg-white py-10 dark:border-slate-800 dark:bg-slate-950">
-        <div className="page-wrap flex flex-col gap-4 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between dark:text-slate-400">
-          <p className="font-semibold text-slate-900 dark:text-white">
-            IIUC CSE Resources Management System
-          </p>
-          <p>Built for clearer academic planning and faster routine access.</p>
-        </div>
-      </footer>
     </div>
   );
 };

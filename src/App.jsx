@@ -13,6 +13,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import Cookies from "js-cookie";
 import { FiAlertTriangle, FiLoader } from "react-icons/fi";
 import api from "./api";
+import GlobalFooter from "./pages/components/GlobalFooter";
 import { NotificationViewport } from "./pages/components/ui";
 import { fetchActiveSession } from "./services/sessionService";
 
@@ -317,6 +318,18 @@ function NotFound() {
   );
 }
 
+function AppFrame() {
+  const { isLoggedIn, loadingAuth } = useAuth();
+
+  return (
+    <>
+      <AppRoutes />
+      <GlobalFooter isLoggedIn={isLoggedIn} authReady={!loadingAuth} />
+      <NotificationViewport />
+    </>
+  );
+}
+
 /**
  * Application composition with theme, router, and auth providers.
  */
@@ -327,8 +340,7 @@ function App() {
         <BrowserRouter>
           <SessionProvider>
             <AuthProvider>
-              <AppRoutes />
-              <NotificationViewport />
+              <AppFrame />
             </AuthProvider>
           </SessionProvider>
         </BrowserRouter>
