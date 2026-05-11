@@ -178,6 +178,27 @@
     overflow-wrap: anywhere;
     word-break: normal;
   }
+
+  .notification-anchor {
+    display: none;
+  }
+
+  div:has(> .notification-anchor:only-child) {
+    display: contents;
+  }
+
+  .notification-card {
+    animation: notificationEnter 220ms ease-out both;
+  }
+
+  .notification-card.is-leaving {
+    animation: notificationExit 240ms ease-in both;
+  }
+
+  .notification-progress {
+    animation: notificationProgress var(--notification-duration) linear forwards;
+    transform-origin: left center;
+  }
 }
 
 @keyframes enter {
@@ -212,6 +233,37 @@
   }
 }
 
+@keyframes notificationEnter {
+  from {
+    opacity: 0;
+    transform: translate(16px, -8px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(0, 0);
+  }
+}
+
+@keyframes notificationExit {
+  from {
+    opacity: 1;
+    transform: translate(0, 0);
+  }
+  to {
+    opacity: 0;
+    transform: translate(16px, -8px);
+  }
+}
+
+@keyframes notificationProgress {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -220,5 +272,9 @@
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+  }
+
+  .notification-progress {
+    transform: scaleX(0);
   }
 }

@@ -1013,7 +1013,7 @@ export function RatingModal({
           </form>
         ) : (
           <div className="mt-6">
-            <Notice type="info">Login to add or edit your rating. You can still review existing feedback.</Notice>
+            <Notice inline type="info">Login to add or edit your rating. You can still review existing feedback.</Notice>
           </div>
         )}
 

@@ -13,6 +13,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import Cookies from "js-cookie";
 import { FiAlertTriangle, FiLoader } from "react-icons/fi";
 import api from "./api";
+import { NotificationViewport } from "./pages/components/ui";
 import { fetchActiveSession } from "./services/sessionService";
 
 const Home = lazy(() => import("./pages/home"));
@@ -327,6 +328,7 @@ function App() {
           <SessionProvider>
             <AuthProvider>
               <AppRoutes />
+              <NotificationViewport />
             </AuthProvider>
           </SessionProvider>
         </BrowserRouter>

@@ -1,17 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  FiAlertTriangle,
-  FiCheckCircle,
-  FiPlus,
-  FiSearch,
-  FiShuffle,
-  FiTrash2,
-} from "react-icons/fi";
+import { FiPlus, FiSearch, FiShuffle, FiTrash2 } from "react-icons/fi";
 import api from "../../api";
 import { useActiveSession } from "../../App";
 import Header from "../components/Header";
+import { notify } from "../components/notifications";
 import {
   EmptyState,
   FormField,
@@ -140,8 +134,6 @@ function PersonalCourseManage() {
   const handleAddClass = async (classItem, index) => {
     setItemState(index, {
       adding: true,
-      addMessage: null,
-      conflictMessage: null,
     });
 
     try {
@@ -150,12 +142,14 @@ function PersonalCourseManage() {
         section: classItem.sec,
         code: classItem.code,
       });
-      setItemState(index, {
-        addMessage: { type: "success", text: "Class added successfully." },
+      notify({
+        type: "success",
+        message: `${classItem.code} (${classItem.sec}) added successfully.`,
       });
     } catch (addError) {
-      setItemState(index, {
-        addMessage: { type: "error", text: getAddError(addError) },
+      notify({
+        type: "error",
+        message: `${classItem.code} (${classItem.sec}): ${getAddError(addError)}`,
       });
     } finally {
       setItemState(index, { adding: false });
@@ -170,8 +164,6 @@ function PersonalCourseManage() {
 
     setItemState(index, {
       deleting: true,
-      deleteMessage: null,
-      conflictMessage: null,
     });
 
     try {
@@ -180,12 +172,14 @@ function PersonalCourseManage() {
         section: classItem.sec,
         code: classItem.code,
       });
-      setItemState(index, {
-        deleteMessage: { type: "success", text: "Course removed successfully." },
+      notify({
+        type: "success",
+        message: `${classItem.code} (${classItem.sec}) removed successfully.`,
       });
     } catch (deleteError) {
-      setItemState(index, {
-        deleteMessage: { type: "error", text: getDeleteError(deleteError) },
+      notify({
+        type: "error",
+        message: `${classItem.code} (${classItem.sec}): ${getDeleteError(deleteError)}`,
       });
     } finally {
       setItemState(index, { deleting: false });
@@ -195,7 +189,6 @@ function PersonalCourseManage() {
   const handleCheckConflict = async (classItem, index) => {
     setItemState(index, {
       checking: true,
-      conflictMessage: null,
     });
 
     try {
@@ -204,20 +197,21 @@ function PersonalCourseManage() {
         section: classItem.sec,
         session: classItem.session,
       });
-      setItemState(index, {
-        conflictMessage: normalizeConflictResponse(response.data),
+      const conflictNotice = normalizeConflictResponse(response.data);
+      notify({
+        type: conflictNotice.type,
+        message: `${classItem.code} (${classItem.sec}): ${conflictNotice.text}`,
       });
     } catch (conflictError) {
       if (conflictError.response?.status === 405) {
-        setItemState(index, {
-          conflictMessage: {
-            type: "warning",
-            text: "This course is already enrolled in your schedule.",
-          },
+        notify({
+          type: "warning",
+          message: `${classItem.code} (${classItem.sec}) is already enrolled in your schedule.`,
         });
       } else {
-        setItemState(index, {
-          conflictMessage: { type: "error", text: getConflictError(conflictError) },
+        notify({
+          type: "error",
+          message: `${classItem.code} (${classItem.sec}): ${getConflictError(conflictError)}`,
         });
       }
     } finally {
@@ -476,12 +470,6 @@ function ClassResultCard({ classItem, state, onCheck, onAdd, onDelete }) {
         <ResultField label="Session" value={classItem.session} />
       </dl>
 
-      <div className="mt-5 space-y-3">
-        {state.addMessage && <InlineMessage {...state.addMessage} />}
-        {state.deleteMessage && <InlineMessage {...state.deleteMessage} />}
-        {state.conflictMessage && <InlineMessage {...state.conflictMessage} />}
-      </div>
-
       <div className="mt-5 flex flex-wrap justify-end gap-2">
         <button type="button" onClick={onCheck} disabled={state.checking} className="btn-secondary">
           <FiShuffle aria-hidden="true" />
@@ -507,26 +495,6 @@ function ResultField({ label, value }) {
       <dd className="safe-text mt-1 font-semibold text-slate-950 dark:text-white">
         {value || "N/A"}
       </dd>
-    </div>
-  );
-}
-
-function InlineMessage({ type, text }) {
-  const styles = {
-    success:
-      "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-100",
-    warning:
-      "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100",
-    error:
-      "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-100",
-  };
-
-  const Icon = type === "success" ? FiCheckCircle : FiAlertTriangle;
-
-  return (
-    <div className={`flex items-start gap-2 rounded-lg border px-3 py-2 text-sm font-medium ${styles[type] || styles.error}`}>
-      <Icon className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-      <span>{text}</span>
     </div>
   );
 }

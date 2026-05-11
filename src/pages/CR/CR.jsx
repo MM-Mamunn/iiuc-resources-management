@@ -684,7 +684,7 @@ function FacultyManagementSection() {
                 </span>
               </div>
             ) : (
-              <Notice type="info">Select a faculty to enable the update form.</Notice>
+              <Notice inline type="info">Select a faculty to enable the update form.</Notice>
             )}
 
             <FacultyFormFields
