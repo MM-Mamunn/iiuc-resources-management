@@ -73,6 +73,14 @@ function ResourceHighlights({
     navigate("/auth/login");
   };
 
+  const openContributorProfile = (studentId) => {
+    const contributorId = String(studentId || "").trim();
+
+    if (!contributorId) return;
+
+    navigate(`/info/community?student=${encodeURIComponent(contributorId)}`);
+  };
+
   const openRatings = async (resource) => {
     setSelectedResource(resource);
     setRatings([]);
@@ -176,9 +184,20 @@ function ResourceHighlights({
                     <h3 className="safe-text mt-1 font-bold text-slate-950 dark:text-white">
                       {resource.courseTitle || resource.courseShortName || "Shared resource"}
                     </h3>
-                    <p className="safe-text mt-2 text-sm text-slate-500 dark:text-slate-400">
-                      {resource.studentName || resource.by || "Student"}
-                    </p>
+                    <button
+                      type="button"
+                      onClick={() => openContributorProfile(resource.by)}
+                      className="mt-2 block max-w-full text-left text-sm font-semibold text-slate-600 transition hover:text-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-slate-400 dark:hover:text-blue-300"
+                    >
+                      <span className="safe-text block">
+                        {resource.studentName || resource.by || "Student"}
+                      </span>
+                      {resource.by && (
+                        <span className="safe-text mt-0.5 block text-xs text-slate-500 dark:text-slate-500">
+                          ID: {resource.by}
+                        </span>
+                      )}
+                    </button>
                   </div>
                   <button
                     type="button"

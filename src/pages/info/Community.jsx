@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   FiChevronLeft,
   FiChevronRight,
@@ -36,6 +37,7 @@ const DEFAULT_PAGINATION = {
  */
 function Community() {
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [students, setStudents] = useState([]);
   const [pagination, setPagination] = useState(DEFAULT_PAGINATION);
   const [loading, setLoading] = useState(false);
@@ -56,9 +58,16 @@ function Community() {
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [profileLoading, setProfileLoading] = useState(false);
   const controlPrefix = useId();
+  const queryStudentId = searchParams.get("student") || "";
 
   const activeSection = sectionEnabled ? selectedSection : "";
   const activeType = typeEnabled ? selectedType : "";
+
+  useEffect(() => {
+    if (queryStudentId) {
+      setSelectedStudentId(queryStudentId);
+    }
+  }, [queryStudentId]);
 
   useEffect(() => {
     fetchStudentTypes();
@@ -212,6 +221,7 @@ function Community() {
     setSearch(searchInput.trim());
     setStudentSuggestions([]);
     setSelectedStudentId("");
+    setSearchParams({});
   };
 
   const handleSearchChange = (event) => {
@@ -223,7 +233,16 @@ function Community() {
     setSearchInput(student.name || student.id || "");
     setSearch(student.name || student.id || "");
     setStudentSuggestions([]);
-    setSelectedStudentId(student.id);
+    openStudentProfile(student.id);
+  };
+
+  const openStudentProfile = (studentId) => {
+    const nextStudentId = String(studentId || "").trim();
+
+    if (!nextStudentId) return;
+
+    setSelectedStudentId(nextStudentId);
+    setSearchParams({ student: nextStudentId });
   };
 
   const handleSectionChange = async (event) => {
@@ -254,11 +273,13 @@ function Community() {
     setSelectedSection(sectionCode);
     setSectionSuggestions([]);
     setSelectedStudentId("");
+    setSearchParams({});
   };
 
   const handleTypeChange = (event) => {
     setSelectedType(event.target.value);
     setSelectedStudentId("");
+    setSearchParams({});
   };
 
   const clearFilters = () => {
@@ -272,6 +293,7 @@ function Community() {
     setTypeEnabled(false);
     setSelectedType("");
     setSelectedStudentId("");
+    setSearchParams({});
   };
 
   const handlePageChange = (nextPage) => {
@@ -288,7 +310,10 @@ function Community() {
         student={selectedStudent}
         loading={profileLoading}
         notice={notice}
-        onBack={() => setSelectedStudentId("")}
+        onBack={() => {
+          setSelectedStudentId("");
+          setSearchParams({});
+        }}
         onNoticeDismiss={() => setNotice(null)}
       />
     );
@@ -463,7 +488,7 @@ function Community() {
                   <StudentResultCard
                     key={student.id}
                     student={student}
-                    onOpen={() => setSelectedStudentId(student.id)}
+                    onOpen={() => openStudentProfile(student.id)}
                   />
                 ))}
               </div>

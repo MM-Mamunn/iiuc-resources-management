@@ -291,6 +291,14 @@ function ResourceBrowser({
     navigate("/auth/login");
   };
 
+  const openContributorProfile = (studentId) => {
+    const contributorId = String(studentId || "").trim();
+
+    if (!contributorId) return;
+
+    navigate(`/info/community?student=${encodeURIComponent(contributorId)}`);
+  };
+
   const openEditResource = (resource) => {
     setEditingResource(resource);
     setEditForm({
@@ -562,6 +570,7 @@ function ResourceBrowser({
             onConfirmDelete={(resource) => setDeleteConfirmId(resource.id)}
             onCancelDelete={() => setDeleteConfirmId(null)}
             onOpen={handleResourceOpen}
+            onOpenContributor={openContributorProfile}
           />
         ) : (
           <EmptyState
@@ -660,6 +669,7 @@ function ResourceTable({
   onCancelDelete,
   onDelete,
   onOpen,
+  onOpenContributor,
 }) {
   return (
     <div className="overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
@@ -689,6 +699,7 @@ function ResourceTable({
                 onConfirmDelete={() => onConfirmDelete(resource)}
                 onCancelDelete={onCancelDelete}
                 onOpen={onOpen}
+                onOpenContributor={onOpenContributor}
               />
             ))}
           </tbody>
@@ -709,9 +720,11 @@ function ResourceRow({
   deleteConfirming,
   deleting,
   onOpen,
+  onOpenContributor,
 }) {
   const studentName = resource.studentName || "Student";
   const studentId = resource.by || "N/A";
+  const hasContributorProfile = Boolean(resource.by);
   const profilePic = resource.studentProfilePic || resource.profilePic || "";
   const courseCode = resource.course || "Course";
   const resourceTitle = resource.courseTitle || resource.courseShortName || "Shared resource";
@@ -749,10 +762,16 @@ function ResourceRow({
       </td>
 
       <td className="px-5 py-5 align-top">
-        <div className="flex min-w-56 items-center gap-3">
+        <button
+          type="button"
+          onClick={() => onOpenContributor(resource.by)}
+          disabled={!hasContributorProfile}
+          className="group flex min-w-56 items-center gap-3 rounded-lg p-1 text-left transition hover:bg-blue-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-default disabled:hover:bg-transparent dark:hover:bg-slate-900"
+          aria-label={`Open community profile for ${studentName}`}
+        >
           <Avatar image={profilePic} name={studentName} />
           <div className="min-w-0">
-            <p className="safe-text text-sm font-bold text-slate-950 dark:text-white">
+            <p className="safe-text text-sm font-bold text-slate-950 transition group-hover:text-blue-700 dark:text-white dark:group-hover:text-blue-300">
               {studentName}
             </p>
             <p className="safe-text mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">
@@ -762,7 +781,7 @@ function ResourceRow({
               Uploaded {formatDate(resource.date)}
             </p>
           </div>
-        </div>
+        </button>
       </td>
 
       <td className="px-5 py-5 align-top">

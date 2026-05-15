@@ -351,6 +351,16 @@ const Home = () => {
     normalizedSection.length >= 1 &&
     normalizedSection.length <= 4 &&
     normalizedSession.length >= 1;
+  const openCommunityProfile = (studentId) => {
+    const contributorId = String(studentId || "").trim();
+
+    if (!contributorId) {
+      navigate("/info/community");
+      return;
+    }
+
+    navigate(`/info/community?student=${encodeURIComponent(contributorId)}`);
+  };
 
   return (
     <div className="min-h-screen">
@@ -602,7 +612,12 @@ const Home = () => {
               ) : topContributors.length ? (
                 <div className="grid gap-3 sm:grid-cols-2">
                   {topContributors.slice(0, 6).map((contributor, index) => (
-                    <ContributorCard key={contributor.id || index} contributor={contributor} rank={index + 1} />
+                    <ContributorCard
+                      key={contributor.id || index}
+                      contributor={contributor}
+                      rank={index + 1}
+                      onOpenProfile={openCommunityProfile}
+                    />
                   ))}
                 </div>
               ) : (
@@ -650,18 +665,20 @@ function QuickAction({ icon, title, description, href }) {
 /**
  * Contributor summary card with rank and points.
  */
-function ContributorCard({ contributor, rank }) {
+function ContributorCard({ contributor, rank, onOpenProfile }) {
   const points = Number(contributor.resourceCount || contributor.point || contributor.points || 0);
   const highlighted = rank <= 3;
   const initials = getContributorInitials(contributor);
 
   return (
-    <div
+    <button
+      type="button"
+      onClick={() => onOpenProfile(contributor.id)}
       className={`rounded-lg border p-4 transition ${
         highlighted
           ? "border-amber-200 bg-amber-50/80 shadow-sm shadow-amber-500/10 dark:border-amber-500/30 dark:bg-amber-500/10"
           : "border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900"
-      }`}
+      } text-left hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500`}
     >
       <div className="flex items-center gap-4">
         <span className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-950 text-sm font-black text-white ring-2 ring-white dark:bg-white dark:text-slate-950 dark:ring-slate-800">
@@ -687,7 +704,7 @@ function ContributorCard({ contributor, rank }) {
           <span className="block text-[11px] uppercase text-slate-500 dark:text-slate-400">resources</span>
         </span>
       </div>
-    </div>
+    </button>
   );
 }
 

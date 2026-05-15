@@ -58,7 +58,8 @@ const DEFAULT_SUBMISSION_PAGINATION = {
   total: 0,
   totalPages: 1,
 };
-const SUBMISSION_TYPES = ["CR", "Feedback", "Suggestion", "Complaint", "Request"];
+const PASSWORD_CHANGE_TYPE = "password change";
+const SUBMISSION_TYPES = ["CR", "Feedback", "Suggestion", "Complaint", "Request", PASSWORD_CHANGE_TYPE];
 const emptySessionForm = {
   session: "",
   start: "",
@@ -308,14 +309,19 @@ const AdminRoles = () => {
 
   const updateSubmissionStatus = async (submissionId, updates, { quiet = false } = {}) => {
     try {
-      await api.patch(`/api/admin/submissions/${submissionId}`, updates);
+      const response = await api.patch(`/api/admin/submissions/${submissionId}`, updates);
       await Promise.all([
         fetchAdminSubmissions(submissionPagination.page),
         fetchSubmissionNotifications(),
       ]);
 
       if (!quiet) {
-        setMessage({ type: "success", text: "Submission updated." });
+        setMessage({
+          type: "success",
+          text: response.data?.passwordApplied
+            ? "Password change approved and applied."
+            : "Submission updated.",
+        });
       }
     } catch (submissionError) {
       setMessage({
@@ -1054,7 +1060,7 @@ function SubmissionManagementFeature({
               Submission Management
             </h2>
             <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-              Review CR applications, feedback, suggestions, complaints, and requests.
+              Review CR applications, feedback, suggestions, complaints, requests, and password changes.
             </p>
           </div>
           <button type="button" onClick={onRefresh} className="btn-secondary" disabled={loading}>
@@ -1126,6 +1132,8 @@ function SubmissionManagementFeature({
         <div className="grid gap-4 p-5">
           {submissions.map((submission) => {
             const isExpanded = expandedSubmissionId === submission.id;
+            const passwordChangeDetails = getPasswordChangeDetails(submission);
+            const isPasswordChange = submission.type === PASSWORD_CHANGE_TYPE;
 
             return (
               <article
@@ -1168,7 +1176,13 @@ function SubmissionManagementFeature({
                       className={submission.resolved ? "btn-secondary" : "btn-primary"}
                     >
                       <FiCheckCircle aria-hidden="true" />
-                      {submission.resolved ? "Unresolve" : "Resolve"}
+                      {isPasswordChange
+                        ? submission.resolved
+                          ? "Mark pending"
+                          : "Approve"
+                        : submission.resolved
+                          ? "Unresolve"
+                          : "Resolve"}
                     </button>
                   </div>
                 </div>
@@ -1177,10 +1191,23 @@ function SubmissionManagementFeature({
                   <div className="mt-4 rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950">
                     <div className="grid gap-4 lg:grid-cols-[1fr_260px]">
                       <div>
-                        <p className="section-kicker">Description</p>
-                        <p className="mt-2 break-words text-sm leading-6 text-slate-700 dark:text-slate-300">
-                          {submission.description}
-                        </p>
+                        {isPasswordChange ? (
+                          <>
+                            <p className="section-kicker">Password change request</p>
+                            <div className="mt-3 grid gap-2 text-sm">
+                              <InfoLine label="Student ID" value={passwordChangeDetails.studentId || submission.by} />
+                              <InfoLine label="Confirm ID" value={passwordChangeDetails.confirmStudentId || submission.by} />
+                              <InfoLine label="Password hash" value={passwordChangeDetails.passwordHash || "N/A"} />
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <p className="section-kicker">Description</p>
+                            <p className="mt-2 break-words text-sm leading-6 text-slate-700 dark:text-slate-300">
+                              {submission.description}
+                            </p>
+                          </>
+                        )}
                       </div>
                       <div className="grid gap-2 text-sm">
                         <InfoLine label="Email" value={submission.studentEmail || "N/A"} />
@@ -1242,6 +1269,16 @@ function InfoLine({ label, value }) {
       </span>
     </div>
   );
+}
+
+function getPasswordChangeDetails(submission) {
+  const description = String(submission?.description || "");
+
+  return {
+    studentId: description.match(/^Student ID:\s*(.+)$/im)?.[1]?.trim() || "",
+    confirmStudentId: description.match(/^Confirm Student ID:\s*(.+)$/im)?.[1]?.trim() || "",
+    passwordHash: description.match(/^Password hash:\s*(\S+)/im)?.[1] || "",
+  };
 }
 
 function AdminAvatar({ image, name }) {
