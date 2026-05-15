@@ -18,6 +18,7 @@ import {
   FiSave,
   FiSearch,
   FiSend,
+  FiTrash2,
   FiUser,
   FiX,
 } from "react-icons/fi";
@@ -27,7 +28,6 @@ import Header from "../components/Header";
 import {
   FormField,
   LoadingState,
-  MetricCard,
   Notice,
   PageShell,
   SectionHeading,
@@ -112,6 +112,7 @@ function EditDetails() {
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [previewUrl, setPreviewUrl] = useState("");
   const [photoLoading, setPhotoLoading] = useState(false);
+  const [photoRemoving, setPhotoRemoving] = useState(false);
   const [resourceForm, setResourceForm] = useState(emptyResourceForm);
   const [semesterResourceForm, setSemesterResourceForm] = useState(emptySemesterResourceForm);
   const [resourceSuggestions, setResourceSuggestions] = useState([]);
@@ -532,6 +533,41 @@ function EditDetails() {
     }
   };
 
+  const handlePhotoRemove = async () => {
+    if (!currentProfile?.profilePic) {
+      setNotice({ type: "error", text: "There is no profile image to remove." });
+      return;
+    }
+
+    setPhotoRemoving(true);
+    setNotice(null);
+
+    try {
+      await api.delete("/api/profile/picture");
+      setProfile((current) => {
+        if (!current || current.length === 0) return current;
+        const updated = [...current];
+        updated[0] = { ...updated[0], profilePic: null };
+        return updated;
+      });
+      setUser((current) => (current ? { ...current, profilePic: null } : current));
+      setSelectedPhoto(null);
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      setPreviewUrl("");
+      setNotice({ type: "success", text: "Profile image removed successfully." });
+    } catch (photoError) {
+      setNotice({
+        type: "error",
+        text:
+          photoError.response?.data?.message ||
+          photoError.message ||
+          "Could not remove the profile image.",
+      });
+    } finally {
+      setPhotoRemoving(false);
+    }
+  };
+
   const handlePasswordSubmit = async (event) => {
     event.preventDefault();
     setPasswordChanging(true);
@@ -756,28 +792,13 @@ function EditDetails() {
           </div>
         )}
 
-        <section className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <MetricCard
-            icon={<FiUser className="h-5 w-5" aria-hidden="true" />}
-            label="Student ID"
-            value={currentProfile?.id || "Loading"}
-            tone="blue"
-          />
-          <MetricCard
-            icon={<FiUser className="h-5 w-5" aria-hidden="true" />}
-            label="Section"
-            value={currentProfile?.sec || "N/A"}
-            tone="teal"
-          />
-          <MetricCard
-            icon={<FiLock className="h-5 w-5" aria-hidden="true" />}
-            label="Security"
-            value="Password"
-            tone="amber"
-          />
-        </section>
-
-        <section className="mt-6 grid gap-4 md:grid-cols-3">
+        <section
+          className="mt-6 grid gap-4"
+          style={{
+            gridTemplateColumns:
+              "repeat(auto-fit, minmax(max(180px, calc((100% - 5rem) / 6)), 1fr))",
+          }}
+        >
           {profileNavigation.map((item) => (
             <ProfileNavCard
               key={item.key}
@@ -791,12 +812,12 @@ function EditDetails() {
         {loading ? (
           <LoadingState label="Loading profile..." />
         ) : (
-          <section className={`mt-8 grid gap-8 ${activeProfileSection === "details" ? "lg:grid-cols-[360px_1fr]" : ""}`}>
-            {activeProfileSection === "details" && (
-              <aside className="space-y-5">
-                <div className="surface-card p-5">
-                  <div className="flex items-center gap-4">
-                    <span className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-slate-950 text-lg font-black text-white dark:bg-white dark:text-slate-950">
+          <section className="mt-8">
+            <div className="space-y-8">
+              {activeProfileSection === "details" && (
+                <section className="surface-card overflow-hidden">
+                  <div className="grid gap-5 border-b border-slate-200 p-5 lg:grid-cols-[auto_1fr_auto] lg:items-center dark:border-slate-800">
+                    <span className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-xl bg-slate-950 text-3xl font-black text-white ring-1 ring-slate-200 dark:bg-white dark:text-slate-950 dark:ring-slate-800">
                       {currentProfile?.profilePic ? (
                         <img
                           src={currentProfile.profilePic}
@@ -807,125 +828,132 @@ function EditDetails() {
                         avatarInitials
                       )}
                     </span>
+
                     <div className="min-w-0">
-                      <h2 className="safe-text text-xl font-bold text-slate-950 dark:text-white">
+                      <p className="section-kicker">Student profile</p>
+                      <h2 className="safe-text mt-2 text-2xl font-black text-slate-950 dark:text-white">
                         {currentProfile?.name || "Student"}
                       </h2>
-                      <p className="safe-text mt-1 text-sm text-slate-500 dark:text-slate-400">
-                        {currentProfile?.email || currentProfile?.id || "Profile"}
-                      </p>
+                      <div className="mt-4 grid gap-2 text-sm sm:grid-cols-2 xl:grid-cols-4">
+                        <ProfileInfoPill label="ID" value={currentProfile?.id} />
+                        <ProfileInfoPill label="Section" value={currentProfile?.sec} />
+                        <ProfileInfoPill label="Email" value={currentProfile?.email} />
+                        <ProfileInfoPill label="Phone" value={currentProfile?.phone} />
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="mt-5 space-y-3">
-                    <label className="btn-secondary w-full cursor-pointer">
-                      <FiCamera aria-hidden="true" />
-                      Choose image
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handlePhotoSelection}
-                        className="sr-only"
-                      />
-                    </label>
-                    <button
-                      type="button"
-                      onClick={handlePhotoUpload}
-                      disabled={photoLoading || !selectedPhoto}
-                      className="btn-primary w-full"
-                    >
-                      {photoLoading ? "Uploading..." : "Upload image"}
-                    </button>
-                  </div>
-
-                  {previewUrl && (
-                    <div className="mt-5">
-                      <p className="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
-                        Preview
-                      </p>
-                      <img
-                        src={previewUrl}
-                        alt="Selected profile preview"
-                        className="aspect-square w-32 rounded-lg object-cover ring-1 ring-slate-200 dark:ring-slate-800"
-                      />
-                    </div>
-                  )}
-                </div>
-
-                <ProfileSummary profile={currentProfile} />
-              </aside>
-            )}
-
-            <div className="space-y-8">
-              {activeProfileSection === "details" && (
-              <section className="surface-card p-5">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                  <SectionHeading kicker="Details" title="Personal information" />
-                  {!isEditing && (
-                    <button type="button" onClick={() => setIsEditing(true)} className="btn-primary">
-                      <FiEdit3 aria-hidden="true" />
-                      Edit profile
-                    </button>
-                  )}
-                </div>
-
-                {!isEditing ? (
-                  <div className="mt-6 grid gap-4 md:grid-cols-2">
-                    <ReadOnlyField label="ID" value={currentProfile?.id} />
-                    <ReadOnlyField label="Name" value={currentProfile?.name} />
-                    <ReadOnlyField label="Section" value={currentProfile?.sec} />
-                    <ReadOnlyField label="Phone" value={currentProfile?.phone} />
-                    <ReadOnlyField label="Email" value={currentProfile?.email} className="md:col-span-2" />
-                  </div>
-                ) : (
-                  <form onSubmit={handleSubmit} className="mt-6 grid gap-5">
-                    <div className="grid gap-5 md:grid-cols-2">
-                      <FormField id="profile-id" label="ID" helper="ID cannot be changed.">
-                        <input id="profile-id" type="text" value={currentProfile?.id || ""} disabled className="form-field opacity-70" />
-                      </FormField>
-                      <FormField id="name" label="Name">
-                        <input id="name" type="text" name="name" value={editData.name} onChange={handleInputChange} className="form-field" />
-                      </FormField>
-                      <FormField
-                        id="sec"
-                        label="Section"
-                        helper={sectionLoading ? "Searching sections..." : "Start typing to see matching sections."}
+                    <div className="grid gap-3 sm:grid-cols-2 lg:w-56 lg:grid-cols-1">
+                      <label className="btn-secondary cursor-pointer">
+                        <FiCamera aria-hidden="true" />
+                        Choose image
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handlePhotoSelection}
+                          className="sr-only"
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        onClick={handlePhotoUpload}
+                        disabled={photoLoading || !selectedPhoto}
+                        className="btn-primary"
                       >
-                        <div className="relative">
-                          <input
+                        {photoLoading ? "Uploading..." : "Upload image"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handlePhotoRemove}
+                        disabled={photoRemoving || !currentProfile?.profilePic}
+                        className="btn-danger"
+                      >
+                        <FiTrash2 aria-hidden="true" />
+                        {photoRemoving ? "Removing..." : "Remove image"}
+                      </button>
+                    </div>
+
+                    {previewUrl && (
+                      <div className="lg:col-start-2 lg:col-span-2">
+                        <p className="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                          Preview
+                        </p>
+                        <img
+                          src={previewUrl}
+                          alt="Selected profile preview"
+                          className="aspect-square w-32 rounded-lg object-cover ring-1 ring-slate-200 dark:ring-slate-800"
+                        />
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-5">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                      <SectionHeading kicker="Details" title="Personal information" />
+                      {!isEditing && (
+                        <button type="button" onClick={() => setIsEditing(true)} className="btn-primary">
+                          <FiEdit3 aria-hidden="true" />
+                          Edit profile
+                        </button>
+                      )}
+                    </div>
+
+                    {!isEditing ? (
+                      <div className="mt-6 grid gap-4 md:grid-cols-2">
+                        <ReadOnlyField label="ID" value={currentProfile?.id} />
+                        <ReadOnlyField label="Name" value={currentProfile?.name} />
+                        <ReadOnlyField label="Section" value={currentProfile?.sec} />
+                        <ReadOnlyField label="Phone" value={currentProfile?.phone} />
+                        <ReadOnlyField label="Email" value={currentProfile?.email} className="md:col-span-2" />
+                      </div>
+                    ) : (
+                      <form onSubmit={handleSubmit} className="mt-6 grid gap-5">
+                        <div className="grid gap-5 md:grid-cols-2">
+                          <FormField id="profile-id" label="ID" helper="ID cannot be changed.">
+                            <input id="profile-id" type="text" value={currentProfile?.id || ""} disabled className="form-field opacity-70" />
+                          </FormField>
+                          <FormField id="name" label="Name">
+                            <input id="name" type="text" name="name" value={editData.name} onChange={handleInputChange} className="form-field" />
+                          </FormField>
+                          <FormField
                             id="sec"
-                            type="text"
-                            name="sec"
-                            value={editData.sec}
-                            onChange={handleSectionChange}
-                            className="form-field uppercase"
-                            autoComplete="off"
-                          />
-                          <SuggestionList
-                            suggestions={sectionSuggestions}
-                            onSelect={chooseSectionSuggestion}
-                          />
+                            label="Section"
+                            helper={sectionLoading ? "Searching sections..." : "Start typing to see matching sections."}
+                          >
+                            <div className="relative">
+                              <input
+                                id="sec"
+                                type="text"
+                                name="sec"
+                                value={editData.sec}
+                                onChange={handleSectionChange}
+                                className="form-field uppercase"
+                                autoComplete="off"
+                              />
+                              <SuggestionList
+                                suggestions={sectionSuggestions}
+                                onSelect={chooseSectionSuggestion}
+                              />
+                            </div>
+                          </FormField>
+                          <FormField id="phone" label="Phone">
+                            <input id="phone" type="text" name="phone" value={editData.phone} onChange={handleInputChange} className="form-field" />
+                          </FormField>
+                          <FormField id="email" label="Email" className="md:col-span-2">
+                            <input id="email" type="email" name="email" value={editData.email} onChange={handleInputChange} className="form-field" />
+                          </FormField>
                         </div>
-                      </FormField>
-                      <FormField id="phone" label="Phone">
-                        <input id="phone" type="text" name="phone" value={editData.phone} onChange={handleInputChange} className="form-field" />
-                      </FormField>
-                      <FormField id="email" label="Email" className="md:col-span-2">
-                        <input id="email" type="email" name="email" value={editData.email} onChange={handleInputChange} className="form-field" />
-                      </FormField>
-                    </div>
-                    <div className="flex flex-wrap justify-end gap-3">
-                      <button type="button" onClick={handleCancel} className="btn-secondary">
-                        Cancel
-                      </button>
-                      <button type="submit" disabled={updating} className="btn-primary">
-                        <FiSave aria-hidden="true" />
-                        {updating ? "Saving..." : "Save changes"}
-                      </button>
-                    </div>
-                  </form>
-                )}
-              </section>
+                        <div className="flex flex-wrap justify-end gap-3">
+                          <button type="button" onClick={handleCancel} className="btn-secondary">
+                            Cancel
+                          </button>
+                          <button type="submit" disabled={updating} className="btn-primary">
+                            <FiSave aria-hidden="true" />
+                            {updating ? "Saving..." : "Save changes"}
+                          </button>
+                        </div>
+                      </form>
+                    )}
+                  </div>
+                </section>
               )}
 
               {activeProfileSection === "resources" && (
@@ -1394,6 +1422,19 @@ function ProfileNavCard({ item, active, onSelect }) {
   );
 }
 
+function ProfileInfoPill({ label, value }) {
+  return (
+    <div className="min-w-0 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-800 dark:bg-slate-900">
+      <p className="text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400">
+        {label}
+      </p>
+      <p className="safe-text mt-1 text-sm font-bold text-slate-950 dark:text-white">
+        {value || "N/A"}
+      </p>
+    </div>
+  );
+}
+
 function ApplicationsFeedbackSection({
   form,
   submissions,
@@ -1576,19 +1617,6 @@ function SubmissionPagination({ pagination, disabled, onPageChange }) {
   );
 }
 
-function ProfileSummary({ profile }) {
-  return (
-    <div className="surface-card p-5">
-      <SectionHeading kicker="Summary" title="Profile" />
-      <div className="mt-5 space-y-3 text-sm">
-        <InfoRow label="ID" value={profile?.id} />
-        <InfoRow label="Name" value={profile?.name} />
-        <InfoRow label="Section" value={profile?.sec} />
-      </div>
-    </div>
-  );
-}
-
 function ReadOnlyField({ label, value, className = "" }) {
   return (
     <div className={`rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900 ${className}`}>
@@ -1598,17 +1626,6 @@ function ReadOnlyField({ label, value, className = "" }) {
       <p className="safe-text mt-2 font-semibold text-slate-950 dark:text-white">
         {value || "N/A"}
       </p>
-    </div>
-  );
-}
-
-function InfoRow({ label, value }) {
-  return (
-    <div className="flex items-center justify-between gap-4 rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-900">
-      <span className="text-slate-500 dark:text-slate-400">{label}</span>
-      <span className="safe-text text-right font-semibold text-slate-950 dark:text-white">
-        {value || "N/A"}
-      </span>
     </div>
   );
 }

@@ -1,10 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import {
   FiArrowRight,
-  FiBookOpen,
   FiCalendar,
   FiCheckCircle,
   FiEdit3,
@@ -22,11 +20,11 @@ import {
   fetchFacultySuggestions,
   searchFaculty,
 } from "../../services/facultySearchService";
+import CrRoutine from "./CrRoutine";
 import Header from "../components/Header";
 import {
   EmptyState,
   FormField,
-  MetricCard,
   Notice,
   PageShell,
   SectionHeading,
@@ -56,7 +54,6 @@ const emptyFacultyForm = {
  * CR dashboard for reviewing and managing section classes.
  */
 function CR() {
-  const navigate = useNavigate();
   const {
     activeSessionName,
     activeSessionLoading,
@@ -68,35 +65,29 @@ function CR() {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState(null);
+  const [activePanel, setActivePanel] = useState("");
   const sessionHelper = activeSessionLoading
     ? "Loading active session..."
     : activeSessionError || (activeSessionName ? `Active: ${activeSessionName}` : "Enter a session");
   const navigationCards = [
     {
+      key: "routine",
       title: "Routine editor",
-      description: "Bulk add and adjust section classes.",
-      to: "/CR/routine",
-      icon: FiPlus,
+      description: "Edit routine cells directly in this workspace.",
+      icon: FiEdit3,
       tone: "blue",
     },
     {
-      title: "Section routine",
-      description: "Open the public timetable view.",
-      to: "/routine/section",
-      icon: FiCalendar,
-      tone: "teal",
-    },
-    {
-      title: "Course selection",
-      description: "Review personal add/drop choices.",
-      to: "/courseadddrop",
-      icon: FiBookOpen,
+      key: "bulk",
+      title: "Bulk entry",
+      description: "Queue multiple faculty classes before saving.",
+      icon: FiPlus,
       tone: "amber",
     },
     {
+      key: "faculty",
       title: "Faculty management",
       description: "Add new faculty or update teacher information.",
-      action: () => document.getElementById("faculty-management")?.scrollIntoView({ behavior: "smooth" }),
       icon: FiUserPlus,
       tone: "teal",
     },
@@ -202,11 +193,11 @@ function CR() {
             </div>
             <button
               type="button"
-              onClick={() => navigate("/cr/routine")}
+              onClick={() => setActivePanel("routine")}
               className="btn-secondary border-white/20 bg-white/10 text-white hover:bg-white/20 dark:border-white/20 dark:bg-white/10 dark:text-white"
             >
-              <FiPlus aria-hidden="true" />
-              Edit routine
+              <FiEdit3 aria-hidden="true" />
+              Open editor
             </button>
           </div>
 
@@ -265,13 +256,18 @@ function CR() {
         <section className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {navigationCards.map((item) => {
             const Icon = item.icon;
+            const active = activePanel === item.key;
 
             return (
               <button
-                key={item.to || item.title}
+                key={item.key}
                 type="button"
-                onClick={() => (item.action ? item.action() : navigate(item.to))}
-                className="interactive-card group p-5 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                onClick={() => setActivePanel(item.key)}
+                className={`interactive-card group p-5 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                  active
+                    ? "border-blue-300 bg-blue-50/80 shadow-lg shadow-blue-500/10 ring-2 ring-blue-500/20 dark:border-blue-500/50 dark:bg-blue-500/10"
+                    : ""
+                }`}
               >
                 <div className="flex items-start justify-between gap-4">
                   <div
@@ -279,10 +275,16 @@ function CR() {
                   >
                     <Icon className="h-5 w-5" aria-hidden="true" />
                   </div>
-                  <FiArrowRight
-                    className="h-5 w-5 text-slate-400 transition group-hover:translate-x-1 group-hover:text-blue-600 dark:group-hover:text-blue-300"
-                    aria-hidden="true"
-                  />
+                  {active ? (
+                    <span className="status-pill border-blue-200 bg-white text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200">
+                      Active
+                    </span>
+                  ) : (
+                    <FiArrowRight
+                      className="h-5 w-5 text-slate-400 transition group-hover:translate-x-1 group-hover:text-blue-600 dark:group-hover:text-blue-300"
+                      aria-hidden="true"
+                    />
+                  )}
                 </div>
                 <h2 className="mt-4 text-lg font-bold text-slate-950 dark:text-white">
                   {item.title}
@@ -295,28 +297,17 @@ function CR() {
           })}
         </section>
 
-        <FacultyManagementSection />
+        {activePanel === "faculty" && <FacultyManagementSection />}
 
-        <section className="mt-6 grid gap-4 md:grid-cols-3">
-          <MetricCard
-            icon={<FiGrid className="h-5 w-5" aria-hidden="true" />}
-            label="Loaded classes"
-            value={courses.length}
-            tone="blue"
-          />
-          <MetricCard
-            icon={<FiCalendar className="h-5 w-5" aria-hidden="true" />}
-            label="Session"
-            value={session || "N/A"}
-            tone="teal"
-          />
-          <MetricCard
-            icon={<FiEdit3 className="h-5 w-5" aria-hidden="true" />}
-            label="Editor"
-            value="Available"
-            tone="amber"
-          />
-        </section>
+        {(activePanel === "routine" || activePanel === "bulk") && (
+          <section className="mt-8">
+            <CrRoutine
+              embedded
+              mode={activePanel === "bulk" ? "bulk" : "routine"}
+              showModeCards={false}
+            />
+          </section>
+        )}
 
         <section className="mt-8">
           {courses.length > 0 ? (

@@ -7,7 +7,6 @@ import {
   FiAward,
   FiBookOpen,
   FiCalendar,
-  FiCheck,
   FiDownload,
   FiGrid,
   FiPlus,
@@ -22,7 +21,6 @@ import RoutineTable from "./components/RoutineTable";
 import {
   EmptyState,
   FormField,
-  MetricCard,
   Notice,
   SectionHeading,
   SuggestionList,
@@ -66,7 +64,7 @@ const Home = () => {
   const [notice, setNotice] = useState(null);
   const [topContributors, setTopContributors] = useState([]);
   const [contributorsLoading, setContributorsLoading] = useState(false);
-  const [showRoutineActions, setShowRoutineActions] = useState(true);
+  const [showRoutineActions, setShowRoutineActions] = useState(false);
   const { periods } = usePeriods();
 
   const timeSlots = getRoutineTimeSlots(periods, shift);
@@ -574,9 +572,9 @@ const Home = () => {
             />
             <QuickAction
               icon={<FiBookOpen className="h-5 w-5" aria-hidden="true" />}
-              title="Study materials"
-              description="Browse course resources after signing in."
-              href="/info/materials"
+              title="Resources"
+              description="Browse course resources shared by students."
+              href="/resources"
             />
           </div>
         </section>
@@ -586,12 +584,12 @@ const Home = () => {
           onFind={() => navigate("/resources")}
         />
 
-        <section className="grid gap-6 lg:grid-cols-[1fr_360px]">
+        <section>
           <div className="surface-card p-6">
             <SectionHeading
               kicker="Contributors"
               title="Top routine contributors"
-              description="Recognition for students helping keep academic resources accurate and useful."
+              description="Students with the highest number of submitted resources."
             />
 
             <div className="mt-6">
@@ -616,27 +614,6 @@ const Home = () => {
               )}
             </div>
           </div>
-
-          <aside className="grid gap-4">
-            <MetricCard
-              icon={<FiCheck className="h-5 w-5" aria-hidden="true" />}
-              label="Search format"
-              value="Section + Session"
-              tone="teal"
-            />
-            <MetricCard
-              icon={<FiCalendar className="h-5 w-5" aria-hidden="true" />}
-              label="Default session"
-              value={sessionLabel}
-              tone="blue"
-            />
-            <MetricCard
-              icon={<FiGrid className="h-5 w-5" aria-hidden="true" />}
-              label="Routine scope"
-              value="5 class days"
-              tone="amber"
-            />
-          </aside>
         </section>
       </main>
 
@@ -674,15 +651,30 @@ function QuickAction({ icon, title, description, href }) {
  * Contributor summary card with rank and points.
  */
 function ContributorCard({ contributor, rank }) {
-  const points = Number(contributor.point || contributor.points || 0);
+  const points = Number(contributor.resourceCount || contributor.point || contributor.points || 0);
+  const highlighted = rank <= 3;
+  const initials = getContributorInitials(contributor);
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900">
+    <div
+      className={`rounded-lg border p-4 transition ${
+        highlighted
+          ? "border-amber-200 bg-amber-50/80 shadow-sm shadow-amber-500/10 dark:border-amber-500/30 dark:bg-amber-500/10"
+          : "border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900"
+      }`}
+    >
       <div className="flex items-center gap-4">
-        <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-slate-950 text-sm font-black text-white dark:bg-white dark:text-slate-950">
-          #{rank}
+        <span className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-950 text-sm font-black text-white ring-2 ring-white dark:bg-white dark:text-slate-950 dark:ring-slate-800">
+          {contributor.profilePic ? (
+            <img src={contributor.profilePic} alt="" className="h-full w-full object-cover" />
+          ) : (
+            initials
+          )}
         </span>
         <div className="min-w-0 flex-1">
+          <span className={`text-xs font-black uppercase ${highlighted ? "text-amber-700 dark:text-amber-200" : "text-slate-500 dark:text-slate-400"}`}>
+            Rank #{rank}
+          </span>
           <p className="safe-text font-bold text-slate-950 dark:text-white">
             {contributor.name || "Contributor"}
           </p>
@@ -690,12 +682,23 @@ function ContributorCard({ contributor, rank }) {
             ID: {contributor.id || "N/A"}
           </p>
         </div>
-        <span className="rounded-lg bg-amber-100 px-3 py-2 text-sm font-bold text-amber-800 dark:bg-amber-500/10 dark:text-amber-200">
-          {Number.isFinite(points) ? points.toLocaleString() : 0}
+        <span className="rounded-lg bg-white px-3 py-2 text-right text-sm font-bold text-slate-950 ring-1 ring-slate-200 dark:bg-slate-950 dark:text-white dark:ring-slate-800">
+          <span className="block text-lg">{Number.isFinite(points) ? points.toLocaleString() : 0}</span>
+          <span className="block text-[11px] uppercase text-slate-500 dark:text-slate-400">resources</span>
         </span>
       </div>
     </div>
   );
+}
+
+function getContributorInitials(contributor) {
+  return String(contributor?.name || contributor?.id || "C")
+    .split(" ")
+    .filter(Boolean)
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 }
 
 /**

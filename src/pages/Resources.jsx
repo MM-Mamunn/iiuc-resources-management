@@ -1,12 +1,12 @@
 "use client";
 
 import { useNavigate } from "react-router-dom";
-import { FiBookOpen, FiPlus } from "react-icons/fi";
+import { FiPlus } from "react-icons/fi";
 import { useAuth } from "../App";
 import campusImage from "../assets/iiuc.webp";
 import Header from "./components/Header";
 import ResourceBrowser from "./components/ResourceBrowser";
-import { MetricCard, PageShell } from "./components/ui";
+import { PageShell } from "./components/ui";
 
 /**
  * Dedicated resource discovery page.
@@ -49,27 +49,6 @@ function Resources() {
               Add Resource
             </button>
           </div>
-        </section>
-
-        <section className="mt-6 grid gap-4 md:grid-cols-3">
-          <MetricCard
-            icon={<FiBookOpen className="h-5 w-5" aria-hidden="true" />}
-            label="Browse mode"
-            value="Rows"
-            tone="blue"
-          />
-          <MetricCard
-            icon={<FiBookOpen className="h-5 w-5" aria-hidden="true" />}
-            label="Feedback"
-            value="Stars"
-            tone="amber"
-          />
-          <MetricCard
-            icon={<FiBookOpen className="h-5 w-5" aria-hidden="true" />}
-            label="Pagination"
-            value="Enabled"
-            tone="teal"
-          />
         </section>
 
         <div className="mt-8">

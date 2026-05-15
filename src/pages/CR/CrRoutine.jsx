@@ -33,7 +33,6 @@ import {
   EmptyState,
   FormField,
   LoadingState,
-  MetricCard,
   Notice,
   PageShell,
   SectionHeading,
@@ -74,7 +73,11 @@ const DAY_OPTIONS = DISPLAY_DAYS.map((day) => ({
 /**
  * CR routine editor for adding, editing, and deleting section classes.
  */
-const CrRoutine = () => {
+const CrRoutine = ({
+  embedded = false,
+  mode = "routine",
+  showModeCards = true,
+}) => {
   const [schedule, setSchedule] = useState([]);
   const [hasSearched, setHasSearched] = useState(false);
   const {
@@ -112,6 +115,7 @@ const CrRoutine = () => {
   const [quickFacultyForm, setQuickFacultyForm] = useState(emptyQuickFacultyForm);
   const [quickFacultyNotice, setQuickFacultyNotice] = useState(null);
   const [quickFacultySaving, setQuickFacultySaving] = useState(false);
+  const [activeEditorMode, setActiveEditorMode] = useState(mode);
   const { user } = useAuth();
   const { periods } = usePeriods();
 
@@ -131,6 +135,10 @@ const CrRoutine = () => {
       setSession((current) => current || activeSessionName);
     }
   }, [activeSessionName]);
+
+  useEffect(() => {
+    setActiveEditorMode(mode);
+  }, [mode]);
 
   useEffect(() => {
     if (!hasSearched && userSection) {
@@ -680,9 +688,9 @@ const CrRoutine = () => {
   };
 
   return (
-    <div className="min-h-screen">
-      <Header />
-      <PageShell className="py-10">
+    <div className={embedded ? "" : "min-h-screen"}>
+      {!embedded && <Header />}
+      <RoutineContentFrame embedded={embedded}>
         <section className="surface-card p-6 sm:p-8">
           <SectionHeading
             kicker="CR Routine"
@@ -734,27 +742,26 @@ const CrRoutine = () => {
           </div>
         )}
 
-        <section className="mt-6 grid gap-4 md:grid-cols-3">
-          <MetricCard
-            icon={<FiCalendar className="h-5 w-5" aria-hidden="true" />}
-            label="Session"
-            value={session}
-            tone="blue"
-          />
-          <MetricCard
-            icon={<FiEdit3 className="h-5 w-5" aria-hidden="true" />}
-            label="Section"
-            value={userSection || "N/A"}
-            tone="teal"
-          />
-          <MetricCard
-            icon={<FiPlus className="h-5 w-5" aria-hidden="true" />}
-            label="Loaded classes"
-            value={schedule.length}
-            tone="amber"
-          />
-        </section>
+        {showModeCards && (
+          <section className="mt-6 grid gap-4 md:grid-cols-2">
+            <RoutineModeCard
+              title="Routine editor"
+              description="Edit individual routine cells from the timetable."
+              icon={FiEdit3}
+              active={activeEditorMode === "routine"}
+              onClick={() => setActiveEditorMode("routine")}
+            />
+            <RoutineModeCard
+              title="Bulk entry"
+              description="Queue multiple classes for one faculty, then save together."
+              icon={FiList}
+              active={activeEditorMode === "bulk"}
+              onClick={() => setActiveEditorMode("bulk")}
+            />
+          </section>
+        )}
 
+        {activeEditorMode === "bulk" && (
         <section className="mt-8 surface-card p-6 sm:p-8">
           <SectionHeading
             kicker="Bulk entry"
@@ -981,6 +988,7 @@ const CrRoutine = () => {
             </div>
           </div>
         </section>
+        )}
 
         <section className="mt-8">
           {loading ? (
@@ -1036,7 +1044,7 @@ const CrRoutine = () => {
             </div>
           )}
         </section>
-      </PageShell>
+      </RoutineContentFrame>
 
       {showAddForm && (
         <ClassModal
@@ -1072,6 +1080,45 @@ const CrRoutine = () => {
     </div>
   );
 };
+
+function RoutineContentFrame({ embedded, children }) {
+  if (embedded) {
+    return <div className="space-y-8">{children}</div>;
+  }
+
+  return <PageShell className="py-10">{children}</PageShell>;
+}
+
+function RoutineModeCard({ title, description, icon: Icon, active, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`interactive-card p-5 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+        active
+          ? "border-blue-300 bg-blue-50/80 shadow-lg shadow-blue-500/10 ring-2 ring-blue-500/20 dark:border-blue-500/50 dark:bg-blue-500/10"
+          : ""
+      }`}
+    >
+      <div className="flex items-start justify-between gap-4">
+        <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-200">
+          <Icon className="h-5 w-5" aria-hidden="true" />
+        </span>
+        {active && (
+          <span className="status-pill border-blue-200 bg-white text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200">
+            Active
+          </span>
+        )}
+      </div>
+      <h2 className="mt-4 text-lg font-bold text-slate-950 dark:text-white">
+        {title}
+      </h2>
+      <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-400">
+        {description}
+      </p>
+    </button>
+  );
+}
 
 /**
  * Modal form used for adding and editing class cells.

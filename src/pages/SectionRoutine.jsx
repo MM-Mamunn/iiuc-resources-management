@@ -47,7 +47,7 @@ const SectionRoutine = () => {
   const [hasSearched, setHasSearched] = useState(false);
   const [busyCourses, setBusyCourses] = useState({});
   const [notice, setNotice] = useState(null);
-  const [showRoutineActions, setShowRoutineActions] = useState(true);
+  const [showRoutineActions, setShowRoutineActions] = useState(false);
   const { periods } = usePeriods();
 
   const timeSlots = getRoutineTimeSlots(periods, shift);
