@@ -30,6 +30,7 @@ const Fullroutine = lazy(() => import("./pages/teacher/Fullroutine"));
 const TeacherInfo = lazy(() => import("./pages/info/TeacherInfo"));
 const CourseInfo = lazy(() => import("./pages/info/CourseInfo"));
 const SectionInfo = lazy(() => import("./pages/info/SectionInfo"));
+const Community = lazy(() => import("./pages/info/Community"));
 const Contributor = lazy(() => import("./pages/info/Contributor"));
 const BusSchedule = lazy(() => import("./pages/info/BusSchedule"));
 const CR = lazy(() => import("./pages/CR/CR"));
@@ -267,6 +268,7 @@ function AppRoutes() {
           element={isLoggedIn ? <CourseInfo /> : <Navigate to="/auth/login" replace />}
         />
         <Route path="/info/section" element={<SectionInfo />} />
+        <Route path="/info/community" element={<Community />} />
         <Route path="/info/contributor" element={<Contributor />} />
         <Route
           path="/info/materials"

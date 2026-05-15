@@ -48,6 +48,7 @@ function ResourceBrowser({
   refreshKey = 0,
   manageable = false,
   enableCourseFilters = false,
+  fixedContributorId = "",
   onManagedChange = () => {},
 }) {
   const { isLoggedIn, user } = useAuth();
@@ -100,7 +101,7 @@ function ResourceBrowser({
           course: courseCode,
           semester: enableCourseFilters ? semesterFilter : "",
           credit: enableCourseFilters ? creditFilter : "",
-          by: enableCourseFilters ? contributorId : "",
+          by: fixedContributorId || (enableCourseFilters ? contributorId : ""),
         },
       });
 
@@ -132,6 +133,7 @@ function ResourceBrowser({
     semesterFilter,
     creditFilter,
     contributorId,
+    fixedContributorId,
     limit,
     refreshKey,
   ]);
@@ -432,23 +434,25 @@ function ResourceBrowser({
                 </select>
               </FormField>
 
-              <FormField id={`${controlPrefix}-resource-contributor-mode`} label="Contributor filter">
-                <select
-                  id={`${controlPrefix}-resource-contributor-mode`}
-                  value={contributorFilterMode}
-                  onChange={(event) => {
-                    const nextMode = event.target.value;
-                    setContributorFilterMode(nextMode);
-                    if (nextMode !== "by") {
-                      clearContributorFilter();
-                    }
-                  }}
-                  className="form-field"
-                >
-                  <option value="off">All contributors</option>
-                  <option value="by">By student ID</option>
-                </select>
-              </FormField>
+              {!fixedContributorId && (
+                <FormField id={`${controlPrefix}-resource-contributor-mode`} label="Contributor filter">
+                  <select
+                    id={`${controlPrefix}-resource-contributor-mode`}
+                    value={contributorFilterMode}
+                    onChange={(event) => {
+                      const nextMode = event.target.value;
+                      setContributorFilterMode(nextMode);
+                      if (nextMode !== "by") {
+                        clearContributorFilter();
+                      }
+                    }}
+                    className="form-field"
+                  >
+                    <option value="off">All contributors</option>
+                    <option value="by">By student ID</option>
+                  </select>
+                </FormField>
+              )}
 
               <button
                 type="button"
@@ -468,7 +472,7 @@ function ResourceBrowser({
         </div>
       </form>
 
-      {enableCourseFilters && contributorFilterMode === "by" && (
+      {enableCourseFilters && !fixedContributorId && contributorFilterMode === "by" && (
         <section className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900">
           <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
             <FormField
@@ -510,7 +514,7 @@ function ResourceBrowser({
         </section>
       )}
 
-      {enableCourseFilters && (semesterFilter || creditFilter || contributorId) && (
+      {(enableCourseFilters && (semesterFilter || creditFilter || contributorId)) || fixedContributorId ? (
         <div className="mt-4 flex flex-wrap gap-2">
           {semesterFilter && (
             <span className="status-pill border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200">
@@ -527,8 +531,13 @@ function ResourceBrowser({
               By {contributorId}
             </span>
           )}
+          {fixedContributorId && (
+            <span className="status-pill border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+              By {fixedContributorId}
+            </span>
+          )}
         </div>
-      )}
+      ) : null}
 
       {notice && (
         <div className="mt-5">
