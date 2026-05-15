@@ -13,6 +13,7 @@ function RoutineTable({
   actions,
   renderCourseActions,
   renderEmptyActions,
+  onCellClick,
   getDayMeta = () => ({}),
   getCellMeta = () => ({}),
   emptyTitle = "No routine found",
@@ -101,11 +102,41 @@ function RoutineTable({
                     {dayItems.map((item, index) => {
                       const cellMeta = getCellMeta(day, item, index);
                       const hasCourse = item.subject && item.subject !== "-";
+                      const canOpenDetails = hasCourse && !item.isBreak && onCellClick;
+                      const openCellDetails = (event) => {
+                        if (!canOpenDetails) return;
+
+                        const interactiveTarget = event.target.closest?.(
+                          "a,button,input,select,textarea,label",
+                        );
+
+                        if (interactiveTarget) return;
+
+                        onCellClick({
+                          ...item,
+                          dayLabel: day,
+                          timeSlot: timeSlots[index],
+                        });
+                      };
+                      const handleCellKeyDown = (event) => {
+                        if (!canOpenDetails || !["Enter", " "].includes(event.key)) return;
+                        event.preventDefault();
+                        onCellClick({
+                          ...item,
+                          dayLabel: day,
+                          timeSlot: timeSlots[index],
+                        });
+                      };
 
                       return (
                         <td
                           key={`${day}-${index}-${item.subject}`}
                           colSpan={item.colspan}
+                          role={canOpenDetails ? "button" : undefined}
+                          tabIndex={canOpenDetails ? 0 : undefined}
+                          onClick={openCellDetails}
+                          onKeyDown={handleCellKeyDown}
+                          title={canOpenDetails ? "View class details" : undefined}
                           className={cx(
                             "min-w-32 border-l border-slate-100 px-4 py-4 text-center align-top dark:border-slate-800",
                             item.isBreak &&
@@ -113,6 +144,8 @@ function RoutineTable({
                             hasCourse &&
                               !item.isBreak &&
                               "bg-white dark:bg-slate-950",
+                            canOpenDetails &&
+                              "cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
                             cellMeta.active &&
                               "bg-emerald-50 ring-2 ring-inset ring-emerald-400/70 dark:bg-emerald-500/10"
                           )}

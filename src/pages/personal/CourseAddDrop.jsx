@@ -1,9 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { FiPlus, FiSearch, FiShuffle, FiTrash2 } from "react-icons/fi";
+import { useCallback, useEffect, useState } from "react";
+import {
+  FiAlertTriangle,
+  FiCheckCircle,
+  FiPlus,
+  FiSearch,
+  FiTrash2,
+  FiUser,
+} from "react-icons/fi";
 import api from "../../api";
 import { useActiveSession } from "../../App";
+import {
+  FACULTY_SEARCH_MAX_LENGTH,
+  formatFacultyLabel,
+} from "../../services/facultySearchService";
+import { clearCacheByPrefix } from "../../services/cacheService";
 import Header from "../components/Header";
 import { notify } from "../components/notifications";
 import {
@@ -29,11 +41,13 @@ function PersonalCourseManage() {
     session: "",
     section: "",
     code: "",
+    faculty: "",
   });
   const [suggestions, setSuggestions] = useState({
     session: [],
     section: [],
     code: [],
+    faculty: [],
   });
   const [loadingField, setLoadingField] = useState("");
   const [searchResults, setSearchResults] = useState([]);
@@ -43,6 +57,9 @@ function PersonalCourseManage() {
   const [rowState, setRowState] = useState({});
   const [courseCodeEnabled, setCourseCodeEnabled] = useState(false);
   const [sectionEnabled, setSectionEnabled] = useState(false);
+  const [facultyEnabled, setFacultyEnabled] = useState(false);
+  const [courseStatuses, setCourseStatuses] = useState({});
+  const [statusLoading, setStatusLoading] = useState(false);
   const sessionHelper = activeSessionLoading
     ? "Loading active session..."
     : activeSessionError || (activeSessionName ? `Active: ${activeSessionName}` : "");
@@ -66,8 +83,9 @@ function PersonalCourseManage() {
 
     setLoadingField(key);
     try {
-      const response = await api.get(`${endpoint}/${value}`);
-      const nextSuggestions = response.data?.rows?.map(mapValue) ?? [];
+      const response = await api.get(`${endpoint}/${encodeURIComponent(value)}`);
+      const nextSuggestions =
+        response.data?.rows?.map(mapValue || ((row) => row)) ?? [];
       setSuggestions((current) => ({ ...current, [key]: nextSuggestions }));
     } catch {
       setSuggestions((current) => ({ ...current, [key]: [] }));
@@ -91,11 +109,12 @@ function PersonalCourseManage() {
 
     const hasCourseCode = courseCodeEnabled && formData.code.trim();
     const hasSection = sectionEnabled && formData.section.trim();
+    const hasFaculty = facultyEnabled && formData.faculty.trim();
 
-    if (!hasCourseCode && !hasSection) {
+    if (!hasCourseCode && !hasSection && !hasFaculty) {
       setNotice({
         type: "error",
-        text: "Enable and provide either course code or section before searching.",
+        text: "Enable and provide course code, section, faculty, or any combination before searching.",
       });
       return;
     }
@@ -105,11 +124,13 @@ function PersonalCourseManage() {
     setSearchResults([]);
     setHasSearched(true);
     setRowState({});
+    setCourseStatuses({});
 
     try {
       const requestBody = { session: formData.session };
       if (sectionEnabled && formData.section.trim()) requestBody.section = formData.section;
       if (courseCodeEnabled && formData.code.trim()) requestBody.code = formData.code;
+      if (facultyEnabled && formData.faculty.trim()) requestBody.faculty = formData.faculty;
 
       const response = await api.post("/api/class/search", requestBody);
       setSearchResults(response.data?.rows ?? []);
@@ -117,7 +138,7 @@ function PersonalCourseManage() {
       setNotice({ type: "error", text: getSearchError(searchError) });
     } finally {
       setSearching(false);
-      setSuggestions({ session: [], section: [], code: [] });
+      setSuggestions({ session: [], section: [], code: [], faculty: [] });
     }
   };
 
@@ -131,7 +152,86 @@ function PersonalCourseManage() {
     }));
   };
 
+  const refreshClassStatus = useCallback(async (classItem, index) => {
+    const key = getClassResultKey(classItem, index);
+
+    try {
+      const response = await api.post("/api/user/course_conflict", {
+        code: classItem.code,
+        section: classItem.sec,
+        session: classItem.session,
+      });
+      const nextStatus = normalizeCourseStatus(response.data, classItem);
+
+      setCourseStatuses((current) => ({ ...current, [key]: nextStatus }));
+      return nextStatus;
+    } catch (statusError) {
+      const nextStatus = normalizeCourseStatusError(statusError, classItem);
+      setCourseStatuses((current) => ({ ...current, [key]: nextStatus }));
+      return nextStatus;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!searchResults.length) {
+      setCourseStatuses({});
+      setStatusLoading(false);
+      return undefined;
+    }
+
+    let ignoreResult = false;
+
+    async function loadCourseStatuses() {
+      setStatusLoading(true);
+
+      const statusEntries = await Promise.all(
+        searchResults.map(async (classItem, index) => {
+          try {
+            const response = await api.post("/api/user/course_conflict", {
+              code: classItem.code,
+              section: classItem.sec,
+              session: classItem.session,
+            });
+
+            return [
+              getClassResultKey(classItem, index),
+              normalizeCourseStatus(response.data, classItem),
+            ];
+          } catch (statusError) {
+            return [
+              getClassResultKey(classItem, index),
+              normalizeCourseStatusError(statusError, classItem),
+            ];
+          }
+        }),
+      );
+
+      if (!ignoreResult) {
+        setCourseStatuses(Object.fromEntries(statusEntries));
+        setStatusLoading(false);
+      }
+    }
+
+    loadCourseStatuses();
+
+    return () => {
+      ignoreResult = true;
+    };
+  }, [searchResults]);
+
   const handleAddClass = async (classItem, index) => {
+    const currentStatus =
+      courseStatuses[getClassResultKey(classItem, index)] ||
+      (await refreshClassStatus(classItem, index));
+
+    if (currentStatus.state === "enrolled" && currentStatus.sameSection) {
+      notify({
+        type: "warning",
+        message: `${classItem.code} (${classItem.sec}): ${currentStatus.message}`,
+      });
+      return;
+    }
+
     setItemState(index, {
       adding: true,
     });
@@ -146,6 +246,8 @@ function PersonalCourseManage() {
         type: "success",
         message: `${classItem.code} (${classItem.sec}) added successfully.`,
       });
+      clearCacheByPrefix("dashboard:personal-routine:");
+      await refreshClassStatus(classItem, index);
     } catch (addError) {
       notify({
         type: "error",
@@ -157,6 +259,18 @@ function PersonalCourseManage() {
   };
 
   const handleDeleteClass = async (classItem, index) => {
+    const currentStatus =
+      courseStatuses[getClassResultKey(classItem, index)] ||
+      (await refreshClassStatus(classItem, index));
+
+    if (currentStatus.state === "enrolled" && !currentStatus.sameSection) {
+      notify({
+        type: "warning",
+        message: `${classItem.code} is enrolled in section ${currentStatus.enrolledSection}, not ${classItem.sec}.`,
+      });
+      return;
+    }
+
     const confirmDelete = window.confirm(
       `Remove this course from your personal routine?\n\n${classItem.code} - ${classItem.sec}`
     );
@@ -176,6 +290,8 @@ function PersonalCourseManage() {
         type: "success",
         message: `${classItem.code} (${classItem.sec}) removed successfully.`,
       });
+      clearCacheByPrefix("dashboard:personal-routine:");
+      await refreshClassStatus(classItem, index);
     } catch (deleteError) {
       notify({
         type: "error",
@@ -183,39 +299,6 @@ function PersonalCourseManage() {
       });
     } finally {
       setItemState(index, { deleting: false });
-    }
-  };
-
-  const handleCheckConflict = async (classItem, index) => {
-    setItemState(index, {
-      checking: true,
-    });
-
-    try {
-      const response = await api.post("/api/user/course_conflict", {
-        code: classItem.code,
-        section: classItem.sec,
-        session: classItem.session,
-      });
-      const conflictNotice = normalizeConflictResponse(response.data);
-      notify({
-        type: conflictNotice.type,
-        message: `${classItem.code} (${classItem.sec}): ${conflictNotice.text}`,
-      });
-    } catch (conflictError) {
-      if (conflictError.response?.status === 405) {
-        notify({
-          type: "warning",
-          message: `${classItem.code} (${classItem.sec}) is already enrolled in your schedule.`,
-        });
-      } else {
-        notify({
-          type: "error",
-          message: `${classItem.code} (${classItem.sec}): ${getConflictError(conflictError)}`,
-        });
-      }
-    } finally {
-      setItemState(index, { checking: false });
     }
   };
 
@@ -227,11 +310,11 @@ function PersonalCourseManage() {
           <SectionHeading
             kicker="Course planner"
             title="Add / Drop Personal Courses"
-            description="Search by course code, section, or both, then check overlap before adding courses to your routine."
+            description="Search by course, section, faculty, or a combination. Each result shows its add/drop status automatically."
           />
 
           <form onSubmit={handleSearch} className="mt-6 grid gap-5" autoComplete="off">
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-3">
               <SearchToggle
                 id="course-toggle"
                 label="Search by course code"
@@ -256,9 +339,21 @@ function PersonalCourseManage() {
                   }
                 }}
               />
+              <SearchToggle
+                id="faculty-toggle"
+                label="Search by faculty"
+                checked={facultyEnabled}
+                onChange={(checked) => {
+                  setFacultyEnabled(checked);
+                  if (!checked) {
+                    setFormData((current) => ({ ...current, faculty: "" }));
+                    setSuggestions((current) => ({ ...current, faculty: [] }));
+                  }
+                }}
+              />
             </div>
 
-            <div className="grid gap-4 lg:grid-cols-3">
+            <div className="grid gap-4 lg:grid-cols-4">
               {courseCodeEnabled && (
                 <AutocompleteField
                   id="code"
@@ -298,6 +393,27 @@ function PersonalCourseManage() {
                     })
                   }
                   onSelect={(value) => chooseSuggestion("section", value)}
+                />
+              )}
+
+              {facultyEnabled && (
+                <AutocompleteField
+                  id="faculty"
+                  label="Faculty"
+                  value={formData.faculty}
+                  placeholder="JAA or Abdullah"
+                  loading={loadingField === "faculty"}
+                  suggestions={suggestions.faculty}
+                  getSuggestionLabel={formatFacultyLabel}
+                  onChange={(value) =>
+                    updateSuggestions({
+                      key: "faculty",
+                      value,
+                      endpoint: "/api/lookLike/facultyAnyLookLike",
+                      maxLength: FACULTY_SEARCH_MAX_LENGTH,
+                    })
+                  }
+                  onSelect={(faculty) => chooseSuggestion("faculty", faculty.code || faculty.name || "")}
                 />
               )}
 
@@ -345,15 +461,15 @@ function PersonalCourseManage() {
             tone="blue"
           />
           <MetricCard
-            icon={<FiShuffle className="h-5 w-5" aria-hidden="true" />}
-            label="Overlap check"
-            value="Available"
+            icon={<FiCheckCircle className="h-5 w-5" aria-hidden="true" />}
+            label="Course status"
+            value={statusLoading ? "Checking" : "Auto-detected"}
             tone="teal"
           />
           <MetricCard
-            icon={<FiPlus className="h-5 w-5" aria-hidden="true" />}
-            label="Action"
-            value="Add / drop"
+            icon={<FiUser className="h-5 w-5" aria-hidden="true" />}
+            label="Faculty filter"
+            value={facultyEnabled ? "Enabled" : "Off"}
             tone="amber"
           />
         </section>
@@ -366,7 +482,8 @@ function PersonalCourseManage() {
                   key={`${classItem.code}-${classItem.sec}-${classItem.session}-${index}`}
                   classItem={classItem}
                   state={rowState[index] || {}}
-                  onCheck={() => handleCheckConflict(classItem, index)}
+                  status={courseStatuses[getClassResultKey(classItem, index)]}
+                  statusLoading={statusLoading}
                   onAdd={() => handleAddClass(classItem, index)}
                   onDelete={() => handleDeleteClass(classItem, index)}
                 />
@@ -422,6 +539,7 @@ function AutocompleteField({
   loading,
   helper,
   suggestions,
+  getSuggestionLabel,
   onChange,
   onSelect,
 }) {
@@ -439,50 +557,105 @@ function AutocompleteField({
           className="form-field"
           required
         />
-        <SuggestionList suggestions={suggestions} onSelect={onSelect} />
+        <SuggestionList
+          suggestions={suggestions}
+          getLabel={getSuggestionLabel}
+          onSelect={onSelect}
+        />
       </div>
     </FormField>
   );
 }
 
 /**
- * Search result card with overlap, add, and delete actions.
+ * Search result card with automatic enrollment and overlap status.
  */
-function ClassResultCard({ classItem, state, onCheck, onAdd, onDelete }) {
+function ClassResultCard({
+  classItem,
+  state,
+  status,
+  statusLoading,
+  onAdd,
+  onDelete,
+}) {
+  const statusView = getStatusView(status, statusLoading);
+
   return (
-    <article className="interactive-card p-5">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="section-kicker">Class</p>
-          <h2 className="safe-text mt-1 text-xl font-bold text-slate-950 dark:text-white">
-            {classItem.code}
-          </h2>
+    <article className="interactive-card overflow-hidden">
+      <div className="border-b border-slate-200 p-5 dark:border-slate-800">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <p className="section-kicker">Class</p>
+            <h2 className="safe-text mt-1 text-2xl font-black text-slate-950 dark:text-white">
+              {classItem.code}
+            </h2>
+            {classItem.title && (
+              <p className="safe-text mt-2 text-sm font-semibold text-slate-600 dark:text-slate-300">
+                {classItem.title}
+              </p>
+            )}
+          </div>
+          <span className="status-pill border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200">
+            Section {classItem.sec}
+          </span>
         </div>
-        <span className="status-pill border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200">
-          {classItem.sec}
-        </span>
       </div>
 
-      <dl className="mt-5 grid gap-3 text-sm sm:grid-cols-2">
-        <ResultField label="Credit" value={classItem.credit} />
-        <ResultField label="Faculty" value={classItem.faculty} />
-        <ResultField label="Section" value={classItem.sec} />
-        <ResultField label="Session" value={classItem.session} />
-      </dl>
+      <div className="p-5">
+        <div className={`rounded-lg border px-4 py-3 text-sm font-semibold ${statusView.className}`}>
+          <div className="flex items-start gap-3">
+            <statusView.icon className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
+            <div>
+              <p>{statusView.label}</p>
+              <p className="mt-1 font-medium leading-6">{statusView.message}</p>
+            </div>
+          </div>
+        </div>
 
-      <div className="mt-5 flex flex-wrap justify-end gap-2">
-        <button type="button" onClick={onCheck} disabled={state.checking} className="btn-secondary">
-          <FiShuffle aria-hidden="true" />
-          {state.checking ? "Checking..." : "Overlap"}
-        </button>
-        <button type="button" onClick={onAdd} disabled={state.adding} className="btn-primary">
-          <FiPlus aria-hidden="true" />
-          {state.adding ? "Adding..." : "Add"}
-        </button>
-        <button type="button" onClick={onDelete} disabled={state.deleting} className="btn-danger">
-          <FiTrash2 aria-hidden="true" />
-          {state.deleting ? "Deleting..." : "Delete"}
-        </button>
+        {status?.state === "enrolled" && (
+          <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+            <ResultField label="Enrolled section" value={status.enrolledSection} />
+            <ResultField label="Searched section" value={classItem.sec} />
+          </div>
+        )}
+
+        {status?.state === "conflict" && status.conflicts?.length > 0 && (
+          <div className="mt-4 grid gap-2">
+            {status.conflicts.map((conflict, index) => (
+              <div
+                key={`${conflict.code}-${conflict.sec}-${index}`}
+                className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:bg-amber-500/10 dark:text-amber-100"
+              >
+                {conflict.code} is already scheduled from section {conflict.sec}.
+              </div>
+            ))}
+          </div>
+        )}
+
+        <dl className="mt-5 grid gap-3 text-sm sm:grid-cols-2">
+          <ResultField label="Credit" value={classItem.credit} />
+          <ResultField label="Faculty" value={formatClassFaculty(classItem)} />
+          <ResultField label="Section" value={classItem.sec} />
+          <ResultField label="Session" value={classItem.session} />
+        </dl>
+
+        <div className="mt-5 flex flex-wrap justify-end gap-2">
+          <button
+            type="button"
+            onClick={onAdd}
+            disabled={state.adding || (status?.state === "enrolled" && status.sameSection)}
+            className="btn-primary"
+          >
+            <FiPlus aria-hidden="true" />
+            {state.adding ? "Adding..." : "Add"}
+          </button>
+          {status?.state === "enrolled" && status.sameSection && (
+            <button type="button" onClick={onDelete} disabled={state.deleting} className="btn-danger">
+              <FiTrash2 aria-hidden="true" />
+              {state.deleting ? "Deleting..." : "Delete"}
+            </button>
+          )}
+        </div>
       </div>
     </article>
   );
@@ -499,36 +672,138 @@ function ResultField({ label, value }) {
   );
 }
 
-function normalizeConflictResponse(data) {
+function getClassResultKey(classItem, index) {
+  return `${classItem.code}-${classItem.sec}-${classItem.session}-${classItem.faculty}-${index}`;
+}
+
+function normalizeCourseStatus(data, classItem) {
   if (data?.courseAlreadyEnrolled) {
+    const enrolledSection = data.enrolledSection || data.enrollment?.sec || "";
+    const sameSection =
+      data.sameSection ??
+      String(enrolledSection || "").toLowerCase() ===
+        String(classItem.sec || "").toLowerCase();
+
     return {
-      type: "warning",
-      text: "This course is already enrolled in your schedule.",
+      state: "enrolled",
+      sameSection,
+      enrolledSection,
+      message: sameSection
+        ? `${classItem.code} is already enrolled in section ${enrolledSection}.`
+        : `${classItem.code} is already enrolled from section ${enrolledSection}.`,
     };
   }
 
   if (Array.isArray(data) && data.length === 0) {
     return {
-      type: "success",
-      text: "No conflicts found. You can safely add this course.",
+      state: "available",
+      message: "No conflict found. This course can be added.",
     };
   }
 
   if (Array.isArray(data) && data.length > 0) {
     return {
-      type: "warning",
-      text: `Conflicts detected with ${data.map((item) => `${item.code} (${item.sec})`).join(", ")}.`,
+      state: "conflict",
+      conflicts: data,
+      message: `Schedule conflict with ${data.map((item) => `${item.code} in section ${item.sec}`).join(", ")}.`,
     };
   }
 
   return {
-    type: "success",
-    text: "No blocking conflict was returned.",
+    state: "available",
+    message: "No blocking conflict was returned.",
   };
+}
+
+function normalizeCourseStatusError(error, classItem) {
+  const apiMessage = getApiErrorMessage(error);
+
+  if (error.response?.status === 405) {
+    return {
+      state: "enrolled",
+      sameSection: false,
+      enrolledSection: "",
+      message: `${classItem.code} is already enrolled in another section.`,
+    };
+  }
+
+  return {
+    state: "error",
+    message: apiMessage || getConflictError(error),
+  };
+}
+
+function getStatusView(status, loading) {
+  if (loading && !status) {
+    return {
+      icon: FiSearch,
+      label: "Checking status",
+      message: "Looking for enrolled sections and schedule conflicts.",
+      className:
+        "border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-100",
+    };
+  }
+
+  if (status?.state === "available") {
+    return {
+      icon: FiCheckCircle,
+      label: "Available",
+      message: status.message,
+      className:
+        "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-100",
+    };
+  }
+
+  if (status?.state === "enrolled") {
+    return {
+      icon: FiAlertTriangle,
+      label: status.sameSection ? "Already taken here" : "Taken in another section",
+      message: status.message,
+      className:
+        "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100",
+    };
+  }
+
+  if (status?.state === "conflict") {
+    return {
+      icon: FiAlertTriangle,
+      label: "Schedule conflict",
+      message: status.message,
+      className:
+        "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100",
+    };
+  }
+
+  if (status?.state === "error") {
+    return {
+      icon: FiAlertTriangle,
+      label: "Status unavailable",
+      message: status.message,
+      className:
+        "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-100",
+    };
+  }
+
+  return {
+    icon: FiSearch,
+    label: "Waiting",
+    message: "Status will appear after the automatic check finishes.",
+    className:
+      "border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200",
+  };
+}
+
+function formatClassFaculty(classItem) {
+  if (classItem.facultyName && classItem.faculty) {
+    return `${classItem.facultyName} (${classItem.faculty})`;
+  }
+
+  return classItem.facultyName || classItem.faculty || "N/A";
 }
 
 function getSearchError(error) {
   const status = error.response?.status;
+  if (status === 400) return "Add at least one enabled filter with a value.";
   if (status === 404) return "No classes found matching your criteria.";
   if (status === 500) return "Server error. Please try again later.";
   if (error.request) return "Network error: unable to connect to the server.";
@@ -552,8 +827,13 @@ function getAddError(error) {
 
 function getDeleteError(error) {
   const status = error.response?.status;
+  const apiMessage = getApiErrorMessage(error);
+
+  if (apiMessage) return apiMessage;
+
   if (status === 401) return "This course was not found in your personal schedule.";
   if (status === 402) return "No such class exists in your personal routine.";
+  if (status === 409) return "This course is enrolled in another section.";
   if (status === 403) return "Access forbidden.";
   if (status === 500) return "Server error. Please try again later.";
   if (error.request) return "Network error: unable to connect to the server.";

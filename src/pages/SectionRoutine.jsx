@@ -4,8 +4,14 @@ import { useEffect, useState } from "react";
 import { FiCalendar, FiDownload, FiPlus, FiSearch, FiTrash2 } from "react-icons/fi";
 import api from "../api";
 import { useActiveSession, useAuth } from "../App";
+import { clearCacheByPrefix } from "../services/cacheService";
 import { getRoutineTimeSlots, usePeriods } from "../services/periodService";
+import {
+  getRoutineClassDetails,
+  summarizeRoutineDetails,
+} from "../services/routineDetails";
 import Header from "./components/Header";
+import RoutineActionToggle from "./components/RoutineActionToggle";
 import RoutineTable from "./components/RoutineTable";
 import {
   EmptyState,
@@ -41,6 +47,7 @@ const SectionRoutine = () => {
   const [hasSearched, setHasSearched] = useState(false);
   const [busyCourses, setBusyCourses] = useState({});
   const [notice, setNotice] = useState(null);
+  const [showRoutineActions, setShowRoutineActions] = useState(true);
   const { periods } = usePeriods();
 
   const timeSlots = getRoutineTimeSlots(periods, shift);
@@ -128,6 +135,7 @@ const SectionRoutine = () => {
         type: "success",
         text: action === "add" ? `${courseData.code} added.` : `${courseData.code} removed.`,
       });
+      clearCacheByPrefix("dashboard:personal-routine:");
     } catch (courseError) {
       setNotice({
         type: "error",
@@ -151,19 +159,34 @@ const SectionRoutine = () => {
       const classItem = daySchedule.find((item) => Number(item.slot) === slot);
       if (classItem) {
         const count = Number(classItem.count || 1);
-        const code = classItem.code || "Course";
-        mergedSchedule.push({
-          subject: code,
+        const details = getRoutineClassDetails(classItem, {
+          section: normalizedSection,
+          session: normalizedSession,
+          day: DAYS.indexOf(day),
+          dayLabel: day,
+          slot,
+        });
+        const summary = summarizeRoutineDetails(details, {
+          subject: classItem.code || "Course",
           title: classItem.short_name || "",
           room: classItem.room || "",
           faculty: classItem.name || classItem.faculty || "",
+        });
+
+        mergedSchedule.push({
+          subject: summary.subject,
+          title: summary.title,
+          room: summary.room,
+          faculty: summary.faculty,
           colspan: count,
           slotStart: slot,
           courseData: {
-            code,
+            code: details[0]?.courseCode || classItem.code || "Course",
             section: normalizedSection,
             session: normalizedSession,
           },
+          day: DAYS.indexOf(day),
+          details,
         });
         slot += count;
       } else {
@@ -303,13 +326,22 @@ const SectionRoutine = () => {
                 displayDays={DISPLAY_DAYS}
                 getItemsForDay={generateDaySchedule}
                 actions={
-                  <button type="button" onClick={handlePrint} className="btn-secondary">
-                    <FiDownload aria-hidden="true" />
-                    Print
-                  </button>
+                  <>
+                    {isLoggedIn && (
+                      <RoutineActionToggle
+                        visible={showRoutineActions}
+                        onToggle={() => setShowRoutineActions((current) => !current)}
+                      />
+                    )}
+                    <button type="button" onClick={handlePrint} className="btn-secondary">
+                      <FiDownload aria-hidden="true" />
+                      Print
+                    </button>
+                  </>
                 }
                 renderCourseActions={(item) =>
                   isLoggedIn &&
+                  showRoutineActions &&
                   item.courseData && (
                     <>
                       <button

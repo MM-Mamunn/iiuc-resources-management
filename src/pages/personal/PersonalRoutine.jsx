@@ -9,6 +9,12 @@ import {
   getRoutineTimeSlots,
   usePeriods,
 } from "../../services/periodService";
+import {
+  getRoutineClassDetails,
+  joinRoutineValues,
+  splitRoutineValue,
+  summarizeRoutineDetails,
+} from "../../services/routineDetails";
 import Header from "../components/Header";
 import RoutineTable from "../components/RoutineTable";
 import {
@@ -126,13 +132,28 @@ const PersonalRoutine = () => {
       const classItem = daySchedule.find((item) => Number(item.slot) === slot);
       if (classItem) {
         const count = Number(classItem.count || 1);
-        mergedSchedule.push({
+        const details = getRoutineClassDetails(classItem, {
+          session,
+          day: DAYS.indexOf(day),
+          dayLabel: day,
+          slot,
+        });
+        const summary = summarizeRoutineDetails(details, {
           subject: classItem.code || "Course",
           title: classItem.short_name || "",
           room: classItem.room || "",
           faculty: classItem.name || classItem.faculty || "",
+        });
+
+        mergedSchedule.push({
+          subject: summary.subject,
+          title: summary.title,
+          room: summary.room,
+          faculty: summary.faculty,
           colspan: count,
           slotStart: slot,
+          day: DAYS.indexOf(day),
+          details,
         });
         slot += count;
       } else {
@@ -219,9 +240,14 @@ const PersonalRoutine = () => {
         {currentClass && (
           <section className="mt-6 rounded-lg border border-emerald-200 bg-emerald-50 p-5 text-emerald-900 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-100">
             <p className="text-sm font-bold uppercase">Live now</p>
-            <h2 className="mt-2 text-2xl font-bold">{currentClass.code}</h2>
+            <h2 className="mt-2 text-2xl font-bold">
+              {joinRoutineValues(splitRoutineValue(currentClass.code), currentClass.code)}
+            </h2>
             <p className="mt-1 text-sm">
-              {currentClass.short_name || currentClass.name || currentClass.faculty} - Room {currentClass.room || "N/A"}
+              {joinRoutineValues(
+                splitRoutineValue(currentClass.short_name || currentClass.name || currentClass.faculty),
+                currentClass.short_name || currentClass.name || currentClass.faculty,
+              )} - Room {joinRoutineValues(splitRoutineValue(currentClass.room), currentClass.room || "N/A")}
             </p>
           </section>
         )}

@@ -17,6 +17,7 @@ import {
 } from "react-icons/fi";
 import Header from "./components/Header";
 import ResourceHighlights from "./components/ResourceHighlights";
+import RoutineActionToggle from "./components/RoutineActionToggle";
 import RoutineTable from "./components/RoutineTable";
 import {
   EmptyState,
@@ -29,10 +30,16 @@ import {
 import routineImage from "../assets/iiuc.webp";
 import api from "../api";
 import { useActiveSession, useAuth } from "../App";
+import { cachedRequest, clearCacheByPrefix } from "../services/cacheService";
 import { getRoutineTimeSlots, usePeriods } from "../services/periodService";
+import {
+  getRoutineClassDetails,
+  summarizeRoutineDetails,
+} from "../services/routineDetails";
 
 const DAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 const DISPLAY_DAYS = ["sat", "sun", "mon", "tue", "wed"];
+const HOME_CACHE_TTL = 2 * 60 * 1000;
 
 /**
  * Public landing and section routine lookup page.
@@ -59,6 +66,7 @@ const Home = () => {
   const [notice, setNotice] = useState(null);
   const [topContributors, setTopContributors] = useState([]);
   const [contributorsLoading, setContributorsLoading] = useState(false);
+  const [showRoutineActions, setShowRoutineActions] = useState(true);
   const { periods } = usePeriods();
 
   const timeSlots = getRoutineTimeSlots(periods, shift);
@@ -79,8 +87,15 @@ const Home = () => {
     async function fetchTopContributors() {
       setContributorsLoading(true);
       try {
-        const response = await api.get("/api/info/topcontributor");
-        setTopContributors(response.data?.rows ?? []);
+        const rows = await cachedRequest(
+          "home:top-contributors",
+          async () => {
+            const response = await api.get("/api/info/topcontributor");
+            return response.data?.rows ?? [];
+          },
+          { ttl: 5 * 60 * 1000 },
+        );
+        setTopContributors(rows);
       } catch {
         setTopContributors([]);
       } finally {
@@ -176,11 +191,21 @@ const Home = () => {
     setSessionSuggestions([]);
 
     try {
-      const response = await api.get(
-        `/api/section/fullroutine/${normalizedSection}/${normalizedSession}`
+      const routineData = await cachedRequest(
+        `home:section-routine:${normalizedSection}:${normalizedSession}`,
+        async () => {
+          const response = await api.get(
+            `/api/section/fullroutine/${normalizedSection}/${normalizedSession}`,
+          );
+          return {
+            rows: response.data?.rows ?? [],
+            gender: response.data?.gender || 1,
+          };
+        },
+        { ttl: HOME_CACHE_TTL },
       );
-      setSchedule(response.data?.rows ?? []);
-      setShift(response.data?.gender || 1);
+      setSchedule(routineData.rows);
+      setShift(routineData.gender);
       setHasSearched(true);
     } catch {
       setSchedule([]);
@@ -225,6 +250,7 @@ const Home = () => {
             ? `${courseData.code} was added to your routine.`
             : `${courseData.code} was removed from your routine.`,
       });
+      clearCacheByPrefix("dashboard:personal-routine:");
     } catch (error) {
       setNotice({
         type: "error",
@@ -256,22 +282,34 @@ const Home = () => {
       const classItem = daySchedule.find((item) => Number(item.slot) === slot);
       if (classItem) {
         const count = Number(classItem.count || 1);
-        const code = classItem.code || "Course";
-        const room = classItem.room || "";
-        const title = classItem.short_name || classItem.name || "";
+        const details = getRoutineClassDetails(classItem, {
+          section: normalizedSection,
+          session: normalizedSession,
+          day: DAYS.indexOf(day),
+          dayLabel: day,
+          slot,
+        });
+        const summary = summarizeRoutineDetails(details, {
+          subject: classItem.code || "Course",
+          title: classItem.short_name || classItem.name || "",
+          room: classItem.room || "",
+          faculty: classItem.name || classItem.faculty || "",
+        });
 
         mergedSchedule.push({
-          subject: code,
-          title,
-          room,
-          faculty: classItem.name || classItem.faculty || "",
+          subject: summary.subject,
+          title: summary.title,
+          room: summary.room,
+          faculty: summary.faculty,
           colspan: count,
           slotStart: slot,
           courseData: {
-            code,
+            code: details[0]?.courseCode || classItem.code || "Course",
             section: normalizedSection,
             session: normalizedSession,
           },
+          day: DAYS.indexOf(day),
+          details,
         });
         slot += count;
       } else {
@@ -459,14 +497,23 @@ const Home = () => {
             getItemsForDay={generateDaySchedule}
             actions={
               schedule.length > 0 && (
-                <button type="button" onClick={handleDownloadPDF} className="btn-secondary">
-                  <FiDownload aria-hidden="true" />
-                  Print routine
-                </button>
+                <>
+                  {isLoggedIn && (
+                    <RoutineActionToggle
+                      visible={showRoutineActions}
+                      onToggle={() => setShowRoutineActions((current) => !current)}
+                    />
+                  )}
+                  <button type="button" onClick={handleDownloadPDF} className="btn-secondary">
+                    <FiDownload aria-hidden="true" />
+                    Print routine
+                  </button>
+                </>
               )
             }
             renderCourseActions={(item) =>
               isLoggedIn &&
+              showRoutineActions &&
               item.courseData && (
                 <>
                   <button

@@ -17,6 +17,11 @@ import {
 import api from "../../api";
 import campusImage from "../../assets/iiuc.webp";
 import { useActiveSession } from "../../App";
+import {
+  FACULTY_SEARCH_MAX_LENGTH,
+  fetchFacultySuggestions,
+  searchFaculty,
+} from "../../services/facultySearchService";
 import Header from "../components/Header";
 import {
   EmptyState,
@@ -45,25 +50,6 @@ const emptyFacultyForm = {
   type: "",
   email: "",
   phone: "",
-};
-
-const FACULTY_SEARCH_MODES = {
-  code: {
-    label: "Code",
-    placeholder: "Search by faculty code",
-    suggestionEndpoint: "/api/lookLike/facultyLookLike",
-    searchEndpoint: (query) => `/api/teacher/search/${encodeURIComponent(query)}`,
-    getSuggestionValue: (faculty) => faculty.code || "",
-    maxLength: 20,
-  },
-  name: {
-    label: "Name",
-    placeholder: "Search by faculty name",
-    suggestionEndpoint: "/api/lookLike/facultyNameLookLike",
-    searchEndpoint: (query) => `/api/teacher/search/name/${encodeURIComponent(query)}`,
-    getSuggestionValue: (faculty) => faculty.name || "",
-    maxLength: 80,
-  },
 };
 
 /**
@@ -393,7 +379,6 @@ function FacultyManagementSection() {
   const [addForm, setAddForm] = useState(emptyFacultyForm);
   const [addSubmitting, setAddSubmitting] = useState(false);
   const [addNotice, setAddNotice] = useState(null);
-  const [searchMode, setSearchMode] = useState("code");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchSuggestions, setSearchSuggestions] = useState([]);
   const [searchLoading, setSearchLoading] = useState(false);
@@ -401,7 +386,6 @@ function FacultyManagementSection() {
   const [selectedFacultyCode, setSelectedFacultyCode] = useState("");
   const [updateSubmitting, setUpdateSubmitting] = useState(false);
   const [updateNotice, setUpdateNotice] = useState(null);
-  const searchConfig = FACULTY_SEARCH_MODES[searchMode];
 
   const handleAddFormChange = (field, value) => {
     setAddForm((current) => ({
@@ -446,17 +430,6 @@ function FacultyManagementSection() {
     }
   };
 
-  const handleSearchModeChange = (nextMode) => {
-    if (nextMode === searchMode) return;
-
-    setSearchMode(nextMode);
-    setSearchQuery("");
-    setSearchSuggestions([]);
-    setSelectedFacultyCode("");
-    setUpdateForm(emptyFacultyForm);
-    setUpdateNotice(null);
-  };
-
   const handleSearchChange = async (event) => {
     const value = event.target.value;
     setSearchQuery(value);
@@ -465,16 +438,13 @@ function FacultyManagementSection() {
     setUpdateForm(emptyFacultyForm);
     setUpdateNotice(null);
 
-    if (value.length < 1 || value.length > searchConfig.maxLength) {
+    if (value.length < 1 || value.length > FACULTY_SEARCH_MAX_LENGTH) {
       return;
     }
 
     setSearchLoading(true);
     try {
-      const response = await api.get(
-        `${searchConfig.suggestionEndpoint}/${encodeURIComponent(value)}`,
-      );
-      setSearchSuggestions(response.data?.rows ?? []);
+      setSearchSuggestions(await fetchFacultySuggestions(value));
     } catch {
       setSearchSuggestions([]);
     } finally {
@@ -490,7 +460,7 @@ function FacultyManagementSection() {
     try {
       const endpoint = facultyCode
         ? `/api/teacher/search/${encodeURIComponent(facultyCode)}`
-        : searchConfig.searchEndpoint(searchConfig.getSuggestionValue(faculty));
+        : `/api/teacher/search-any/${encodeURIComponent(faculty?.name || "")}`;
       const response = await api.get(endpoint, { params: { limit: 1 } });
       const selectedFaculty = response.data?.rows?.[0] || faculty;
 
@@ -501,7 +471,7 @@ function FacultyManagementSection() {
 
       setUpdateForm(getFacultyFormFromRow(selectedFaculty));
       setSelectedFacultyCode(selectedFaculty.code);
-      setSearchQuery(searchConfig.getSuggestionValue(selectedFaculty));
+      setSearchQuery(selectedFaculty.code || selectedFaculty.name || "");
       setSearchSuggestions([]);
     } catch (facultyError) {
       setUpdateNotice({ type: "error", text: getFacultyError(facultyError) });
@@ -523,10 +493,8 @@ function FacultyManagementSection() {
     setUpdateNotice(null);
 
     try {
-      const response = await api.get(searchConfig.searchEndpoint(query), {
-        params: { limit: 5 },
-      });
-      const rows = response.data?.rows ?? [];
+      const response = await searchFaculty(query, { limit: 5 });
+      const rows = response.rows ?? [];
 
       if (rows.length === 0) {
         setSearchSuggestions([]);
@@ -615,28 +583,10 @@ function FacultyManagementSection() {
           <SectionHeading kicker="Update faculty" title="Search and Edit" />
 
           <form onSubmit={handleSearchSubmit} className="mt-6">
-            <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1 dark:border-slate-800 dark:bg-slate-900">
-              {Object.entries(FACULTY_SEARCH_MODES).map(([mode, config]) => (
-                <button
-                  key={mode}
-                  type="button"
-                  onClick={() => handleSearchModeChange(mode)}
-                  className={`min-h-10 rounded-md px-3 py-2 text-sm font-bold transition ${
-                    searchMode === mode
-                      ? "bg-white text-blue-700 shadow-sm dark:bg-slate-800 dark:text-blue-200"
-                      : "text-slate-600 hover:text-slate-950 dark:text-slate-400 dark:hover:text-white"
-                  }`}
-                >
-                  {config.label}
-                </button>
-              ))}
-            </div>
-
             <FormField
               id="faculty-search"
               label="Find faculty"
               helper={searchLoading ? "Loading faculty..." : "Search by faculty name or code before editing."}
-              className="mt-4"
             >
               <div className="relative">
                 <FiSearch
@@ -647,8 +597,9 @@ function FacultyManagementSection() {
                   id="faculty-search"
                   value={searchQuery}
                   onChange={handleSearchChange}
-                  placeholder={searchConfig.placeholder}
-                  className={`form-field pl-12 ${searchMode === "code" ? "uppercase" : ""}`}
+                  placeholder="Search faculty name or code"
+                  className="form-field pl-12"
+                  maxLength={FACULTY_SEARCH_MAX_LENGTH}
                   autoComplete="off"
                 />
                 <SuggestionList

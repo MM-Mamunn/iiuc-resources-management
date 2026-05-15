@@ -6,18 +6,21 @@ import {
   FiCalendar,
   FiCheckCircle,
   FiEdit3,
-  FiHash,
   FiList,
   FiPlus,
   FiSearch,
   FiTrash2,
-  FiType,
   FiUser,
   FiUserPlus,
   FiX,
 } from "react-icons/fi";
 import api from "../../api";
 import { useActiveSession, useAuth } from "../../App";
+import {
+  FACULTY_SEARCH_MAX_LENGTH,
+  fetchFacultySuggestions,
+  formatFacultyLabel,
+} from "../../services/facultySearchService";
 import {
   getPeriodLabel,
   getPeriodNumbers,
@@ -35,7 +38,6 @@ import {
   PageShell,
   SectionHeading,
   SuggestionList,
-  cx,
 } from "../components/ui";
 
 const DAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
@@ -62,27 +64,6 @@ const emptyQuickFacultyForm = {
   desig: "",
   email: "",
   phone: "",
-};
-
-const FACULTY_SEARCH_MODES = {
-  code: {
-    label: "Code",
-    fieldLabel: "Faculty code",
-    helper: "Example: JAA",
-    placeholder: "Enter faculty code",
-    maxLength: 10,
-    suggestionEndpoint: "/api/lookLike/facultyLookLike",
-    getSuggestionValue: (faculty) => faculty.code || "",
-  },
-  name: {
-    label: "Name",
-    fieldLabel: "Faculty name",
-    helper: "Example: Abdullah",
-    placeholder: "Enter faculty name",
-    maxLength: 80,
-    suggestionEndpoint: "/api/lookLike/facultyNameLookLike",
-    getSuggestionValue: (faculty) => faculty.name || "",
-  },
 };
 
 const DAY_OPTIONS = DISPLAY_DAYS.map((day) => ({
@@ -116,7 +97,6 @@ const CrRoutine = () => {
   const [notice, setNotice] = useState(null);
   const [formError, setFormError] = useState(null);
   const [classFacultyQuickAddAvailable, setClassFacultyQuickAddAvailable] = useState(false);
-  const [facultySearchMode, setFacultySearchMode] = useState("code");
   const [facultyQuery, setFacultyQuery] = useState("");
   const [selectedFaculty, setSelectedFaculty] = useState(null);
   const [facultySuggestions, setFacultySuggestions] = useState([]);
@@ -138,10 +118,7 @@ const CrRoutine = () => {
   const userSection = user?.sec;
   const timeSlots = getRoutineTimeSlots(periods, shift);
   const slotOptions = getPeriodNumbers(periods, shift);
-  const facultySearchConfig = FACULTY_SEARCH_MODES[facultySearchMode];
-  const selectedFacultyCode =
-    selectedFaculty?.code ||
-    (facultySearchMode === "code" ? facultyQuery.trim().toUpperCase() : "");
+  const selectedFacultyCode = selectedFaculty?.code || "";
   const selectedFacultyLabel = selectedFacultyCode
     ? formatFacultyLabel({ code: selectedFacultyCode, name: selectedFaculty?.name })
     : "Not selected";
@@ -166,6 +143,7 @@ const CrRoutine = () => {
       bulkForm.day === "" ||
       bulkForm.slot === "" ||
       !selectedFacultyCode ||
+      !bulkForm.code.trim() ||
       !session.trim() ||
       !userSection
     ) {
@@ -194,6 +172,7 @@ const CrRoutine = () => {
           session,
           section: userSection,
           faculty: selectedFacultyCode,
+          code: bulkForm.code,
           day: bulkForm.day,
           slot: bulkForm.slot,
         });
@@ -218,6 +197,7 @@ const CrRoutine = () => {
     };
   }, [
     bulkForm.day,
+    bulkForm.code,
     bulkForm.slot,
     bulkQueue,
     selectedFacultyCode,
@@ -319,18 +299,6 @@ const CrRoutine = () => {
     }
   };
 
-  const handleFacultySearchModeChange = (nextMode) => {
-    if (nextMode === facultySearchMode) return;
-
-    setFacultySearchMode(nextMode);
-    setFacultyQuery("");
-    setSelectedFaculty(null);
-    setFacultySuggestions([]);
-    setBulkQueue([]);
-    setBulkForm(emptyBulkClassForm);
-    setBulkWarning(null);
-  };
-
   const handleFacultyChange = async (event) => {
     const value = event.target.value;
     setFacultyQuery(value);
@@ -339,16 +307,13 @@ const CrRoutine = () => {
     setBulkQueue([]);
     setBulkWarning(null);
 
-    if (value.length < 1 || value.length > facultySearchConfig.maxLength) {
+    if (value.length < 1 || value.length > FACULTY_SEARCH_MAX_LENGTH) {
       return;
     }
 
     setFacultyLoading(true);
     try {
-      const response = await api.get(
-        `${facultySearchConfig.suggestionEndpoint}/${encodeURIComponent(value)}`,
-      );
-      setFacultySuggestions(response.data?.rows ?? []);
+      setFacultySuggestions(await fetchFacultySuggestions(value));
     } catch {
       setFacultySuggestions([]);
     } finally {
@@ -361,7 +326,7 @@ const CrRoutine = () => {
       code: faculty.code || "",
       name: faculty.name || "",
     });
-    setFacultyQuery(facultySearchConfig.getSuggestionValue(faculty));
+    setFacultyQuery(faculty.code || faculty.name || "");
     setFacultySuggestions([]);
     setBulkQueue([]);
     setBulkForm(emptyBulkClassForm);
@@ -372,8 +337,8 @@ const CrRoutine = () => {
     const seedValue = target === "bulk" ? facultyQuery.trim() : formData.faculty.trim();
     const seedForm = {
       ...emptyQuickFacultyForm,
-      code: target === "bulk" && facultySearchMode === "name" ? "" : seedValue.toUpperCase(),
-      name: target === "bulk" && facultySearchMode === "name" ? seedValue : "",
+      code: seedValue.toUpperCase(),
+      name: "",
     };
 
     setQuickFacultyForm(seedForm);
@@ -418,9 +383,7 @@ const CrRoutine = () => {
           name: savedFaculty?.name || quickFacultyForm.name,
         });
         setFacultyQuery(
-          facultySearchMode === "name"
-            ? savedFaculty?.name || quickFacultyForm.name || facultyCode
-            : facultyCode,
+          savedFaculty?.code || facultyCode,
         );
         setFacultySuggestions([]);
         setBulkWarning({
@@ -517,6 +480,7 @@ const CrRoutine = () => {
         session,
         section: userSection,
         faculty: selectedFacultyCode,
+        code: bulkForm.code,
         day: bulkForm.day,
         slot: bulkForm.slot,
       });
@@ -800,35 +764,10 @@ const CrRoutine = () => {
 
           <div className="mt-6 grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
             <div>
-              <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1 dark:border-slate-800 dark:bg-slate-950">
-                {Object.entries(FACULTY_SEARCH_MODES).map(([mode, config]) => {
-                  const Icon = mode === "code" ? FiHash : FiType;
-                  const isActive = facultySearchMode === mode;
-
-                  return (
-                    <button
-                      key={mode}
-                      type="button"
-                      onClick={() => handleFacultySearchModeChange(mode)}
-                      className={cx(
-                        "inline-flex min-h-10 items-center gap-2 rounded-md px-3 py-2 text-sm font-bold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
-                        isActive
-                          ? "bg-white text-blue-700 shadow-sm dark:bg-slate-800 dark:text-blue-200"
-                          : "text-slate-600 hover:text-slate-950 dark:text-slate-400 dark:hover:text-white",
-                      )}
-                    >
-                      <Icon className="h-4 w-4" aria-hidden="true" />
-                      {config.label}
-                    </button>
-                  );
-                })}
-              </div>
-
               <FormField
                 id="bulk-faculty"
-                label={facultySearchConfig.fieldLabel}
-                helper={facultyLoading ? "Loading faculty suggestions..." : facultySearchConfig.helper}
-                className="mt-4"
+                label="Faculty name or code"
+                helper={facultyLoading ? "Loading faculty suggestions..." : "Example: JAA or Abdullah"}
               >
                 <div className="relative">
                   <FiUser
@@ -842,9 +781,9 @@ const CrRoutine = () => {
                     onChange={handleFacultyChange}
                     type="text"
                     autoComplete="off"
-                    placeholder={facultySearchConfig.placeholder}
-                    className={cx("form-field pl-12", facultySearchMode === "code" && "uppercase")}
-                    maxLength={facultySearchConfig.maxLength}
+                    placeholder="Search faculty name or code"
+                    className="form-field pl-12"
+                    maxLength={FACULTY_SEARCH_MAX_LENGTH}
                   />
                   <SuggestionList
                     suggestions={facultySuggestions}
@@ -1204,9 +1143,9 @@ function ClassModal({
               onChange({
                 key: "faculty",
                 value,
-                endpoint: "/api/lookLike/facultyLookLike",
+                endpoint: "/api/lookLike/facultyAnyLookLike",
                 mapValue: (row) => row.code,
-                maxLength: 10,
+                maxLength: FACULTY_SEARCH_MAX_LENGTH,
               })
             }
             onSelect={(value) => onSelect("faculty", value)}
@@ -1415,16 +1354,6 @@ function getShiftFromSection(section) {
 
 function getDayLabel(day) {
   return DAYS[Number(day)] || "Day";
-}
-
-function formatFacultyLabel(faculty) {
-  if (!faculty) return "Faculty";
-
-  const code = faculty.code || "";
-  const name = faculty.name || "";
-
-  if (code && name) return `${name} (${code})`;
-  return code || name || "Faculty";
 }
 
 function getQuickFacultyPayload(form) {

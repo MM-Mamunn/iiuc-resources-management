@@ -4,14 +4,18 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   FiChevronLeft,
   FiChevronRight,
-  FiHash,
   FiRefreshCw,
   FiSearch,
-  FiType,
   FiUser,
   FiUsers,
 } from "react-icons/fi";
 import api from "../../api";
+import {
+  FACULTY_SEARCH_MAX_LENGTH,
+  fetchFacultySuggestions,
+  formatFacultyLabel,
+  searchFaculty,
+} from "../../services/facultySearchService";
 import Header from "../components/Header";
 import {
   EmptyState,
@@ -22,7 +26,6 @@ import {
   PageShell,
   SectionHeading,
   SuggestionList,
-  cx,
 } from "../components/ui";
 
 const SEARCH_PAGE_SIZE = 10;
@@ -33,40 +36,14 @@ const DEFAULT_PAGINATION = {
   totalPages: 1,
 };
 
-const SEARCH_MODES = {
-  code: {
-    label: "Search by code",
-    fieldLabel: "Teacher code",
-    helper: "Example: JAA",
-    placeholder: "Search by teacher code",
-    lookupLabel: "Short code",
-    maxLength: 10,
-    suggestionEndpoint: "/api/lookLike/facultyLookLike",
-    searchEndpoint: (query) => `/api/teacher/search/${encodeURIComponent(query)}`,
-    getSuggestionValue: (teacher) => teacher.code || "",
-  },
-  name: {
-    label: "Search by name",
-    fieldLabel: "Teacher name",
-    helper: "Example: Abdullah",
-    placeholder: "Search by teacher name",
-    lookupLabel: "Name",
-    maxLength: 80,
-    suggestionEndpoint: "/api/lookLike/facultyNameLookLike",
-    searchEndpoint: (query) => `/api/teacher/search/name/${encodeURIComponent(query)}`,
-    getSuggestionValue: (teacher) => teacher.name || "",
-  },
-};
-
 /**
- * Teacher directory with faculty-code and name search.
+ * Teacher directory with unified faculty-code and name search.
  */
 function TeacherInfo() {
   const [teachers, setTeachers] = useState([]);
   const [directoryPagination, setDirectoryPagination] = useState(DEFAULT_PAGINATION);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [searchMode, setSearchMode] = useState("code");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchSuggestions, setSearchSuggestions] = useState([]);
   const [searchLoading, setSearchLoading] = useState(false);
@@ -76,7 +53,6 @@ function TeacherInfo() {
   const [searchError, setSearchError] = useState("");
   const searchDropdownRef = useRef(null);
 
-  const modeConfig = SEARCH_MODES[searchMode];
   const firstSearchResult = searchResults[0] || null;
   const tableRows = hasSearched ? searchResults : teachers;
   const tableTitle = hasSearched ? "Search Results" : "Teacher Directory";
@@ -133,12 +109,6 @@ function TeacherInfo() {
     setSearchError("");
   };
 
-  const handleModeChange = (nextMode) => {
-    if (nextMode === searchMode) return;
-    setSearchMode(nextMode);
-    clearSearch();
-  };
-
   const handleSearchChange = async (event) => {
     const value = event.target.value;
     setSearchQuery(value);
@@ -147,17 +117,14 @@ function TeacherInfo() {
     setHasSearched(false);
     setSearchError("");
 
-    if (value.length < 1 || value.length > modeConfig.maxLength) {
+    if (value.length < 1 || value.length > FACULTY_SEARCH_MAX_LENGTH) {
       setSearchSuggestions([]);
       return;
     }
 
     setSearchLoading(true);
     try {
-      const response = await api.get(
-        `${modeConfig.suggestionEndpoint}/${encodeURIComponent(value)}`,
-      );
-      setSearchSuggestions(response.data?.rows ?? []);
+      setSearchSuggestions(await fetchFacultySuggestions(value));
     } catch {
       setSearchSuggestions([]);
     } finally {
@@ -168,22 +135,19 @@ function TeacherInfo() {
   const runSearch = async (page = 1) => {
     const query = searchQuery.trim();
     if (!query) {
-      setSearchError(
-        searchMode === "code"
-          ? "Please enter a teacher code to search."
-          : "Please enter a teacher name to search.",
-      );
+      setSearchError("Please enter a teacher name or code to search.");
       return;
     }
 
     setSearchLoading(true);
     setSearchError("");
     try {
-      const response = await api.get(modeConfig.searchEndpoint(query), {
-        params: { page, limit: SEARCH_PAGE_SIZE },
+      const response = await searchFaculty(query, {
+        page,
+        limit: SEARCH_PAGE_SIZE,
       });
-      const rows = response.data?.rows || [];
-      const pagination = response.data?.pagination || {
+      const rows = response.rows || [];
+      const pagination = response.pagination || {
         page,
         limit: SEARCH_PAGE_SIZE,
         total: rows.length,
@@ -194,11 +158,7 @@ function TeacherInfo() {
       setSearchPagination(pagination);
       setHasSearched(true);
       if (!rows.length) {
-        setSearchError(
-          searchMode === "code"
-            ? "No teacher found with this short code."
-            : "No teacher found with this name.",
-        );
+        setSearchError("No teacher found with this name or code.");
       }
     } catch {
       setSearchError("Error searching for teacher.");
@@ -231,8 +191,7 @@ function TeacherInfo() {
   };
 
   const suggestionLabel = useMemo(
-    () => (teacher) =>
-      `${teacher.code || "N/A"} - ${teacher.name || "Teacher"}`,
+    () => (teacher) => formatFacultyLabel(teacher),
     [],
   );
 
@@ -244,7 +203,7 @@ function TeacherInfo() {
           <SectionHeading
             kicker="Directory"
             title="Teacher Information"
-            description="Search faculty by short code or name, or browse the full teacher directory."
+            description="Search faculty by name or short code, or browse the full teacher directory."
             actions={
               <button
                 type="button"
@@ -258,35 +217,11 @@ function TeacherInfo() {
             }
           />
 
-          <div className="mt-6 inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1 dark:border-slate-800 dark:bg-slate-900">
-            {Object.entries(SEARCH_MODES).map(([mode, config]) => {
-              const isActive = searchMode === mode;
-              const Icon = mode === "code" ? FiHash : FiType;
-
-              return (
-                <button
-                  key={mode}
-                  type="button"
-                  onClick={() => handleModeChange(mode)}
-                  className={cx(
-                    "inline-flex min-h-10 items-center gap-2 rounded-md px-3 py-2 text-sm font-bold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
-                    isActive
-                      ? "bg-white text-blue-700 shadow-sm dark:bg-slate-800 dark:text-blue-200"
-                      : "text-slate-600 hover:text-slate-950 dark:text-slate-300 dark:hover:text-white",
-                  )}
-                >
-                  <Icon className="h-4 w-4" aria-hidden="true" />
-                  {config.label}
-                </button>
-              );
-            })}
-          </div>
-
           <div className="mt-6 grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end" ref={searchDropdownRef}>
             <FormField
               id="teacher-search"
-              label={modeConfig.fieldLabel}
-              helper={searchLoading ? "Searching suggestions..." : modeConfig.helper}
+              label="Teacher name or code"
+              helper={searchLoading ? "Searching suggestions..." : "Example: JAA or Abdullah"}
             >
               <div className="relative">
                 <FiSearch
@@ -299,15 +234,15 @@ function TeacherInfo() {
                   value={searchQuery}
                   onChange={handleSearchChange}
                   onKeyDown={handleKeyDown}
-                  placeholder={modeConfig.placeholder}
-                  className={cx("form-field pl-12", searchMode === "code" && "uppercase")}
+                  placeholder="Search by teacher name or code"
+                  className="form-field pl-12"
                   autoComplete="off"
                 />
                 <SuggestionList
                   suggestions={searchSuggestions}
                   getLabel={suggestionLabel}
                   onSelect={(suggestion) => {
-                    setSearchQuery(modeConfig.getSuggestionValue(suggestion));
+                    setSearchQuery(suggestion.code || suggestion.name || "");
                     setSearchSuggestions([]);
                   }}
                 />
@@ -349,12 +284,12 @@ function TeacherInfo() {
           <MetricCard
             icon={<FiSearch className="h-5 w-5" aria-hidden="true" />}
             label="Lookup"
-            value={modeConfig.lookupLabel}
+            value="Name or code"
             tone="teal"
           />
         </section>
 
-        {hasSearched && searchMode === "code" && firstSearchResult && (
+        {hasSearched && firstSearchResult && (
           <section className="surface-card mt-8 p-5">
             <SectionHeading kicker="Search result" title={firstSearchResult.name || "Teacher"} />
             <div className="mt-5 grid gap-4 md:grid-cols-3">

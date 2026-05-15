@@ -12,6 +12,7 @@ import {
 } from "react-icons/fi";
 import api from "../../api";
 import { useAuth } from "../../App";
+import { cachedRequest, clearCacheByPrefix } from "../../services/cacheService";
 import { EmptyState, LoadingState, Notice, SectionHeading } from "./ui";
 import { RatingModal } from "./ResourceBrowser";
 
@@ -43,10 +44,17 @@ function ResourceHighlights({
       setNotice(null);
 
       try {
-        const response = await api.get("/api/resources", {
-          params: { limit, sort: "latest" },
-        });
-        setResources(response.data?.rows ?? []);
+        const rows = await cachedRequest(
+          `resource-highlights:latest:${limit}`,
+          async () => {
+            const response = await api.get("/api/resources", {
+              params: { limit, sort: "latest" },
+            });
+            return response.data?.rows ?? [];
+          },
+          { ttl: 60 * 1000 },
+        );
+        setResources(rows);
       } catch (resourceError) {
         setResources([]);
         setNotice({ type: "error", text: getResourceError(resourceError) });
@@ -118,6 +126,7 @@ function ResourceHighlights({
         ),
       );
       setSelectedResource((current) => (current ? { ...current, star: average } : current));
+      clearCacheByPrefix("resource-highlights:");
       setRatingNotice({ type: "success", text: "Your rating was saved." });
     } catch (ratingError) {
       setRatingNotice({ type: "error", text: getRatingError(ratingError) });

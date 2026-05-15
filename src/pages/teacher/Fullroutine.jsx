@@ -5,19 +5,29 @@ import {
   FiCalendar,
   FiClock,
   FiDownload,
-  FiHash,
   FiSearch,
-  FiType,
   FiUser,
   FiUsers,
 } from "react-icons/fi";
 import api from "../../api";
 import { useActiveSession } from "../../App";
 import {
+  FACULTY_SEARCH_MAX_LENGTH,
+  fetchFacultySuggestions,
+  formatFacultyLabel,
+  resolveFacultyFromQuery,
+} from "../../services/facultySearchService";
+import {
   getCurrentRoutineClass,
   getRoutineTimeSlots,
   usePeriods,
 } from "../../services/periodService";
+import {
+  getRoutineClassDetails,
+  joinRoutineValues,
+  splitRoutineValue,
+  summarizeRoutineDetails,
+} from "../../services/routineDetails";
 import Header from "../components/Header";
 import RoutineTable from "../components/RoutineTable";
 import {
@@ -35,27 +45,6 @@ import {
 const DAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 const DISPLAY_DAYS = ["sat", "sun", "mon", "tue", "wed"];
 
-const TEACHER_SEARCH_MODES = {
-  code: {
-    label: "Search by code",
-    fieldLabel: "Teacher code",
-    helper: "Example: JAA",
-    placeholder: "Enter teacher code",
-    maxLength: 10,
-    suggestionEndpoint: "/api/lookLike/facultyLookLike",
-    getSuggestionValue: (teacher) => teacher.code || "",
-  },
-  name: {
-    label: "Search by name",
-    fieldLabel: "Teacher name",
-    helper: "Example: Abdullah",
-    placeholder: "Enter teacher name",
-    maxLength: 80,
-    suggestionEndpoint: "/api/lookLike/facultyNameLookLike",
-    getSuggestionValue: (teacher) => teacher.name || "",
-  },
-};
-
 /**
  * Teacher routine lookup with autocomplete and a reusable timetable surface.
  */
@@ -68,9 +57,8 @@ const TeacherRoutine = () => {
   const [schedule, setSchedule] = useState([]);
   const [hasSearched, setHasSearched] = useState(false);
   const [session, setSession] = useState("");
-  const [teacherSearchMode, setTeacherSearchMode] = useState("code");
   const [teacherQuery, setTeacherQuery] = useState("");
-  const [teacherCode, setTeacherCode] = useState("");
+  const [selectedTeacher, setSelectedTeacher] = useState(null);
   const [gender, setGender] = useState("male");
   const [sessionSuggestions, setSessionSuggestions] = useState([]);
   const [teacherSuggestions, setTeacherSuggestions] = useState([]);
@@ -92,7 +80,6 @@ const TeacherRoutine = () => {
   );
 
   const timeSlots = getRoutineTimeSlots(periods, gender);
-  const teacherSearchConfig = TEACHER_SEARCH_MODES[teacherSearchMode];
   const sessionHelper = activeSessionLoading
     ? "Loading active session..."
     : activeSessionError || (activeSessionName ? `Active: ${activeSessionName}` : "Enter a session");
@@ -130,20 +117,17 @@ const TeacherRoutine = () => {
   const handleTeacherChange = async (event) => {
     const value = event.target.value;
     setTeacherQuery(value);
-    setTeacherCode("");
+    setSelectedTeacher(null);
     setHasSearched(false);
 
-    if (value.length < 1 || value.length > teacherSearchConfig.maxLength) {
+    if (value.length < 1 || value.length > FACULTY_SEARCH_MAX_LENGTH) {
       setTeacherSuggestions([]);
       return;
     }
 
     setTeacherLoading(true);
     try {
-      const response = await api.get(
-        `${teacherSearchConfig.suggestionEndpoint}/${encodeURIComponent(value)}`,
-      );
-      setTeacherSuggestions(response.data?.rows ?? []);
+      setTeacherSuggestions(await fetchFacultySuggestions(value));
     } catch {
       setTeacherSuggestions([]);
     } finally {
@@ -151,35 +135,17 @@ const TeacherRoutine = () => {
     }
   };
 
-  const handleTeacherSearchModeChange = (nextMode) => {
-    if (nextMode === teacherSearchMode) return;
-    setTeacherSearchMode(nextMode);
-    setTeacherQuery("");
-    setTeacherCode("");
-    setTeacherSuggestions([]);
-    setHasSearched(false);
-    setSchedule([]);
-  };
-
   const resolveTeacherRoutineCode = async (query) => {
-    if (teacherCode.trim()) {
-      return teacherCode.trim();
+    if (selectedTeacher?.code) {
+      return selectedTeacher.code;
     }
 
-    if (teacherSearchMode === "code") {
-      return query.toUpperCase();
-    }
-
-    const response = await api.get(
-      `/api/teacher/search/name/${encodeURIComponent(query)}`,
-      { params: { page: 1, limit: 1 } },
-    );
-    const teacher = response.data?.rows?.[0];
+    const teacher = await resolveFacultyFromQuery(query);
 
     if (!teacher?.code) return "";
 
-    setTeacherCode(teacher.code);
-    setTeacherQuery(teacher.name || teacher.code);
+    setSelectedTeacher(teacher);
+    setTeacherQuery(teacher.code || teacher.name || query);
     return teacher.code;
   };
 
@@ -252,13 +218,32 @@ const TeacherRoutine = () => {
       const classItem = daySchedule.find((item) => Number(item.slot) === slot);
       if (classItem) {
         const count = Number(classItem.count || 1);
-        mergedSchedule.push({
+        const details = getRoutineClassDetails(classItem, {
+          session,
+          day: DAYS.indexOf(day),
+          dayLabel: day,
+          slot,
+        });
+        const summary = summarizeRoutineDetails(details, {
           subject: classItem.code || "Course",
           title: classItem.short_name || "",
           room: classItem.room || "",
           faculty: classItem.sec ? `Section ${classItem.sec}` : "",
+        });
+        const sectionSummary = joinRoutineValues(
+          details.map((detail) => detail.section),
+          classItem.sec ? `Section ${classItem.sec}` : "",
+        );
+
+        mergedSchedule.push({
+          subject: summary.subject,
+          title: summary.title,
+          room: summary.room,
+          faculty: sectionSummary ? `Section ${sectionSummary}` : summary.faculty,
           colspan: count,
           slotStart: slot,
+          day: DAYS.indexOf(day),
+          details,
         });
         slot += count;
       } else {
@@ -271,9 +256,9 @@ const TeacherRoutine = () => {
   };
 
   const teacherLabel =
-    teacherCode && teacherQuery && teacherCode !== teacherQuery
-      ? `${teacherQuery} (${teacherCode})`
-      : teacherCode || teacherQuery || "Not selected";
+    selectedTeacher?.code || teacherQuery
+      ? formatFacultyLabel(selectedTeacher || { code: teacherQuery })
+      : "Not selected";
 
   return (
     <div className="min-h-screen">
@@ -283,7 +268,7 @@ const TeacherRoutine = () => {
           <SectionHeading
             kicker="Teacher routine"
             title="Faculty Schedule"
-            description="Search by teacher code or name, choose the session, and view a clean weekly timetable."
+            description="Search by teacher name or code, choose the session, and view a clean weekly timetable."
             actions={
               <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1 dark:border-slate-800 dark:bg-slate-950">
                 {["male", "female"].map((option) => (
@@ -305,39 +290,15 @@ const TeacherRoutine = () => {
             }
           />
 
-          <div className="mt-6 inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1 dark:border-slate-800 dark:bg-slate-950">
-            {Object.entries(TEACHER_SEARCH_MODES).map(([mode, config]) => {
-              const isActive = teacherSearchMode === mode;
-              const Icon = mode === "code" ? FiHash : FiType;
-
-              return (
-                <button
-                  key={mode}
-                  type="button"
-                  onClick={() => handleTeacherSearchModeChange(mode)}
-                  className={cx(
-                    "inline-flex min-h-10 items-center gap-2 rounded-md px-3 py-2 text-sm font-bold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
-                    isActive
-                      ? "bg-white text-blue-700 shadow-sm dark:bg-slate-800 dark:text-blue-200"
-                      : "text-slate-600 hover:text-slate-950 dark:text-slate-400 dark:hover:text-white",
-                  )}
-                >
-                  <Icon className="h-4 w-4" aria-hidden="true" />
-                  {config.label}
-                </button>
-              );
-            })}
-          </div>
-
           <form
             onSubmit={handleSearch}
-            className="mt-4 grid gap-4 lg:grid-cols-[1.2fr_1fr_auto] lg:items-end"
+            className="mt-6 grid gap-4 lg:grid-cols-[1.2fr_1fr_auto] lg:items-end"
             autoComplete="off"
           >
             <FormField
               id="teacher"
-              label={teacherSearchConfig.fieldLabel}
-              helper={teacherLoading ? "Loading teacher suggestions..." : teacherSearchConfig.helper}
+              label="Teacher name or code"
+              helper={teacherLoading ? "Loading teacher suggestions..." : "Example: JAA or Abdullah"}
             >
               <div className="relative">
                 <FiUser
@@ -350,18 +311,16 @@ const TeacherRoutine = () => {
                   value={teacherQuery}
                   onChange={handleTeacherChange}
                   type="text"
-                  placeholder={teacherSearchConfig.placeholder}
-                  className={cx("form-field pl-12", teacherSearchMode === "code" && "uppercase")}
-                  maxLength={teacherSearchConfig.maxLength}
+                  placeholder="Enter teacher name or code"
+                  className="form-field pl-12"
+                  maxLength={FACULTY_SEARCH_MAX_LENGTH}
                 />
                 <SuggestionList
                   suggestions={teacherSuggestions}
-                  getLabel={(teacher) =>
-                    `${teacher.name || teacher.code || "Teacher"}${teacher.code ? ` (${teacher.code})` : ""}`
-                  }
+                  getLabel={formatFacultyLabel}
                   onSelect={(teacher) => {
-                    setTeacherQuery(teacherSearchConfig.getSuggestionValue(teacher));
-                    setTeacherCode(teacher.code || "");
+                    setTeacherQuery(teacher.code || teacher.name || "");
+                    setSelectedTeacher(teacher);
                     setTeacherSuggestions([]);
                   }}
                 />
@@ -399,7 +358,7 @@ const TeacherRoutine = () => {
 
             <button
               type="submit"
-              disabled={loading || !session.trim() || !(teacherCode || teacherQuery).trim()}
+              disabled={loading || !session.trim() || !teacherQuery.trim()}
               className="btn-primary"
             >
               <FiSearch aria-hidden="true" />
@@ -419,9 +378,14 @@ const TeacherRoutine = () => {
         {currentClass && hasSearched && (
           <section className="mt-6 rounded-lg border border-emerald-200 bg-emerald-50 p-5 text-emerald-900 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-100">
             <p className="text-sm font-bold uppercase">Live now</p>
-            <h2 className="mt-2 text-2xl font-bold">{currentClass.code}</h2>
+            <h2 className="mt-2 text-2xl font-bold">
+              {joinRoutineValues(splitRoutineValue(currentClass.code), currentClass.code)}
+            </h2>
             <p className="mt-1 text-sm">
-              {currentClass.short_name || "Scheduled class"} - Room {currentClass.room || "N/A"}
+              {joinRoutineValues(
+                splitRoutineValue(currentClass.short_name || "Scheduled class"),
+                currentClass.short_name || "Scheduled class",
+              )} - Room {joinRoutineValues(splitRoutineValue(currentClass.room), currentClass.room || "N/A")}
             </p>
           </section>
         )}

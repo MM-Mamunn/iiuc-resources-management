@@ -16,6 +16,7 @@ import api from "../../api";
 import campusImage from "../../assets/iiuc.webp";
 import Header from "../components/Header";
 import ResourceHighlights from "../components/ResourceHighlights";
+import RoutineDetailsModal from "../components/RoutineDetailsModal";
 import RoutineTable from "../components/RoutineTable";
 import {
   EmptyState,
@@ -26,11 +27,18 @@ import {
   cx,
 } from "../components/ui";
 import { useActiveSession, useAuth } from "../../App";
+import { cachedRequest } from "../../services/cacheService";
 import {
   getCurrentRoutineClass,
   getRoutineTimeSlots,
   usePeriods,
 } from "../../services/periodService";
+import {
+  getRoutineClassDetails,
+  joinRoutineValues,
+  splitRoutineValue,
+  summarizeRoutineDetails,
+} from "../../services/routineDetails";
 
 const DAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 const DISPLAY_DAYS = ["sat", "sun", "mon", "tue", "wed"];
@@ -39,6 +47,7 @@ const ROUTINE_VIEW_OPTIONS = [
   { key: "personal", label: "Personal routine", icon: FiUser },
   { key: "section", label: "Section routine", icon: FiGrid },
 ];
+const DASHBOARD_CACHE_TTL = 60 * 1000;
 
 /**
  * Authenticated student dashboard with profile summary and personal routine.
@@ -62,6 +71,7 @@ const HomePersonal = () => {
   const [notice, setNotice] = useState(null);
   const { periods } = usePeriods();
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [selectedRoutineCell, setSelectedRoutineCell] = useState(null);
 
   const timeSlots = getRoutineTimeSlots(periods, shift);
   const sectionTimeSlots = getRoutineTimeSlots(periods, sectionShift);
@@ -88,11 +98,17 @@ const HomePersonal = () => {
   /**
    * Fetches the current student's profile.
    */
-  const fetchProfile = useCallback(async () => {
+  const fetchProfile = useCallback(async ({ forceRefresh = false } = {}) => {
     setProfileLoading(true);
     try {
-      const response = await api.get("/api/user/profile");
-      const nextProfile = response.data?.[0] ?? null;
+      const nextProfile = await cachedRequest(
+        `dashboard:profile:${user?.id || "me"}`,
+        async () => {
+          const response = await api.get("/api/user/profile");
+          return response.data?.[0] ?? null;
+        },
+        { ttl: DASHBOARD_CACHE_TTL, forceRefresh },
+      );
       setProfile(nextProfile);
       return nextProfile;
     } catch {
@@ -105,12 +121,12 @@ const HomePersonal = () => {
     } finally {
       setProfileLoading(false);
     }
-  }, []);
+  }, [user?.id]);
 
   /**
    * Fetches the current student's personal routine for the active session.
    */
-  const fetchPersonalRoutine = useCallback(async () => {
+  const fetchPersonalRoutine = useCallback(async ({ forceRefresh = false } = {}) => {
     if (!activeSessionName) {
       setSchedule([]);
       setShift(1);
@@ -124,12 +140,22 @@ const HomePersonal = () => {
     }
 
     try {
-      const response = await api.post(
-        `/api/user/fullroutine/${activeSessionName.toUpperCase()}`,
-        {},
+      const routineData = await cachedRequest(
+        `dashboard:personal-routine:${user?.id || "me"}:${activeSessionName.toUpperCase()}`,
+        async () => {
+          const response = await api.post(
+            `/api/user/fullroutine/${activeSessionName.toUpperCase()}`,
+            {},
+          );
+          return {
+            rows: response.data?.rows ?? [],
+            gender: response.data?.gender || 1,
+          };
+        },
+        { ttl: DASHBOARD_CACHE_TTL, forceRefresh },
       );
-      setSchedule(response.data?.rows ?? []);
-      setShift(response.data?.gender || 1);
+      setSchedule(routineData.rows);
+      setShift(routineData.gender);
     } catch {
       setSchedule([]);
       setShift(1);
@@ -138,12 +164,12 @@ const HomePersonal = () => {
         text: "Your personal routine could not be loaded.",
       });
     }
-  }, [activeSessionError, activeSessionLoading, activeSessionName]);
+  }, [activeSessionError, activeSessionLoading, activeSessionName, user?.id]);
 
   /**
    * Fetches the student's section routine for the active session.
    */
-  const fetchSectionRoutine = useCallback(async (sectionCode) => {
+  const fetchSectionRoutine = useCallback(async (sectionCode, { forceRefresh = false } = {}) => {
     if (!activeSessionName || !sectionCode) {
       setSectionSchedule([]);
       setSectionShift(1);
@@ -151,13 +177,25 @@ const HomePersonal = () => {
     }
 
     try {
-      const response = await api.get(
-        `/api/section/fullroutine/${encodeURIComponent(
-          sectionCode.toUpperCase(),
-        )}/${encodeURIComponent(activeSessionName.toUpperCase())}`,
+      const sectionInput = sectionCode.toUpperCase();
+      const sessionInput = activeSessionName.toUpperCase();
+      const routineData = await cachedRequest(
+        `dashboard:section-routine:${sectionInput}:${sessionInput}`,
+        async () => {
+          const response = await api.get(
+            `/api/section/fullroutine/${encodeURIComponent(
+              sectionInput,
+            )}/${encodeURIComponent(sessionInput)}`,
+          );
+          return {
+            rows: response.data?.rows ?? [],
+            gender: response.data?.gender || 1,
+          };
+        },
+        { ttl: DASHBOARD_CACHE_TTL, forceRefresh },
       );
-      setSectionSchedule(response.data?.rows ?? []);
-      setSectionShift(response.data?.gender || 1);
+      setSectionSchedule(routineData.rows);
+      setSectionShift(routineData.gender);
     } catch {
       setSectionSchedule([]);
       setSectionShift(1);
@@ -171,11 +209,14 @@ const HomePersonal = () => {
   /**
    * Loads profile, personal routine, and section routine.
    */
-  const loadDashboard = useCallback(async () => {
+  const loadDashboard = useCallback(async ({ forceRefresh = false } = {}) => {
     setLoading(true);
     setNotice(null);
-    const [nextProfile] = await Promise.all([fetchProfile(), fetchPersonalRoutine()]);
-    await fetchSectionRoutine(nextProfile?.sec || user?.sec);
+    const [nextProfile] = await Promise.all([
+      fetchProfile({ forceRefresh }),
+      fetchPersonalRoutine({ forceRefresh }),
+    ]);
+    await fetchSectionRoutine(nextProfile?.sec || user?.sec, { forceRefresh });
     setLoading(false);
   }, [fetchPersonalRoutine, fetchProfile, fetchSectionRoutine, user?.sec]);
 
@@ -187,13 +228,21 @@ const HomePersonal = () => {
    * Converts backend routine rows into cells for the shared timetable.
    */
   const generatePersonalDaySchedule = (day) =>
-    buildRoutineDaySchedule({ schedule, shift, day });
+    buildRoutineDaySchedule({
+      schedule,
+      shift,
+      day,
+      session: sessionLabel,
+      section: normalizedSection,
+    });
 
   const generateSectionDaySchedule = (day) =>
     buildRoutineDaySchedule({
       schedule: sectionSchedule,
       shift: sectionShift,
       day,
+      session: sessionLabel,
+      section: normalizedSection,
     });
 
   /**
@@ -290,7 +339,7 @@ const HomePersonal = () => {
                 </button>
                 <button
                   type="button"
-                  onClick={loadDashboard}
+                  onClick={() => loadDashboard({ forceRefresh: true })}
                   className="btn-secondary border-white/20 bg-white/10 text-white hover:bg-white/20 dark:border-white/20 dark:bg-white/10 dark:text-white"
                   disabled={loading}
                 >
@@ -364,6 +413,7 @@ const HomePersonal = () => {
                   timeSlots={timeSlots}
                   displayDays={DISPLAY_DAYS}
                   getItemsForDay={generatePersonalDaySchedule}
+                  onCellClick={setSelectedRoutineCell}
                   actions={
                     <button type="button" onClick={downloadPDF} className="btn-secondary">
                       <FiDownload aria-hidden="true" />
@@ -399,6 +449,7 @@ const HomePersonal = () => {
                 timeSlots={sectionTimeSlots}
                 displayDays={DISPLAY_DAYS}
                 getItemsForDay={generateSectionDaySchedule}
+                onCellClick={setSelectedRoutineCell}
                 getDayMeta={(day) => ({
                   active: day === highlightedDay.day,
                   label: day === highlightedDay.day ? highlightedDay.label : "",
@@ -423,6 +474,17 @@ const HomePersonal = () => {
           </div>
         </section>
       </main>
+      {selectedRoutineCell && (
+        <RoutineDetailsModal
+          item={selectedRoutineCell}
+          title={
+            routineView === "personal"
+              ? "Personal Routine Details"
+              : "Section Routine Details"
+          }
+          onClose={() => setSelectedRoutineCell(null)}
+        />
+      )}
     </div>
   );
 };
@@ -552,6 +614,13 @@ function ProfilePanel({ profile, loading, onEdit }) {
  * One live-class row inside the dashboard status panel.
  */
 function LiveClassDetails({ label, classInfo, emptyText }) {
+  const code = joinRoutineValues(splitRoutineValue(classInfo?.code), classInfo?.code || "");
+  const shortName = joinRoutineValues(
+    splitRoutineValue(classInfo?.short_name || classInfo?.name || classInfo?.faculty),
+    classInfo?.short_name || classInfo?.name || classInfo?.faculty || "",
+  );
+  const room = joinRoutineValues(splitRoutineValue(classInfo?.room), classInfo?.room || "");
+
   return (
     <div className="border-t border-white/15 pt-3 first:border-t-0 first:pt-0">
       <p className="text-xs font-bold uppercase text-teal-100">
@@ -560,13 +629,13 @@ function LiveClassDetails({ label, classInfo, emptyText }) {
       {classInfo ? (
         <div className="mt-2 space-y-1">
           <p className="font-bold text-white">
-            {classInfo.code}
+            {code}
           </p>
           <p className="text-slate-200">
-            {classInfo.short_name || classInfo.name || classInfo.faculty}
+            {shortName}
           </p>
           <p className="text-slate-300">
-            Room {classInfo.room || "N/A"}
+            Room {room || "N/A"}
           </p>
         </div>
       ) : (
@@ -629,7 +698,7 @@ function DashboardAction({ icon, label, onClick }) {
 /**
  * Converts backend routine rows into merged cells for the shared timetable.
  */
-function buildRoutineDaySchedule({ schedule, shift, day }) {
+function buildRoutineDaySchedule({ schedule, shift, day, section, session }) {
   const daySchedule = schedule.filter((item) => item.day === DAYS.indexOf(day));
   const mergedSchedule = [];
   let slot = 1;
@@ -647,13 +716,29 @@ function buildRoutineDaySchedule({ schedule, shift, day }) {
     const classItem = daySchedule.find((item) => Number(item.slot) === slot);
     if (classItem) {
       const count = Number(classItem.count || 1);
-      mergedSchedule.push({
+      const details = getRoutineClassDetails(classItem, {
+        section,
+        session,
+        day: DAYS.indexOf(day),
+        dayLabel: day,
+        slot,
+      });
+      const summary = summarizeRoutineDetails(details, {
         subject: classItem.code || "Course",
         title: classItem.short_name || "",
         room: classItem.room || "",
         faculty: classItem.name || classItem.faculty || "",
+      });
+
+      mergedSchedule.push({
+        subject: summary.subject,
+        title: summary.title,
+        room: summary.room,
+        faculty: summary.faculty,
         colspan: count,
         slotStart: slot,
+        day: DAYS.indexOf(day),
+        details,
       });
       slot += count;
     } else {
