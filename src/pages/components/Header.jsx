@@ -7,6 +7,7 @@ import {
   FiBookOpen,
   FiCalendar,
   FiChevronDown,
+  FiChevronRight,
   FiGrid,
   FiHome,
   FiInfo,
@@ -46,6 +47,14 @@ function Header() {
     .join("")
     .slice(0, 2)
     .toUpperCase();
+  const roleLabels = {
+    admin: "Admin",
+    cr: "Class Representative",
+    student: "Student",
+  };
+  const accountName = user?.name || user?.id || "Student";
+  const accountId = user?.id ? String(user.id) : "";
+  const accountRole = roleLabels[userType] || (userType ? userType.toUpperCase() : "Student");
 
   const navGroups = useMemo(
     () => [
@@ -233,55 +242,52 @@ function Header() {
         {isMobileOpen && (
           <div
             id="mobile-navigation"
-            className="lg:hidden animate-enter border-t border-slate-200 py-4 dark:border-slate-800"
+            className="lg:hidden animate-enter border-t border-slate-200 bg-slate-50/95 dark:border-slate-800 dark:bg-slate-950/95"
           >
-            <nav className="grid gap-4" aria-label="Mobile navigation">
-              <div className="grid gap-2">
-                {topLinks.map((item) => (
-                  <MobileLink key={item.to} item={item} onClick={closeMenus} />
-                ))}
-              </div>
+            <div className="-mx-1 max-h-[calc(100vh-8rem)] overflow-y-auto overscroll-contain px-1 py-4">
+              <nav className="grid gap-3 pb-2" aria-label="Mobile navigation">
+                <MobileAccountPanel
+                  isLoggedIn={isLoggedIn}
+                  name={accountName}
+                  userId={accountId}
+                  role={accountRole}
+                  image={avatarUrl}
+                  initials={avatarInitials}
+                  onClose={closeMenus}
+                />
 
-              {navGroups
-                .filter((group) => !group.hidden)
-                .map((group) => (
-                  <div key={group.id}>
-                    <p className="mb-2 px-2 text-xs font-bold text-slate-500 dark:text-slate-400">
-                      {group.label}
-                    </p>
-                    <div className="grid gap-1">
-                      {group.items.map((item) => (
-                        <MobileLink key={item.to} item={item} onClick={closeMenus} />
-                      ))}
-                    </div>
-                  </div>
-                ))}
-
-              <div className="grid gap-2 border-t border-slate-200 pt-4 dark:border-slate-800">
-                {isLoggedIn ? (
-                  <>
-                    <p className="px-2 text-xs font-bold text-slate-500 dark:text-slate-400">
-                      Profile
-                    </p>
-                    {profileItems.map((item) => (
+                <MobileSection title="Quick Access" icon={FiHome}>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {topLinks.map((item) => (
                       <MobileLink key={item.to} item={item} onClick={closeMenus} />
                     ))}
-                    <button type="button" onClick={handleLogout} className="btn-danger justify-start">
-                      <FiLogOut aria-hidden="true" />
-                      Logout
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <MobileLink item={{ label: "Register", to: "/auth/reg", icon: FiUser }} onClick={closeMenus} />
-                    <Link to="/auth/login" onClick={closeMenus} className="btn-primary justify-start">
-                      <FiLogIn aria-hidden="true" />
-                      Login
-                    </Link>
-                  </>
+                  </div>
+                </MobileSection>
+
+                {navGroups
+                  .filter((group) => !group.hidden)
+                  .map((group) => (
+                    <MobileSection key={group.id} title={group.label} icon={group.icon}>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        {group.items.map((item) => (
+                          <MobileLink key={item.to} item={item} onClick={closeMenus} />
+                        ))}
+                      </div>
+                    </MobileSection>
+                  ))}
+
+                {isLoggedIn && (
+                  <MobileSection title="Account" icon={FiUser}>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {profileItems.map((item) => (
+                        <MobileLink key={item.to} item={item} onClick={closeMenus} />
+                      ))}
+                      <MobileLogoutButton onClick={handleLogout} />
+                    </div>
+                  </MobileSection>
                 )}
-              </div>
-            </nav>
+              </nav>
+            </div>
           </div>
         )}
       </div>
@@ -448,8 +454,104 @@ function NavItem({ item, onClick }) {
 /**
  * Mobile nav link with icon support and large touch target.
  */
+function MobileAccountPanel({
+  isLoggedIn,
+  name,
+  userId,
+  role,
+  image,
+  initials,
+  onClose,
+}) {
+  if (!isLoggedIn) {
+    return (
+      <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className="flex items-center gap-3">
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-200">
+            <FiUser className="h-5 w-5" aria-hidden="true" />
+          </span>
+          <div className="min-w-0">
+            <p className="truncate text-base font-black text-slate-950 dark:text-white">
+              Welcome
+            </p>
+            <p className="mt-1 text-sm font-medium text-slate-500 dark:text-slate-400">
+              Login or create an account
+            </p>
+          </div>
+        </div>
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          <Link to="/auth/reg" onClick={onClose} className="btn-secondary w-full px-3">
+            Register
+          </Link>
+          <Link to="/auth/login" onClick={onClose} className="btn-primary w-full px-3">
+            <FiLogIn aria-hidden="true" />
+            Login
+          </Link>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <div className="flex items-center gap-3">
+        <Avatar
+          image={image}
+          initials={initials}
+          className="h-12 w-12 bg-blue-50 text-blue-700 ring-blue-100 dark:bg-blue-500/10 dark:text-blue-100 dark:ring-blue-500/30"
+        />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-base font-black text-slate-950 dark:text-white">
+            {name}
+          </p>
+          <div className="mt-1 flex min-w-0 flex-wrap items-center gap-2 text-xs font-semibold text-slate-500 dark:text-slate-400">
+            <span>{role}</span>
+            {userId && (
+              <>
+                <span className="h-1 w-1 rounded-full bg-slate-300 dark:bg-slate-600" />
+                <span className="truncate">{userId}</span>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function MobileSection({ title, icon: Icon, children }) {
+  return (
+    <section className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <div className="mb-3 flex items-center gap-2 px-1">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+          <Icon className="h-4 w-4" aria-hidden="true" />
+        </span>
+        <h2 className="text-xs font-black uppercase text-slate-500 dark:text-slate-400">
+          {title}
+        </h2>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function MobileLogoutButton({ onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="group flex min-h-14 min-w-0 items-center gap-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2.5 text-left text-sm font-bold text-rose-700 transition hover:border-rose-300 hover:bg-rose-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200 dark:hover:bg-rose-500/15"
+    >
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white text-rose-600 ring-1 ring-rose-100 dark:bg-rose-950/40 dark:text-rose-200 dark:ring-rose-500/20">
+        <FiLogOut className="h-5 w-5" aria-hidden="true" />
+      </span>
+      <span className="min-w-0 flex-1 truncate">Logout</span>
+    </button>
+  );
+}
+
 function MobileLink({ item, onClick }) {
-  const Icon = item.icon;
+  const Icon = item.icon || FiChevronRight;
 
   return (
     <NavLink
@@ -457,15 +559,37 @@ function MobileLink({ item, onClick }) {
       onClick={onClick}
       className={({ isActive }) =>
         cx(
-          "flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
+          "group flex min-h-14 min-w-0 items-center gap-3 rounded-lg border px-3 py-2.5 text-left text-sm font-bold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
           isActive
-            ? "bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-200"
-            : "text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-900"
+            ? "border-blue-200 bg-blue-50 text-blue-700 shadow-sm shadow-blue-600/5 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200"
+            : "border-transparent bg-slate-50/70 text-slate-700 hover:border-slate-200 hover:bg-white hover:text-slate-950 dark:bg-slate-950/40 dark:text-slate-200 dark:hover:border-slate-700 dark:hover:bg-slate-800 dark:hover:text-white"
         )
       }
     >
-      <Icon aria-hidden="true" />
-      {item.label}
+      {({ isActive }) => (
+        <>
+          <span
+            className={cx(
+              "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition",
+              isActive
+                ? "bg-blue-600 text-white dark:bg-blue-500"
+                : "bg-white text-slate-500 ring-1 ring-slate-200 group-hover:text-blue-600 dark:bg-slate-900 dark:text-slate-300 dark:ring-slate-700 dark:group-hover:text-blue-200"
+            )}
+          >
+            <Icon className="h-5 w-5" aria-hidden="true" />
+          </span>
+          <span className="min-w-0 flex-1 truncate">{item.label}</span>
+          <FiChevronRight
+            className={cx(
+              "h-4 w-4 shrink-0 transition",
+              isActive
+                ? "text-blue-500 dark:text-blue-200"
+                : "text-slate-400 group-hover:translate-x-0.5 group-hover:text-slate-600 dark:text-slate-500 dark:group-hover:text-slate-300"
+            )}
+            aria-hidden="true"
+          />
+        </>
+      )}
     </NavLink>
   );
 }
@@ -492,9 +616,14 @@ function ThemeButton({ theme, onClick }) {
 /**
  * Profile avatar with image fallback.
  */
-function Avatar({ image, initials }) {
+function Avatar({ image, initials, className = "" }) {
   return (
-    <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-100 text-xs font-black text-slate-700 ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-700">
+    <span
+      className={cx(
+        "flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-100 text-xs font-black text-slate-700 ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-700",
+        className
+      )}
+    >
       {image ? (
         <img src={image} alt="" className="h-full w-full object-cover" />
       ) : (
