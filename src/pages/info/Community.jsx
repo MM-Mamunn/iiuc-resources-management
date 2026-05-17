@@ -177,7 +177,10 @@ function Community() {
       } catch (profileError) {
         if (!ignoreResult) {
           setSelectedStudent(null);
-          setNotice({ type: "error", text: getCommunityError(profileError) });
+          setNotice({
+            type: profileError.response?.status === 404 ? "info" : "error",
+            text: getCommunityError(profileError),
+          });
         }
       } finally {
         if (!ignoreResult) {
@@ -631,8 +634,14 @@ function CommunityProfileView({ student, loading, notice, onBack, onNoticeDismis
           <div className="table-shell mt-6">
             <EmptyState
               icon={<FiUser className="h-7 w-7" aria-hidden="true" />}
-              title="Student not found"
-              description="Return to the directory and choose another student."
+              title="Profile unavailable"
+              description="This profile is hidden or no longer available in the public directory."
+              action={
+                <button type="button" onClick={onBack} className="btn-secondary">
+                  <FiChevronLeft aria-hidden="true" />
+                  Community
+                </button>
+              }
             />
           </div>
         )}
@@ -795,8 +804,8 @@ function formatType(value) {
 }
 
 function getCommunityError(error) {
+  if (error.response?.status === 404) return "This profile is hidden or unavailable.";
   if (error.response?.data?.message) return error.response.data.message;
-  if (error.response?.status === 404) return "Student not found.";
   if (error.request) return "Network error: unable to connect to the server.";
   return error.message || "Could not load community data.";
 }

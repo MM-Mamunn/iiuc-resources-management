@@ -24,6 +24,7 @@ import {
 } from "react-icons/fi";
 import api from "../../api";
 import { useAuth } from "../../App";
+import { clearCacheByPrefix } from "../../services/cacheService";
 import Header from "../components/Header";
 import {
   FormField,
@@ -82,6 +83,11 @@ const resourceEntryModes = [
   },
 ];
 
+const clearPublicDiscoveryCaches = () => {
+  clearCacheByPrefix("home:top-contributors");
+  clearCacheByPrefix("resource-highlights:");
+};
+
 /**
  * Profile settings page for details, avatar, and password updates.
  */
@@ -102,6 +108,7 @@ function EditDetails() {
     newPassword: "",
   });
   const [passwordChanging, setPasswordChanging] = useState(false);
+  const [visibilityUpdating, setVisibilityUpdating] = useState(false);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [editData, setEditData] = useState(emptyEditData);
@@ -279,6 +286,7 @@ function EditDetails() {
   }, [semesterResourceForm.semester]);
 
   const currentProfile = profile?.[0] || null;
+  const isProfileHidden = currentProfile?.profileHidden === true;
   const avatarInitials = (currentProfile?.name || currentProfile?.id || "U")
     .split(" ")
     .map((part) => part[0])
@@ -597,6 +605,50 @@ function EditDetails() {
     }
   };
 
+  const handleProfileVisibilityToggle = async () => {
+    if (!currentProfile || visibilityUpdating) return;
+
+    const nextHiddenState = !isProfileHidden;
+    setVisibilityUpdating(true);
+    setNotice(null);
+
+    try {
+      const response = await api.patch("/api/change/profile-visibility", {
+        profileHidden: nextHiddenState,
+      });
+      const updatedProfile = response.data?.row;
+
+      if (updatedProfile) {
+        setProfile((current) => {
+          if (!Array.isArray(current) || current.length === 0) {
+            return [updatedProfile];
+          }
+
+          const updated = [...current];
+          updated[0] = { ...updated[0], ...updatedProfile };
+          return updated;
+        });
+        setUser((current) => (current ? { ...current, ...updatedProfile } : updatedProfile));
+        clearCacheByPrefix("dashboard:profile:");
+        clearPublicDiscoveryCaches();
+      }
+
+      setNotice({
+        type: "success",
+        text: nextHiddenState
+          ? "Your profile is now hidden."
+          : "Your profile is now public.",
+      });
+    } catch (visibilityError) {
+      setNotice({
+        type: "error",
+        text: getProfileVisibilityError(visibilityError),
+      });
+    } finally {
+      setVisibilityUpdating(false);
+    }
+  };
+
   const handleResourceCourseChange = async (event) => {
     const value = event.target.value.toUpperCase();
     setResourceForm((current) => ({ ...current, course: value }));
@@ -674,6 +726,7 @@ function EditDetails() {
         remaining: response.data?.remaining ?? Math.max(current.remaining - 1, 0),
       }));
       setResourceRefreshKey((current) => current + 1);
+      clearPublicDiscoveryCaches();
       setNotice({ type: "success", text: "Resource submitted successfully." });
     } catch (resourceError) {
       setNotice({ type: "error", text: getResourceSubmitError(resourceError) });
@@ -710,6 +763,7 @@ function EditDetails() {
       setSelectedSemesterCourses([]);
       setResourceRefreshKey((current) => current + 1);
       setResourceCountRefreshKey((current) => current + 1);
+      clearPublicDiscoveryCaches();
       setSemesterNotice({
         type: "success",
         text: `${addedCount} course resource${addedCount === 1 ? "" : "s"} added successfully.`,
@@ -724,6 +778,7 @@ function EditDetails() {
   const handleManagedResourceChange = () => {
     setResourceRefreshKey((current) => current + 1);
     setResourceCountRefreshKey((current) => current + 1);
+    clearPublicDiscoveryCaches();
   };
 
   const handleResourceEntryModeChange = (mode) => {
@@ -1255,40 +1310,82 @@ function EditDetails() {
               )}
 
               {activeProfileSection === "settings" && (
-              <section className="surface-card p-5">
-                <SectionHeading
-                  kicker="Settings"
-                  title="Change password"
-                  description="Use your current password and choose a new one."
-                />
+              <div className="grid gap-5">
+                <section className="surface-card p-5">
+                  <SectionHeading
+                    kicker="Privacy"
+                    title="Profile visibility"
+                    description="Control whether other students can discover your profile and shared resources."
+                  />
 
-                <form onSubmit={handlePasswordSubmit} className="mt-6 grid gap-5">
-                  <PasswordField
-                    id="current-password"
-                    label="Current password"
-                    name="password"
-                    value={passwordData.password}
-                    show={showCurrentPassword}
-                    onToggle={() => setShowCurrentPassword((current) => !current)}
-                    onChange={handlePasswordChange}
-                  />
-                  <PasswordField
-                    id="new-password"
-                    label="New password"
-                    name="newPassword"
-                    value={passwordData.newPassword}
-                    show={showNewPassword}
-                    onToggle={() => setShowNewPassword((current) => !current)}
-                    onChange={handlePasswordChange}
-                  />
-                  <div className="flex justify-end">
-                    <button type="submit" disabled={passwordChanging} className="btn-primary">
-                      <FiLock aria-hidden="true" />
-                      {passwordChanging ? "Changing..." : "Change password"}
+                  <div className="mt-6 flex flex-col gap-4 rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900/70 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="min-w-0">
+                      <p className="text-sm font-black text-slate-950 dark:text-white">
+                        {isProfileHidden
+                          ? "Your profile is hidden."
+                          : "Your profile is public."}
+                      </p>
+                      <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                        {isProfileHidden
+                          ? "Other users cannot find your profile or the resources you shared."
+                          : "Other users can visit your profile and see the resources you shared."}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleProfileVisibilityToggle}
+                      disabled={visibilityUpdating || !currentProfile}
+                      className={isProfileHidden ? "btn-primary" : "btn-secondary"}
+                    >
+                      {isProfileHidden ? (
+                        <FiEye aria-hidden="true" />
+                      ) : (
+                        <FiEyeOff aria-hidden="true" />
+                      )}
+                      {visibilityUpdating
+                        ? "Updating..."
+                        : isProfileHidden
+                          ? "Unhide profile"
+                          : "Hide profile"}
                     </button>
                   </div>
-                </form>
-              </section>
+                </section>
+
+                <section className="surface-card p-5">
+                  <SectionHeading
+                    kicker="Settings"
+                    title="Change password"
+                    description="Use your current password and choose a new one."
+                  />
+
+                  <form onSubmit={handlePasswordSubmit} className="mt-6 grid gap-5">
+                    <PasswordField
+                      id="current-password"
+                      label="Current password"
+                      name="password"
+                      value={passwordData.password}
+                      show={showCurrentPassword}
+                      onToggle={() => setShowCurrentPassword((current) => !current)}
+                      onChange={handlePasswordChange}
+                    />
+                    <PasswordField
+                      id="new-password"
+                      label="New password"
+                      name="newPassword"
+                      value={passwordData.newPassword}
+                      show={showNewPassword}
+                      onToggle={() => setShowNewPassword((current) => !current)}
+                      onChange={handlePasswordChange}
+                    />
+                    <div className="flex justify-end">
+                      <button type="submit" disabled={passwordChanging} className="btn-primary">
+                        <FiLock aria-hidden="true" />
+                        {passwordChanging ? "Changing..." : "Change password"}
+                      </button>
+                    </div>
+                  </form>
+                </section>
+              </div>
               )}
             </div>
           </section>
@@ -1665,6 +1762,16 @@ function getProfileError(error) {
   if (status === 500) return "Internal server error. Please try again later.";
   if (error.request) return "Network error: unable to connect to the server.";
   return error.response?.data?.message || error.message || "Could not update profile.";
+}
+
+function getProfileVisibilityError(error) {
+  const status = error.response?.status;
+  if (status === 401) return "Unauthorized. Please login again.";
+  if (status === 403) return "Access forbidden.";
+  if (status === 404) return "Student profile was not found.";
+  if (status === 500) return "Internal server error. Please try again later.";
+  if (error.request) return "Network error: unable to connect to the server.";
+  return error.response?.data?.message || error.message || "Could not update profile visibility.";
 }
 
 function getPasswordError(error) {

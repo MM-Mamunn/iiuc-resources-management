@@ -8,6 +8,8 @@ import {
   FiClock,
   FiDownload,
   FiEdit3,
+  FiEye,
+  FiEyeOff,
   FiGrid,
   FiRefreshCw,
   FiUser,
@@ -374,6 +376,7 @@ const HomePersonal = () => {
               profile={profile}
               loading={profileLoading}
               onEdit={() => navigate("/edit/details")}
+              onPrivacySettings={() => navigate("/edit/details?tab=settings")}
             />
 
             <div className="surface-card p-5">
@@ -564,9 +567,10 @@ function CurrentClassPanel({ currentClass, sectionCurrentClass, sectionLabel }) 
 /**
  * Student profile summary with editable account details.
  */
-function ProfilePanel({ profile, loading, onEdit }) {
+function ProfilePanel({ profile, loading, onEdit, onPrivacySettings }) {
   const profileImage = getProfileImage(profile);
   const profileInitials = getProfileInitials(profile);
+  const profileHidden = profile?.profileHidden === true;
 
   if (loading) {
     return (
@@ -600,12 +604,23 @@ function ProfilePanel({ profile, loading, onEdit }) {
         <ProfileRow label="Student ID" value={profile?.id || "N/A"} />
         <ProfileRow label="Section" value={profile?.sec || "N/A"} />
         <ProfileRow label="Phone" value={profile?.phone || "N/A"} />
+        <ProfileRow
+          label="Visibility"
+          value={profileHidden ? "Hidden" : "Public"}
+          icon={profileHidden ? <FiEyeOff aria-hidden="true" /> : <FiEye aria-hidden="true" />}
+        />
       </dl>
 
-      <button type="button" onClick={onEdit} className="btn-secondary mt-5 w-full">
-        <FiEdit3 aria-hidden="true" />
-        Update details
-      </button>
+      <div className="mt-5 grid gap-2">
+        <button type="button" onClick={onEdit} className="btn-secondary w-full">
+          <FiEdit3 aria-hidden="true" />
+          Update details
+        </button>
+        <button type="button" onClick={onPrivacySettings} className="btn-secondary w-full">
+          {profileHidden ? <FiEye aria-hidden="true" /> : <FiEyeOff aria-hidden="true" />}
+          Privacy settings
+        </button>
+      </div>
     </div>
   );
 }
@@ -668,11 +683,12 @@ function getProfileInitials(profile) {
 /**
  * One label/value row in the profile panel.
  */
-function ProfileRow({ label, value }) {
+function ProfileRow({ label, value, icon = null }) {
   return (
     <div className="flex items-center justify-between gap-4 rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-900">
       <dt className="text-slate-500 dark:text-slate-400">{label}</dt>
-      <dd className="safe-text text-right font-semibold text-slate-900 dark:text-slate-100">
+      <dd className="safe-text flex items-center justify-end gap-2 text-right font-semibold text-slate-900 dark:text-slate-100">
+        {icon}
         {value}
       </dd>
     </div>

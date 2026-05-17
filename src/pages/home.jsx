@@ -85,15 +85,8 @@ const Home = () => {
     async function fetchTopContributors() {
       setContributorsLoading(true);
       try {
-        const rows = await cachedRequest(
-          "home:top-contributors",
-          async () => {
-            const response = await api.get("/api/info/topcontributor");
-            return response.data?.rows ?? [];
-          },
-          { ttl: 5 * 60 * 1000 },
-        );
-        setTopContributors(rows);
+        const response = await api.get("/api/info/topcontributor");
+        setTopContributors(getPublicContributors(response.data?.rows));
       } catch {
         setTopContributors([]);
       } finally {
@@ -660,6 +653,10 @@ function QuickAction({ icon, title, description, href }) {
       </div>
     </a>
   );
+}
+
+function getPublicContributors(rows = []) {
+  return rows.filter((contributor) => contributor?.profileHidden !== true);
 }
 
 /**
