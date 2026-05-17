@@ -141,9 +141,36 @@ const CrRoutine = ({
   }, [mode]);
 
   useEffect(() => {
-    if (!hasSearched && userSection) {
-      setShift(getShiftFromSection(userSection));
+    if (hasSearched || !userSection) {
+      return undefined;
     }
+
+    let ignoreResult = false;
+
+    async function fetchSectionShift() {
+      try {
+        const response = await api.get(
+          `/api/lookLike/sectionLookLike/${encodeURIComponent(userSection)}`,
+        );
+        const sectionRecord = response.data?.rows?.find(
+          (row) =>
+            String(row?.sec || "").trim().toUpperCase() ===
+            String(userSection || "").trim().toUpperCase(),
+        );
+
+        if (!ignoreResult && sectionRecord?.gender) {
+          setShift(getShiftFromGender(sectionRecord.gender));
+        }
+      } catch {
+        // Keep the existing shift until the routine response provides the source of truth.
+      }
+    }
+
+    fetchSectionShift();
+
+    return () => {
+      ignoreResult = true;
+    };
   }, [hasSearched, userSection]);
 
   useEffect(() => {
@@ -1395,8 +1422,8 @@ function AutocompleteField({
   );
 }
 
-function getShiftFromSection(section) {
-  return String(section || "").trim().toUpperCase().endsWith("M") ? 1 : 2;
+function getShiftFromGender(gender) {
+  return String(gender || "").trim().toLowerCase() === "male" ? 1 : 2;
 }
 
 function getDayLabel(day) {

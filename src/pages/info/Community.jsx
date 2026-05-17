@@ -32,6 +32,8 @@ const DEFAULT_PAGINATION = {
   totalPages: 1,
 };
 
+const GENDER_OPTIONS = ["Male", "Female"];
+
 /**
  * Searchable student community directory with filterable profile results.
  */
@@ -54,6 +56,8 @@ function Community() {
   const [typeEnabled, setTypeEnabled] = useState(false);
   const [selectedType, setSelectedType] = useState("");
   const [studentTypes, setStudentTypes] = useState([]);
+  const [genderEnabled, setGenderEnabled] = useState(false);
+  const [selectedGender, setSelectedGender] = useState("");
   const [selectedStudentId, setSelectedStudentId] = useState("");
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [profileLoading, setProfileLoading] = useState(false);
@@ -62,6 +66,7 @@ function Community() {
 
   const activeSection = sectionEnabled ? selectedSection : "";
   const activeType = typeEnabled ? selectedType : "";
+  const activeGender = genderEnabled ? selectedGender : "";
 
   useEffect(() => {
     if (queryStudentId) {
@@ -76,7 +81,7 @@ function Community() {
   useEffect(() => {
     fetchStudents(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, activeSection, activeType]);
+  }, [search, activeSection, activeType, activeGender]);
 
   useEffect(() => {
     const query = searchInput.trim();
@@ -96,6 +101,7 @@ function Community() {
             search: query,
             section: activeSection,
             type: activeType,
+            gender: activeGender,
           },
         });
 
@@ -117,7 +123,7 @@ function Community() {
       ignoreResult = true;
       window.clearTimeout(timer);
     };
-  }, [searchInput, activeSection, activeType]);
+  }, [searchInput, activeSection, activeType, activeGender]);
 
   useEffect(() => {
     if (!sectionEnabled) {
@@ -133,6 +139,12 @@ function Community() {
       setSelectedType("");
     }
   }, [typeEnabled]);
+
+  useEffect(() => {
+    if (!genderEnabled) {
+      setSelectedGender("");
+    }
+  }, [genderEnabled]);
 
   useEffect(() => {
     if (!selectedStudentId) {
@@ -202,6 +214,7 @@ function Community() {
           search,
           section: activeSection,
           type: activeType,
+          gender: activeGender,
         },
       });
 
@@ -282,6 +295,12 @@ function Community() {
     setSearchParams({});
   };
 
+  const handleGenderChange = (event) => {
+    setSelectedGender(event.target.value);
+    setSelectedStudentId("");
+    setSearchParams({});
+  };
+
   const clearFilters = () => {
     setSearch("");
     setSearchInput("");
@@ -292,6 +311,8 @@ function Community() {
     setSectionSuggestions([]);
     setTypeEnabled(false);
     setSelectedType("");
+    setGenderEnabled(false);
+    setSelectedGender("");
     setSelectedStudentId("");
     setSearchParams({});
   };
@@ -379,7 +400,7 @@ function Community() {
         )}
 
         <section className="mt-6 rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950">
-          <div className="grid gap-4 lg:grid-cols-[minmax(150px,auto)_1fr_minmax(120px,auto)_1fr_auto] lg:items-end">
+          <div className="grid gap-4 xl:grid-cols-[minmax(150px,auto)_1fr_minmax(120px,auto)_1fr_minmax(130px,auto)_1fr_auto] xl:items-end">
             <label className="flex h-11 cursor-pointer items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm font-bold text-slate-800 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100">
               <input
                 type="checkbox"
@@ -390,7 +411,7 @@ function Community() {
               Section
             </label>
 
-            <div className={sectionEnabled ? "" : "hidden lg:block"}>
+            <div className={sectionEnabled ? "" : "hidden xl:block"}>
               {sectionEnabled ? (
                 <FormField
                   id={`${controlPrefix}-section-filter`}
@@ -424,7 +445,7 @@ function Community() {
               Type
             </label>
 
-            <div className={typeEnabled ? "" : "hidden lg:block"}>
+            <div className={typeEnabled ? "" : "hidden xl:block"}>
               {typeEnabled ? (
                 <FormField id={`${controlPrefix}-type-filter`} label="Type">
                   <select
@@ -446,10 +467,42 @@ function Community() {
               )}
             </div>
 
+            <label className="flex h-11 cursor-pointer items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm font-bold text-slate-800 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100">
+              <input
+                type="checkbox"
+                checked={genderEnabled}
+                onChange={(event) => setGenderEnabled(event.target.checked)}
+                className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-950"
+              />
+              Gender
+            </label>
+
+            <div className={genderEnabled ? "" : "hidden xl:block"}>
+              {genderEnabled ? (
+                <FormField id={`${controlPrefix}-gender-filter`} label="Gender">
+                  <select
+                    id={`${controlPrefix}-gender-filter`}
+                    value={selectedGender}
+                    onChange={handleGenderChange}
+                    className="form-field"
+                  >
+                    <option value="">All genders</option>
+                    {GENDER_OPTIONS.map((gender) => (
+                      <option key={gender} value={gender}>
+                        {gender}
+                      </option>
+                    ))}
+                  </select>
+                </FormField>
+              ) : (
+                <div className="h-11 rounded-lg border border-dashed border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900" />
+              )}
+            </div>
+
             <button
               type="button"
               onClick={clearFilters}
-              disabled={!search && !searchInput && !sectionEnabled && !typeEnabled}
+              disabled={!search && !searchInput && !sectionEnabled && !typeEnabled && !genderEnabled}
               className="btn-secondary"
             >
               <FiX aria-hidden="true" />
@@ -457,7 +510,7 @@ function Community() {
             </button>
           </div>
 
-          {(search || activeSection || activeType) && (
+          {(search || activeSection || activeType || activeGender) && (
             <div className="mt-5 flex flex-wrap gap-2">
               {search && (
                 <span className="status-pill border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200">
@@ -472,6 +525,11 @@ function Community() {
               {activeType && (
                 <span className="status-pill border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
                   {formatType(activeType)}
+                </span>
+              )}
+              {activeGender && (
+                <span className="status-pill border-violet-200 bg-violet-50 text-violet-800 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-200">
+                  Gender {activeGender}
                 </span>
               )}
             </div>
