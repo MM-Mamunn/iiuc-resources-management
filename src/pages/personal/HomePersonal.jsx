@@ -606,7 +606,7 @@ function ProfilePanel({ profile, loading, onEdit, onPrivacySettings }) {
         <ProfileRow label="Phone" value={profile?.phone || "N/A"} />
         <ProfileRow
           label="Visibility"
-          value={profileHidden ? "Hidden" : "Public"}
+          value={profileHidden ? "Hidden from Community" : "Public"}
           icon={profileHidden ? <FiEyeOff aria-hidden="true" /> : <FiEye aria-hidden="true" />}
         />
       </dl>

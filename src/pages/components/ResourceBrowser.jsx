@@ -1157,7 +1157,7 @@ function getRatingError(error) {
   if (status === 400) return error.response?.data?.message || "Please check your rating.";
   if (status === 401) return "Please login again.";
   if (status === 403) return "Access forbidden.";
-  if (status === 404) return "This resource is hidden or no longer available.";
+  if (status === 404) return "Resource not found.";
   if (status === 500) return "Internal server error.";
   if (error.request) return "Network error: unable to connect to the server.";
   return error.response?.data?.message || error.message || "Could not save rating.";
@@ -1165,7 +1165,7 @@ function getRatingError(error) {
 
 function getContributorError(error) {
   const status = error.response?.status;
-  if (status === 404) return "No public contributor found for this ID.";
+  if (status === 404) return "No student found for this ID.";
   if (status === 400) return error.response?.data?.message || "Enter a valid student ID.";
   if (status === 500) return "Internal server error.";
   if (error.request) return "Network error: unable to connect to the server.";

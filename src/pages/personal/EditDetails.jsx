@@ -1315,7 +1315,7 @@ function EditDetails() {
                   <SectionHeading
                     kicker="Privacy"
                     title="Profile visibility"
-                    description="Control whether other students can discover your profile and shared resources."
+                    description="Control whether other students can find and open your full profile through Community."
                   />
 
                   <div className="mt-6 flex flex-col gap-4 rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900/70 sm:flex-row sm:items-center sm:justify-between">
@@ -1327,8 +1327,8 @@ function EditDetails() {
                       </p>
                       <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
                         {isProfileHidden
-                          ? "Other users cannot find your profile or the resources you shared."
-                          : "Other users can visit your profile and see the resources you shared."}
+                          ? "Your profile is hidden from the Community page and other users cannot directly visit your profile. However, your shared resources and basic contributor information may still appear publicly."
+                          : "Your profile is public. Other users can find and visit your profile through the Community page and view the resources you shared."}
                       </p>
                     </div>
                     <button

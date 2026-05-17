@@ -86,7 +86,7 @@ const Home = () => {
       setContributorsLoading(true);
       try {
         const response = await api.get("/api/info/topcontributor");
-        setTopContributors(getPublicContributors(response.data?.rows));
+        setTopContributors(response.data?.rows ?? []);
       } catch {
         setTopContributors([]);
       } finally {
@@ -653,10 +653,6 @@ function QuickAction({ icon, title, description, href }) {
       </div>
     </a>
   );
-}
-
-function getPublicContributors(rows = []) {
-  return rows.filter((contributor) => contributor?.profileHidden !== true);
 }
 
 /**
