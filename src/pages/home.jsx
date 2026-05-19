@@ -7,12 +7,17 @@ import {
   FiAward,
   FiBookOpen,
   FiCalendar,
+  FiChevronDown,
   FiDownload,
   FiGrid,
+  FiInfo,
+  FiLogIn,
   FiMapPin,
   FiPlus,
   FiSearch,
+  FiShield,
   FiTrash2,
+  FiUser,
   FiUsers,
 } from "react-icons/fi";
 import Header from "./components/Header";
@@ -44,7 +49,7 @@ const HOME_CACHE_TTL = 2 * 60 * 1000;
  * Public landing and section routine lookup page.
  */
 const Home = () => {
-  const { isLoggedIn } = useAuth();
+  const { user, isLoggedIn } = useAuth();
   const navigate = useNavigate();
   const {
     activeSessionName,
@@ -66,8 +71,12 @@ const Home = () => {
   const [topContributors, setTopContributors] = useState([]);
   const [contributorsLoading, setContributorsLoading] = useState(false);
   const [showRoutineActions, setShowRoutineActions] = useState(false);
+  const [expandedFeatureGroups, setExpandedFeatureGroups] = useState([]);
   const { periods } = usePeriods();
 
+  const userType = String(user?.type || "").toLowerCase();
+  const isAdmin = isLoggedIn && userType === "admin";
+  const isCrOrAdmin = isLoggedIn && ["cr", "admin"].includes(userType);
   const timeSlots = getRoutineTimeSlots(periods, shift);
   const normalizedSection = section.toUpperCase().trim();
   const normalizedSession = session.toUpperCase().trim();
@@ -355,50 +364,97 @@ const Home = () => {
 
     navigate(`/info/community?student=${encodeURIComponent(contributorId)}`);
   };
-  const featureCards = [
+  const featureGroups = [
     {
-      title: "Find Routine",
-      description: "Search section schedules by section and session.",
-      href: "/routine/section",
-      icon: <FiSearch className="h-5 w-5" aria-hidden="true" />,
+      id: "routine",
+      title: "Routine",
+      description: "Section, personal, teacher, and room schedules.",
+      icon: FiCalendar,
       tone: "blue",
+      items: [
+        { label: "Find Routine", href: "/#routine-search", icon: FiSearch },
+        { label: "Section Routine", href: "/routine/section", icon: FiGrid },
+        { label: "Personal Routine", href: isLoggedIn ? "/routine/personalroutine" : "/auth/login", icon: FiUser },
+        { label: "Teacher Routine", href: "/routine/teacher", icon: FiUsers },
+        { label: "Room Routine", href: "/classroom/routine", icon: FiMapPin },
+      ],
     },
     {
-      title: "Room Routine",
-      description: "Check classes scheduled for a specific room.",
-      href: "/classroom/routine",
-      icon: <FiMapPin className="h-5 w-5" aria-hidden="true" />,
-      tone: "teal",
-    },
-    {
-      title: "Community",
-      description: "Find student profiles and shared academic activity.",
-      href: "/info/community",
-      icon: <FiUsers className="h-5 w-5" aria-hidden="true" />,
-      tone: "amber",
-    },
-    {
+      id: "resources",
       title: "Resources",
-      description: "Browse course notes, questions, books, and links.",
-      href: "/resources",
-      icon: <FiBookOpen className="h-5 w-5" aria-hidden="true" />,
-      tone: "blue",
-    },
-    {
-      title: "Teacher Routine",
-      description: "Open faculty schedules and assigned routine slots.",
-      href: "/routine/teacher",
-      icon: <FiCalendar className="h-5 w-5" aria-hidden="true" />,
+      description: "Course files, study materials, and contribution actions.",
+      icon: FiBookOpen,
       tone: "teal",
+      items: [
+        { label: "Resources", href: "/resources", icon: FiBookOpen },
+        { label: "Study Materials", href: "/info/materials", icon: FiGrid },
+        { label: "Add Resource", href: isLoggedIn ? "/edit/details?tab=resources" : "/auth/login", icon: FiPlus },
+      ],
     },
     {
-      title: "Course Info",
-      description: "Review course codes, titles, and credit information.",
-      href: "/info/course",
-      icon: <FiGrid className="h-5 w-5" aria-hidden="true" />,
+      id: "community",
+      title: "Community",
+      description: "Student discovery and contributor activity.",
+      icon: FiUsers,
       tone: "amber",
+      items: [
+        { label: "Community", href: "/info/community", icon: FiUsers },
+        { label: "Top Contributors", href: "/#contributors", icon: FiAward },
+      ],
     },
-  ];
+    {
+      id: "information",
+      title: "Information",
+      description: "Teacher, course, section, and room references.",
+      icon: FiInfo,
+      tone: "blue",
+      items: [
+        { label: "Teacher Info", href: "/info/teacher", icon: FiUsers },
+        { label: "Course Info", href: "/info/course", icon: FiBookOpen },
+        { label: "Section Info", href: "/info/section", icon: FiGrid },
+        { label: "Room Routine", href: "/classroom/routine", icon: FiMapPin },
+      ],
+    },
+    {
+      id: "account",
+      title: isLoggedIn ? "Profile & Settings" : "Account",
+      description: isLoggedIn
+        ? "Dashboard, course selection, and profile settings."
+        : "Login or create an account for personal tools.",
+      icon: isLoggedIn ? FiUser : FiLogIn,
+      tone: "teal",
+      items: isLoggedIn
+        ? [
+            { label: "Dashboard", href: "/homepersonal", icon: FiGrid },
+            { label: "Profile Settings", href: "/edit/details", icon: FiUser },
+            { label: "My Courses", href: "/showall", icon: FiBookOpen },
+            { label: "Add or Drop", href: "/courseadddrop", icon: FiPlus },
+          ]
+        : [
+            { label: "Login", href: "/auth/login", icon: FiLogIn },
+            { label: "Register", href: "/auth/reg", icon: FiUser },
+          ],
+    },
+    {
+      id: "management",
+      title: "Management",
+      description: "CR and admin workspaces when available.",
+      icon: FiShield,
+      tone: "amber",
+      items: [
+        isCrOrAdmin && { label: "CR Workspace", href: "/CR", icon: FiUsers },
+        isAdmin && { label: "Admin Users", href: "/admin/users", icon: FiShield },
+      ].filter(Boolean),
+    },
+  ].filter((group) => group.items.length > 0);
+
+  const toggleFeatureGroup = (groupId) => {
+    setExpandedFeatureGroups((current) =>
+      current.includes(groupId)
+        ? current.filter((id) => id !== groupId)
+        : [...current, groupId],
+    );
+  };
 
   return (
     <div className="min-h-screen">
@@ -438,7 +494,7 @@ const Home = () => {
             </div>
           </div>
 
-          <form onSubmit={handleSearch} className="hero-glass-card hero-form-card p-5 text-white">
+          <form id="routine-search" onSubmit={handleSearch} className="hero-glass-card hero-form-card p-5 text-white">
             <div className="mb-5">
               <p className="text-sm font-semibold text-teal-200">Routine lookup</p>
               <h2 className="mt-2 text-2xl font-bold text-white">
@@ -600,14 +656,19 @@ const Home = () => {
 
         <section className="space-y-6">
           <SectionHeading
-            kicker="Quick access"
-            title="Start with the right academic tool"
-            description="Routine, room, community, and resource destinations are grouped for faster navigation."
+            kicker="Navigation hub"
+            title="Explore by category"
+            description="Important navbar destinations are grouped into expandable sections for faster discovery."
           />
 
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {featureCards.map((feature) => (
-              <QuickAction key={feature.href} {...feature} />
+          <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+            {featureGroups.map((group) => (
+              <FeatureGroupCard
+                key={group.id}
+                group={group}
+                expanded={expandedFeatureGroups.includes(group.id)}
+                onToggle={() => toggleFeatureGroup(group.id)}
+              />
             ))}
           </div>
         </section>
@@ -617,7 +678,7 @@ const Home = () => {
           onFind={() => navigate("/resources")}
         />
 
-        <section>
+        <section id="contributors">
           <div className="surface-card p-6">
             <SectionHeading
               kicker="Contributors"
@@ -660,33 +721,70 @@ const Home = () => {
 };
 
 /**
- * Compact navigation card used on the home page.
+ * Expandable home navigation group that mirrors related navbar destinations.
  */
-function QuickAction({ icon, title, description, href, tone = "blue" }) {
+function FeatureGroupCard({ group, expanded, onToggle }) {
+  const Icon = group.icon;
   const tones = {
-    blue: "bg-blue-50 text-blue-700 group-hover:bg-blue-600 group-hover:text-white dark:bg-blue-500/10 dark:text-blue-200",
-    teal: "bg-teal-50 text-teal-700 group-hover:bg-teal-600 group-hover:text-white dark:bg-teal-500/10 dark:text-teal-200",
-    amber: "bg-amber-50 text-amber-700 group-hover:bg-amber-500 group-hover:text-white dark:bg-amber-500/10 dark:text-amber-200",
+    blue: "bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-200",
+    teal: "bg-teal-50 text-teal-700 dark:bg-teal-500/10 dark:text-teal-200",
+    amber: "bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-200",
   };
 
   return (
-    <Link to={href} className="interactive-card group block p-5">
-      <div className="flex h-full items-start gap-4">
-        <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg transition ${tones[tone] || tones.blue}`}>
-          {icon}
+    <article className="subtle-card overflow-hidden">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex w-full items-start gap-4 p-5 text-left transition hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:hover:bg-slate-900"
+        aria-expanded={expanded}
+      >
+        <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg ${tones[group.tone] || tones.blue}`}>
+          <Icon className="h-5 w-5" aria-hidden="true" />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block text-lg font-bold text-slate-950 dark:text-white">
-            {title}
+          <span className="flex items-center justify-between gap-3">
+            <span className="safe-text text-lg font-black text-slate-950 dark:text-white">
+              {group.title}
+            </span>
+            <FiChevronDown
+              className={`h-5 w-5 shrink-0 text-slate-400 transition ${expanded ? "rotate-180" : ""}`}
+              aria-hidden="true"
+            />
           </span>
           <span className="mt-2 block text-sm leading-6 text-slate-600 dark:text-slate-400">
-            {description}
+            {group.description}
           </span>
-          <span className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-blue-700 dark:text-blue-300">
-            Open <FiArrowRight aria-hidden="true" />
+          <span className="mt-4 inline-flex rounded-lg bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+            {group.items.length} option{group.items.length === 1 ? "" : "s"}
           </span>
         </span>
-      </div>
+      </button>
+
+      {expanded && (
+        <div className="grid gap-2 border-t border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950">
+          {group.items.map((item) => (
+            <FeatureGroupLink key={`${group.id}-${item.href}-${item.label}`} item={item} />
+          ))}
+        </div>
+      )}
+    </article>
+  );
+}
+
+function FeatureGroupLink({ item }) {
+  const Icon = item.icon;
+
+  return (
+    <Link
+      to={item.href}
+      className="group flex min-h-12 items-center gap-3 rounded-lg border border-transparent bg-slate-50 px-3 py-2 text-sm font-bold text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-blue-500/30 dark:hover:bg-blue-500/10 dark:hover:text-blue-200"
+    >
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-slate-500 ring-1 ring-slate-200 transition group-hover:text-blue-600 dark:bg-slate-950 dark:text-slate-300 dark:ring-slate-700 dark:group-hover:text-blue-200">
+        <Icon className="h-4 w-4" aria-hidden="true" />
+      </span>
+      <span className="min-w-0 flex-1 truncate">{item.label}</span>
+      <FiArrowRight className="h-4 w-4 shrink-0 text-slate-400 transition group-hover:translate-x-0.5 group-hover:text-blue-600 dark:group-hover:text-blue-200" aria-hidden="true" />
     </Link>
   );
 }

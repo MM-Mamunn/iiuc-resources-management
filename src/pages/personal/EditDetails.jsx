@@ -831,116 +831,51 @@ function EditDetails() {
     <div className="min-h-screen">
       <Header />
       <PageShell className="py-10">
-        <section className="surface-card p-6 sm:p-8">
-          <SectionHeading
-            kicker="Account"
-            title="Profile Details"
-            description="Update your contact details, profile picture, and password from one secure settings page."
-          />
-        </section>
-
         {notice && (
-          <div className="mt-6">
+          <div>
             <Notice type={notice.type} onDismiss={() => setNotice(null)}>
               {notice.text}
             </Notice>
           </div>
         )}
 
-        <section
-          className="mt-6 grid gap-4"
-          style={{
-            gridTemplateColumns:
-              "repeat(auto-fit, minmax(max(180px, calc((100% - 5rem) / 6)), 1fr))",
-          }}
-        >
-          {profileNavigation.map((item) => (
-            <ProfileNavCard
-              key={item.key}
-              item={item}
-              active={activeProfileSection === item.key}
-              onSelect={() => handleProfileSectionSelect(item.key)}
-            />
-          ))}
-        </section>
-
         {loading ? (
           <LoadingState label="Loading profile..." />
         ) : (
-          <section className="mt-8">
+          <>
+            <ProfileSummaryCard
+              currentProfile={currentProfile}
+              avatarInitials={avatarInitials}
+              previewUrl={previewUrl}
+              photoLoading={photoLoading}
+              photoRemoving={photoRemoving}
+              selectedPhoto={selectedPhoto}
+              onPhotoSelection={handlePhotoSelection}
+              onPhotoUpload={handlePhotoUpload}
+              onPhotoRemove={handlePhotoRemove}
+            />
+
+            <section
+              className="mt-6 grid gap-4"
+              style={{
+                gridTemplateColumns:
+                  "repeat(auto-fit, minmax(max(180px, calc((100% - 5rem) / 6)), 1fr))",
+              }}
+            >
+              {profileNavigation.map((item) => (
+                <ProfileNavCard
+                  key={item.key}
+                  item={item}
+                  active={activeProfileSection === item.key}
+                  onSelect={() => handleProfileSectionSelect(item.key)}
+                />
+              ))}
+            </section>
+
+            <section className="mt-8">
             <div className="space-y-8">
               {activeProfileSection === "details" && (
-                <section className="surface-card overflow-hidden">
-                  <div className="grid gap-5 border-b border-slate-200 p-5 lg:grid-cols-[auto_1fr_auto] lg:items-center dark:border-slate-800">
-                    <span className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-xl bg-slate-950 text-3xl font-black text-white ring-1 ring-slate-200 dark:bg-white dark:text-slate-950 dark:ring-slate-800">
-                      {currentProfile?.profilePic ? (
-                        <img
-                          src={currentProfile.profilePic}
-                          alt=""
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        avatarInitials
-                      )}
-                    </span>
-
-                    <div className="min-w-0">
-                      <p className="section-kicker">Student profile</p>
-                      <h2 className="safe-text mt-2 text-2xl font-black text-slate-950 dark:text-white">
-                        {currentProfile?.name || "Student"}
-                      </h2>
-                      <div className="mt-4 grid gap-2 text-sm sm:grid-cols-2 xl:grid-cols-4">
-                        <ProfileInfoPill label="ID" value={currentProfile?.id} />
-                        <ProfileInfoPill label="Section" value={currentProfile?.sec} />
-                        <ProfileInfoPill label="Email" value={currentProfile?.email} />
-                        <ProfileInfoPill label="Phone" value={currentProfile?.phone} />
-                      </div>
-                    </div>
-
-                    <div className="grid gap-3 sm:grid-cols-2 lg:w-56 lg:grid-cols-1">
-                      <label className="btn-secondary cursor-pointer">
-                        <FiCamera aria-hidden="true" />
-                        Choose image
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handlePhotoSelection}
-                          className="sr-only"
-                        />
-                      </label>
-                      <button
-                        type="button"
-                        onClick={handlePhotoUpload}
-                        disabled={photoLoading || !selectedPhoto}
-                        className="btn-primary"
-                      >
-                        {photoLoading ? "Uploading..." : "Upload image"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handlePhotoRemove}
-                        disabled={photoRemoving || !currentProfile?.profilePic}
-                        className="btn-danger"
-                      >
-                        <FiTrash2 aria-hidden="true" />
-                        {photoRemoving ? "Removing..." : "Remove image"}
-                      </button>
-                    </div>
-
-                    {previewUrl && (
-                      <div className="lg:col-start-2 lg:col-span-2">
-                        <p className="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
-                          Preview
-                        </p>
-                        <img
-                          src={previewUrl}
-                          alt="Selected profile preview"
-                          className="aspect-square w-32 rounded-lg object-cover ring-1 ring-slate-200 dark:ring-slate-800"
-                        />
-                      </div>
-                    )}
-                  </div>
-                  <div className="p-5">
+                <section className="surface-card p-5">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                       <SectionHeading kicker="Details" title="Personal information" />
                       {!isEditing && (
@@ -1007,7 +942,6 @@ function EditDetails() {
                         </div>
                       </form>
                     )}
-                  </div>
                 </section>
               )}
 
@@ -1388,7 +1322,8 @@ function EditDetails() {
               </div>
               )}
             </div>
-          </section>
+            </section>
+          </>
         )}
       </PageShell>
 
@@ -1491,6 +1426,100 @@ function SectionChangeWarningModal({
   );
 }
 
+function ProfileSummaryCard({
+  currentProfile,
+  avatarInitials,
+  previewUrl,
+  photoLoading,
+  photoRemoving,
+  selectedPhoto,
+  onPhotoSelection,
+  onPhotoUpload,
+  onPhotoRemove,
+}) {
+  return (
+    <section className="surface-card overflow-hidden">
+      <div className="grid gap-5 p-5 lg:grid-cols-[auto_1fr_auto] lg:items-center">
+        <span className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-xl bg-slate-950 text-3xl font-black text-white ring-1 ring-slate-200 dark:bg-white dark:text-slate-950 dark:ring-slate-800">
+          {currentProfile?.profilePic ? (
+            <img
+              src={currentProfile.profilePic}
+              alt=""
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            avatarInitials
+          )}
+        </span>
+
+        <div className="min-w-0">
+          <p className="section-kicker">Student profile</p>
+          <h1 className="safe-text mt-2 text-3xl font-black text-slate-950 dark:text-white">
+            {currentProfile?.name || "Student"}
+          </h1>
+          <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-400">
+            Update your contact details, profile picture, resources, privacy, and password from one secure settings page.
+          </p>
+          <div className="mt-4 grid gap-2 text-sm sm:grid-cols-2 xl:grid-cols-5">
+            <ProfileInfoPill label="ID" value={currentProfile?.id} />
+            <ProfileInfoPill label="Section" value={currentProfile?.sec} />
+            <ProfileInfoPill label="Email" value={currentProfile?.email} />
+            <ProfileInfoPill label="Phone" value={currentProfile?.phone} />
+            <ProfileInfoPill
+              label="Views"
+              value={formatProfileViews(currentProfile?.view)}
+              icon={<FiEye className="h-4 w-4" aria-hidden="true" />}
+            />
+          </div>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2 lg:w-56 lg:grid-cols-1">
+          <label className="btn-secondary cursor-pointer">
+            <FiCamera aria-hidden="true" />
+            Choose image
+            <input
+              type="file"
+              accept="image/*"
+              onChange={onPhotoSelection}
+              className="sr-only"
+            />
+          </label>
+          <button
+            type="button"
+            onClick={onPhotoUpload}
+            disabled={photoLoading || !selectedPhoto}
+            className="btn-primary"
+          >
+            {photoLoading ? "Uploading..." : "Upload image"}
+          </button>
+          <button
+            type="button"
+            onClick={onPhotoRemove}
+            disabled={photoRemoving || !currentProfile?.profilePic}
+            className="btn-danger"
+          >
+            <FiTrash2 aria-hidden="true" />
+            {photoRemoving ? "Removing..." : "Remove image"}
+          </button>
+        </div>
+
+        {previewUrl && (
+          <div className="lg:col-start-2 lg:col-span-2">
+            <p className="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
+              Preview
+            </p>
+            <img
+              src={previewUrl}
+              alt="Selected profile preview"
+              className="aspect-square w-32 rounded-lg object-cover ring-1 ring-slate-200 dark:ring-slate-800"
+            />
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
 function ProfileNavCard({ item, active, onSelect }) {
   const Icon = item.icon;
 
@@ -1519,11 +1548,12 @@ function ProfileNavCard({ item, active, onSelect }) {
   );
 }
 
-function ProfileInfoPill({ label, value }) {
+function ProfileInfoPill({ label, value, icon }) {
   return (
     <div className="min-w-0 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-800 dark:bg-slate-900">
-      <p className="text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400">
-        {label}
+      <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400">
+        {icon}
+        <span>{label}</span>
       </p>
       <p className="safe-text mt-1 text-sm font-bold text-slate-950 dark:text-white">
         {value || "N/A"}
@@ -1751,6 +1781,16 @@ function PasswordField({ id, label, name, value, show, onToggle, onChange }) {
       </div>
     </FormField>
   );
+}
+
+function formatProfileViews(value) {
+  const views = Number(value || 0);
+
+  if (!Number.isFinite(views)) {
+    return "0";
+  }
+
+  return views.toLocaleString();
 }
 
 function getProfileError(error) {

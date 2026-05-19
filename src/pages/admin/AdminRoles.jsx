@@ -86,6 +86,7 @@ const AdminRoles = () => {
   const [roleSearchLoading, setRoleSearchLoading] = useState(false);
   const [selectedRoleStudent, setSelectedRoleStudent] = useState(null);
   const [roleUpdating, setRoleUpdating] = useState(false);
+  const [roleUpdateMessage, setRoleUpdateMessage] = useState(null);
   const [sessions, setSessions] = useState([]);
   const [sessionsLoading, setSessionsLoading] = useState(false);
   const [loginLogs, setLoginLogs] = useState([]);
@@ -322,6 +323,7 @@ const AdminRoles = () => {
   const handleRoleSearchChange = (value) => {
     setCustomId(value);
     setSelectedRoleStudent(null);
+    setRoleUpdateMessage(null);
   };
 
   const handleRoleSuggestionSelect = (studentRecord) => {
@@ -329,33 +331,59 @@ const AdminRoles = () => {
     setCustomId(studentRecord.id || "");
     setRoleSuggestions([]);
     setMessage(null);
+    setRoleUpdateMessage(null);
   };
 
-  const updateRole = async (studentId, role) => {
+  const createRoleFeedback = (type, text) => ({
+    id: `${Date.now()}-${Math.random()}`,
+    type,
+    text,
+  });
+
+  const showRoleFeedback = (feedback, { scoped = false } = {}) => {
+    if (scoped) {
+      setRoleUpdateMessage(feedback);
+      return;
+    }
+
+    setMessage(feedback);
+  };
+
+  const updateRole = async (studentId, role, { scopedFeedback = false } = {}) => {
     const normalizedId = String(studentId || "").trim().toUpperCase();
 
     if (!normalizedId) {
-      setMessage({ type: "error", text: "Please choose a student before updating the role." });
+      showRoleFeedback(
+        createRoleFeedback("error", "Please choose a student before updating the role."),
+        { scoped: scopedFeedback },
+      );
       return null;
     }
 
-    setMessage(null);
+    if (scopedFeedback) {
+      setRoleUpdateMessage(null);
+    } else {
+      setMessage(null);
+    }
     setRoleUpdating(true);
     try {
       const response = await api.put(`/api/admin/users/${normalizedId}/type`, {
         type: role,
       });
-      setMessage({
-        type: "success",
-        text: `Role updated: ${response.data.name || normalizedId} (${response.data.id || normalizedId}) is now ${response.data.type || role}.`,
-      });
+      showRoleFeedback(
+        createRoleFeedback(
+          "success",
+          `Role updated: ${response.data.name || normalizedId} (${response.data.id || normalizedId}) is now ${response.data.type || role}.`,
+        ),
+        { scoped: scopedFeedback },
+      );
       await fetchCrUsers(crPagination.page);
       return response.data;
     } catch (roleError) {
-      setMessage({
-        type: "error",
-        text: getRoleUpdateError(roleError, normalizedId),
-      });
+      showRoleFeedback(
+        createRoleFeedback("error", getRoleUpdateError(roleError, normalizedId)),
+        { scoped: scopedFeedback },
+      );
       return null;
     } finally {
       setRoleUpdating(false);
@@ -365,7 +393,9 @@ const AdminRoles = () => {
   const handleCustomUpdate = async (event) => {
     event.preventDefault();
     if (!customId.trim()) {
-      setMessage({ type: "error", text: "Search by student name or ID before updating the role." });
+      setRoleUpdateMessage(
+        createRoleFeedback("error", "Search by student name or ID before updating the role."),
+      );
       return;
     }
 
@@ -378,14 +408,16 @@ const AdminRoles = () => {
     const targetId = targetStudent?.id || customId.trim();
 
     if (!targetStudent && roleSuggestions.length > 0) {
-      setMessage({
-        type: "error",
-        text: "Choose one of the matching student suggestions before updating this role.",
-      });
+      setRoleUpdateMessage(
+        createRoleFeedback(
+          "error",
+          "Choose one of the matching student suggestions before updating this role.",
+        ),
+      );
       return;
     }
 
-    const updatedStudent = await updateRole(targetId, customType);
+    const updatedStudent = await updateRole(targetId, customType, { scopedFeedback: true });
 
     if (updatedStudent) {
       setSelectedRoleStudent(updatedStudent);
@@ -742,10 +774,12 @@ const AdminRoles = () => {
               roleSearchLoading={roleSearchLoading}
               selectedStudent={selectedRoleStudent}
               updating={roleUpdating}
+              roleMessage={roleUpdateMessage}
               onIdChange={handleRoleSearchChange}
               onTypeChange={setCustomType}
               onSuggestionSelect={handleRoleSuggestionSelect}
               onOpenProfile={openCommunityProfile}
+              onRoleMessageDismiss={() => setRoleUpdateMessage(null)}
               onSubmit={handleCustomUpdate}
             />
           )}
@@ -1563,10 +1597,12 @@ function DirectRoleFeature({
   roleSearchLoading,
   selectedStudent,
   updating,
+  roleMessage,
   onIdChange,
   onTypeChange,
   onSuggestionSelect,
   onOpenProfile,
+  onRoleMessageDismiss,
   onSubmit,
 }) {
   return (
@@ -1656,6 +1692,15 @@ function DirectRoleFeature({
               </>
             )}
           </button>
+          {roleMessage && (
+            <Notice
+              key={roleMessage.id}
+              type={roleMessage.type}
+              onDismiss={onRoleMessageDismiss}
+            >
+              {roleMessage.text}
+            </Notice>
+          )}
         </form>
       </aside>
     </section>
