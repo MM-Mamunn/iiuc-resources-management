@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   FiArrowRight,
   FiAward,
@@ -9,6 +9,7 @@ import {
   FiCalendar,
   FiDownload,
   FiGrid,
+  FiMapPin,
   FiPlus,
   FiSearch,
   FiTrash2,
@@ -354,6 +355,50 @@ const Home = () => {
 
     navigate(`/info/community?student=${encodeURIComponent(contributorId)}`);
   };
+  const featureCards = [
+    {
+      title: "Find Routine",
+      description: "Search section schedules by section and session.",
+      href: "/routine/section",
+      icon: <FiSearch className="h-5 w-5" aria-hidden="true" />,
+      tone: "blue",
+    },
+    {
+      title: "Room Routine",
+      description: "Check classes scheduled for a specific room.",
+      href: "/classroom/routine",
+      icon: <FiMapPin className="h-5 w-5" aria-hidden="true" />,
+      tone: "teal",
+    },
+    {
+      title: "Community",
+      description: "Find student profiles and shared academic activity.",
+      href: "/info/community",
+      icon: <FiUsers className="h-5 w-5" aria-hidden="true" />,
+      tone: "amber",
+    },
+    {
+      title: "Resources",
+      description: "Browse course notes, questions, books, and links.",
+      href: "/resources",
+      icon: <FiBookOpen className="h-5 w-5" aria-hidden="true" />,
+      tone: "blue",
+    },
+    {
+      title: "Teacher Routine",
+      description: "Open faculty schedules and assigned routine slots.",
+      href: "/routine/teacher",
+      icon: <FiCalendar className="h-5 w-5" aria-hidden="true" />,
+      tone: "teal",
+    },
+    {
+      title: "Course Info",
+      description: "Review course codes, titles, and credit information.",
+      href: "/info/course",
+      icon: <FiGrid className="h-5 w-5" aria-hidden="true" />,
+      tone: "amber",
+    },
+  ];
 
   return (
     <div className="min-h-screen">
@@ -556,29 +601,14 @@ const Home = () => {
         <section className="space-y-6">
           <SectionHeading
             kicker="Quick access"
-            title="Academic tools that stay close"
-            description="Common routine, room, and course actions are grouped so students can move through the app without hunting through menus."
+            title="Start with the right academic tool"
+            description="Routine, room, community, and resource destinations are grouped for faster navigation."
           />
 
-          <div className="grid gap-4 md:grid-cols-3">
-            <QuickAction
-              icon={<FiCalendar className="h-5 w-5" aria-hidden="true" />}
-              title="Section routine"
-              description="Open public section schedules for the selected session."
-              href="/routine/section"
-            />
-            <QuickAction
-              icon={<FiUsers className="h-5 w-5" aria-hidden="true" />}
-              title="Teacher routine"
-              description="Check faculty schedules and available teaching slots."
-              href="/routine/teacher"
-            />
-            <QuickAction
-              icon={<FiBookOpen className="h-5 w-5" aria-hidden="true" />}
-              title="Resources"
-              description="Browse course resources shared by students."
-              href="/resources"
-            />
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {featureCards.map((feature) => (
+              <QuickAction key={feature.href} {...feature} />
+            ))}
           </div>
         </section>
 
@@ -632,11 +662,17 @@ const Home = () => {
 /**
  * Compact navigation card used on the home page.
  */
-function QuickAction({ icon, title, description, href }) {
+function QuickAction({ icon, title, description, href, tone = "blue" }) {
+  const tones = {
+    blue: "bg-blue-50 text-blue-700 group-hover:bg-blue-600 group-hover:text-white dark:bg-blue-500/10 dark:text-blue-200",
+    teal: "bg-teal-50 text-teal-700 group-hover:bg-teal-600 group-hover:text-white dark:bg-teal-500/10 dark:text-teal-200",
+    amber: "bg-amber-50 text-amber-700 group-hover:bg-amber-500 group-hover:text-white dark:bg-amber-500/10 dark:text-amber-200",
+  };
+
   return (
-    <a href={href} className="interactive-card group block p-5">
-      <div className="flex items-start gap-4">
-        <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-blue-50 text-blue-700 transition group-hover:bg-blue-600 group-hover:text-white dark:bg-blue-500/10 dark:text-blue-200">
+    <Link to={href} className="interactive-card group block p-5">
+      <div className="flex h-full items-start gap-4">
+        <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg transition ${tones[tone] || tones.blue}`}>
           {icon}
         </span>
         <span className="min-w-0 flex-1">
@@ -651,7 +687,7 @@ function QuickAction({ icon, title, description, href }) {
           </span>
         </span>
       </div>
-    </a>
+    </Link>
   );
 }
 

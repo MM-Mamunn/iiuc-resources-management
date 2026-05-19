@@ -13,6 +13,7 @@ import {
   FiPlus,
   FiRefreshCw,
   FiSave,
+  FiSearch,
   FiShield,
   FiUserCheck,
   FiUsers,
@@ -81,6 +82,10 @@ const AdminRoles = () => {
   const [message, setMessage] = useState(null);
   const [customId, setCustomId] = useState("");
   const [customType, setCustomType] = useState("student");
+  const [roleSuggestions, setRoleSuggestions] = useState([]);
+  const [roleSearchLoading, setRoleSearchLoading] = useState(false);
+  const [selectedRoleStudent, setSelectedRoleStudent] = useState(null);
+  const [roleUpdating, setRoleUpdating] = useState(false);
   const [sessions, setSessions] = useState([]);
   const [sessionsLoading, setSessionsLoading] = useState(false);
   const [loginLogs, setLoginLogs] = useState([]);
@@ -266,33 +271,127 @@ const AdminRoles = () => {
     }
   }, [activeFeature, fetchAdminSubmissions]);
 
-  const updateRole = async (studentId, role) => {
+  useEffect(() => {
+    const query = customId.trim();
+
+    if (activeFeature !== "roleUpdate" || query.length < 2) {
+      setRoleSuggestions([]);
+      setRoleSearchLoading(false);
+      return undefined;
+    }
+
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      setRoleSearchLoading(true);
+      try {
+        const response = await api.get("/api/admin/users/search", {
+          params: { search: query, limit: 8 },
+        });
+
+        if (!cancelled) {
+          setRoleSuggestions(response.data?.rows || []);
+        }
+      } catch {
+        if (!cancelled) {
+          setRoleSuggestions([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setRoleSearchLoading(false);
+        }
+      }
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [activeFeature, customId]);
+
+  const openCommunityProfile = useCallback((studentId) => {
+    const profileId = String(studentId || "").trim();
+
+    if (!profileId) {
+      navigate("/info/community");
+      return;
+    }
+
+    navigate(`/info/community?student=${encodeURIComponent(profileId)}`);
+  }, [navigate]);
+
+  const handleRoleSearchChange = (value) => {
+    setCustomId(value);
+    setSelectedRoleStudent(null);
+  };
+
+  const handleRoleSuggestionSelect = (studentRecord) => {
+    setSelectedRoleStudent(studentRecord);
+    setCustomId(studentRecord.id || "");
+    setRoleSuggestions([]);
     setMessage(null);
+  };
+
+  const updateRole = async (studentId, role) => {
+    const normalizedId = String(studentId || "").trim().toUpperCase();
+
+    if (!normalizedId) {
+      setMessage({ type: "error", text: "Please choose a student before updating the role." });
+      return null;
+    }
+
+    setMessage(null);
+    setRoleUpdating(true);
     try {
-      const response = await api.put(`/api/admin/users/${studentId}/type`, {
+      const response = await api.put(`/api/admin/users/${normalizedId}/type`, {
         type: role,
       });
       setMessage({
         type: "success",
-        text: `Updated ${response.data.name || studentId} to ${role}.`,
+        text: `Role updated: ${response.data.name || normalizedId} (${response.data.id || normalizedId}) is now ${response.data.type || role}.`,
       });
       await fetchCrUsers(crPagination.page);
+      return response.data;
     } catch (roleError) {
       setMessage({
         type: "error",
-        text: roleError.response?.data?.msg || "Failed to update role.",
+        text: getRoleUpdateError(roleError, normalizedId),
       });
+      return null;
+    } finally {
+      setRoleUpdating(false);
     }
   };
 
   const handleCustomUpdate = async (event) => {
     event.preventDefault();
     if (!customId.trim()) {
-      setMessage({ type: "error", text: "Please enter a student id." });
+      setMessage({ type: "error", text: "Search by student name or ID before updating the role." });
       return;
     }
 
-    await updateRole(customId.trim(), customType);
+    const exactSuggestion = roleSuggestions.find((studentRecord) =>
+      [studentRecord.id, studentRecord.name]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase() === customId.trim().toLowerCase()),
+    );
+    const targetStudent = selectedRoleStudent || exactSuggestion;
+    const targetId = targetStudent?.id || customId.trim();
+
+    if (!targetStudent && roleSuggestions.length > 0) {
+      setMessage({
+        type: "error",
+        text: "Choose one of the matching student suggestions before updating this role.",
+      });
+      return;
+    }
+
+    const updatedStudent = await updateRole(targetId, customType);
+
+    if (updatedStudent) {
+      setSelectedRoleStudent(updatedStudent);
+      setCustomId(updatedStudent.id || targetId);
+      setRoleSuggestions([]);
+    }
   };
 
   const handleSubmissionFilterChange = async (field, value) => {
@@ -593,6 +692,7 @@ const AdminRoles = () => {
               onRefresh={() => fetchCrUsers(crPagination.page)}
               onPageChange={fetchCrUsers}
               onRoleChange={updateRole}
+              onOpenProfile={openCommunityProfile}
             />
           )}
 
@@ -601,6 +701,7 @@ const AdminRoles = () => {
               loginLogs={loginLogs}
               loading={loginLogsLoading}
               onRefresh={fetchLoginLogs}
+              onOpenProfile={openCommunityProfile}
             />
           )}
 
@@ -629,6 +730,7 @@ const AdminRoles = () => {
               onClearFilters={clearSubmissionFilters}
               onOpenSubmission={openSubmission}
               onStatusChange={updateSubmissionStatus}
+              onOpenProfile={openCommunityProfile}
             />
           )}
 
@@ -636,8 +738,14 @@ const AdminRoles = () => {
             <DirectRoleFeature
               customId={customId}
               customType={customType}
-              onIdChange={setCustomId}
+              roleSuggestions={roleSuggestions}
+              roleSearchLoading={roleSearchLoading}
+              selectedStudent={selectedRoleStudent}
+              updating={roleUpdating}
+              onIdChange={handleRoleSearchChange}
               onTypeChange={setCustomType}
+              onSuggestionSelect={handleRoleSuggestionSelect}
+              onOpenProfile={openCommunityProfile}
               onSubmit={handleCustomUpdate}
             />
           )}
@@ -860,6 +968,7 @@ function CrUsersFeature({
   onRefresh,
   onPageChange,
   onRoleChange,
+  onOpenProfile,
 }) {
   return (
     <section className="table-shell">
@@ -903,12 +1012,21 @@ function CrUsersFeature({
               {crUsers.map((student) => (
                 <tr key={student.id} className="transition hover:bg-blue-50/60 dark:hover:bg-slate-900">
                   <td className="px-5 py-4">
-                    <p className="safe-text font-bold text-slate-950 dark:text-white">
-                      {student.name || "Student"}
-                    </p>
-                    <p className="safe-text mt-1 text-xs text-slate-500 dark:text-slate-400">
-                      ID: {student.id}
-                    </p>
+                    <button
+                      type="button"
+                      onClick={() => onOpenProfile(student.id)}
+                      className="group flex min-w-0 items-center gap-3 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                    >
+                      <AdminAvatar image={student.profilePic} name={student.name || student.id} />
+                      <span className="min-w-0">
+                        <span className="safe-text block font-bold text-slate-950 transition group-hover:text-blue-700 dark:text-white dark:group-hover:text-blue-200">
+                          {student.name || "Student"}
+                        </span>
+                        <span className="safe-text mt-1 block text-xs text-slate-500 dark:text-slate-400">
+                          ID: {student.id}
+                        </span>
+                      </span>
+                    </button>
                   </td>
                   <td className="safe-text px-5 py-4 font-semibold text-slate-700 dark:text-slate-200">
                     {student.sec || "N/A"}
@@ -952,7 +1070,7 @@ function CrUsersFeature({
 /**
  * Recent login history panel.
  */
-function LoginLogsFeature({ loginLogs, loading, onRefresh }) {
+function LoginLogsFeature({ loginLogs, loading, onRefresh, onOpenProfile }) {
   return (
     <section className="table-shell">
       <div className="flex flex-col gap-4 border-b border-slate-200 bg-white px-5 py-5 sm:flex-row sm:items-end sm:justify-between dark:border-slate-800 dark:bg-slate-900">
@@ -998,10 +1116,14 @@ function LoginLogsFeature({ loginLogs, loading, onRefresh }) {
                   className="transition hover:bg-blue-50/60 dark:hover:bg-slate-900"
                 >
                   <td className="px-5 py-4">
-                    <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => onOpenProfile(entry.id)}
+                      className="group flex min-w-0 items-center gap-3 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                    >
                       <AdminAvatar image={entry.profilePic} name={entry.studentName || entry.id} />
                       <div className="min-w-0">
-                        <p className="safe-text font-bold text-slate-950 dark:text-white">
+                        <p className="safe-text font-bold text-slate-950 transition group-hover:text-blue-700 dark:text-white dark:group-hover:text-blue-200">
                           {entry.studentName || "Unknown student"}
                         </p>
                         <p className="safe-text mt-1 text-xs text-slate-500 dark:text-slate-400">
@@ -1013,7 +1135,7 @@ function LoginLogsFeature({ loginLogs, loading, onRefresh }) {
                           </p>
                         )}
                       </div>
-                    </div>
+                    </button>
                   </td>
                   <td className="safe-text px-5 py-4 font-semibold text-slate-700 dark:text-slate-200">
                     {entry.sec || "N/A"}
@@ -1049,6 +1171,7 @@ function SubmissionManagementFeature({
   onClearFilters,
   onOpenSubmission,
   onStatusChange,
+  onOpenProfile,
 }) {
   return (
     <section className="table-shell">
@@ -1153,8 +1276,14 @@ function SubmissionManagementFeature({
                       <ViewedStatus viewed={submission.view} />
                       <ResolvedStatus resolved={submission.resolved} />
                     </div>
-                    <h3 className="safe-text mt-3 text-base font-bold text-slate-950 dark:text-white">
-                      {submission.studentName || "Student"} ({submission.by})
+                    <h3 className="mt-3">
+                      <button
+                        type="button"
+                        onClick={() => onOpenProfile(submission.by)}
+                        className="safe-text text-left text-base font-bold text-slate-950 transition hover:text-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-white dark:hover:text-blue-200"
+                      >
+                        {submission.studentName || "Student"} ({submission.by})
+                      </button>
                     </h3>
                     <p className="mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">
                       {submission.studentSection || "No section"} - {formatLoginTime(submission.createdAt)}
@@ -1430,8 +1559,14 @@ function PeriodManagementFeature({
 function DirectRoleFeature({
   customId,
   customType,
+  roleSuggestions,
+  roleSearchLoading,
+  selectedStudent,
+  updating,
   onIdChange,
   onTypeChange,
+  onSuggestionSelect,
+  onOpenProfile,
   onSubmit,
 }) {
   return (
@@ -1439,8 +1574,8 @@ function DirectRoleFeature({
       <div className="surface-card p-6 sm:p-8">
         <SectionHeading
           kicker="Direct update"
-          title="Update Role by Student ID"
-          description="Use this feature when a user is not visible in the CR list or when you need to promote a student directly."
+          title="Update Role by Student"
+          description="Search by student name or ID, choose the correct user, then apply a role."
         />
         <div className="mt-6 grid gap-4 md:grid-cols-3">
           {VALID_ROLES.map((role) => (
@@ -1460,17 +1595,40 @@ function DirectRoleFeature({
       </div>
 
       <aside className="surface-card p-5">
-        <SectionHeading kicker="Role editor" title="Update by ID" />
+        <SectionHeading kicker="Role editor" title="Update by ID or name" />
         <form onSubmit={onSubmit} className="mt-6 space-y-5">
-          <FormField id="custom-id" label="Student ID">
-            <input
-              id="custom-id"
-              value={customId}
-              onChange={(event) => onIdChange(event.target.value)}
-              placeholder="Enter student id"
-              className="form-field"
-            />
+          <FormField
+            id="custom-id"
+            label="Student name or ID"
+            helper={roleSearchLoading ? "Searching students..." : "Type at least 2 characters for suggestions."}
+          >
+            <div className="relative">
+              <FiSearch
+                className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"
+                aria-hidden="true"
+              />
+              <input
+                id="custom-id"
+                value={customId}
+                onChange={(event) => onIdChange(event.target.value)}
+                placeholder="Search name or ID"
+                className="form-field pl-12"
+                autoComplete="off"
+              />
+              {!selectedStudent && roleSuggestions.length > 0 && (
+                <AdminStudentSuggestionList
+                  suggestions={roleSuggestions}
+                  onSelect={onSuggestionSelect}
+                />
+              )}
+            </div>
           </FormField>
+          {selectedStudent && (
+            <SelectedAdminStudent
+              student={selectedStudent}
+              onOpenProfile={onOpenProfile}
+            />
+          )}
           <FormField id="custom-role" label="New role">
             <select
               id="custom-role"
@@ -1485,12 +1643,77 @@ function DirectRoleFeature({
               ))}
             </select>
           </FormField>
-          <button type="submit" className="btn-primary w-full">
-            Update role
+          <button type="submit" className="btn-primary w-full" disabled={updating}>
+            {updating ? (
+              <>
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                Updating...
+              </>
+            ) : (
+              <>
+                <FiShield aria-hidden="true" />
+                Update Role
+              </>
+            )}
           </button>
         </form>
       </aside>
     </section>
+  );
+}
+
+function AdminStudentSuggestionList({ suggestions, onSelect }) {
+  return (
+    <ul className="absolute left-0 right-0 top-full z-30 mt-2 max-h-72 overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-xl dark:border-slate-700 dark:bg-slate-900">
+      {suggestions.map((studentRecord) => (
+        <li key={studentRecord.id}>
+          <button
+            type="button"
+            onClick={() => onSelect(studentRecord)}
+            className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-blue-50 focus:bg-blue-50 focus:outline-none dark:hover:bg-slate-800 dark:focus:bg-slate-800"
+          >
+            <AdminAvatar image={studentRecord.profilePic} name={studentRecord.name || studentRecord.id} />
+            <span className="min-w-0 flex-1">
+              <span className="safe-text block text-sm font-bold text-slate-950 dark:text-white">
+                {studentRecord.name || "Student"}
+              </span>
+              <span className="safe-text mt-1 block text-xs font-semibold text-slate-500 dark:text-slate-400">
+                {studentRecord.id} - Section {studentRecord.sec || "N/A"}
+              </span>
+            </span>
+            <span className="status-pill border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200">
+              {studentRecord.type || "N/A"}
+            </span>
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function SelectedAdminStudent({ student, onOpenProfile }) {
+  return (
+    <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-500/30 dark:bg-blue-500/10">
+      <div className="flex items-center gap-3">
+        <AdminAvatar image={student.profilePic} name={student.name || student.id} />
+        <div className="min-w-0 flex-1">
+          <p className="safe-text font-bold text-slate-950 dark:text-white">
+            {student.name || "Student"}
+          </p>
+          <p className="safe-text mt-1 text-xs font-semibold text-slate-600 dark:text-slate-300">
+            {student.id} - Section {student.sec || "N/A"} - {student.type || "N/A"}
+          </p>
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={() => onOpenProfile(student.id)}
+        className="btn-secondary mt-3 w-full"
+      >
+        <FiEye aria-hidden="true" />
+        Open profile
+      </button>
+    </div>
   );
 }
 
@@ -1565,6 +1788,20 @@ function formatLoginTime(value) {
     hour: "numeric",
     minute: "2-digit",
   });
+}
+
+function getRoleUpdateError(error, studentId) {
+  const apiMessage = error.response?.data?.msg || error.response?.data?.message;
+
+  if (error.response?.status === 404) {
+    return `No student found for ${studentId}. Search by name or ID and choose a suggestion.`;
+  }
+
+  if (apiMessage) {
+    return apiMessage;
+  }
+
+  return "Could not update this role. Please check the selected student and try again.";
 }
 
 function getSessionError(error) {
