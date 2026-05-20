@@ -14,6 +14,7 @@ import {
 import api from "../../api";
 import Header from "../components/Header";
 import ResourceBrowser from "../components/ResourceBrowser";
+import { ProfileResourceStats } from "../components/ProfileResourceStats";
 import {
   EmptyState,
   FormField,
@@ -619,6 +620,8 @@ function CommunityProfileView({ student, loading, notice, onBack, onNoticeDismis
                 <ProfileField label="Email" value={student.email} />
               </div>
             </section>
+
+            <ProfileResourceStats stats={student.resourceStats} loading={false} />
 
             <div className="mt-8">
               <ResourceBrowser

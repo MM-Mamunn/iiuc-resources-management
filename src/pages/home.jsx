@@ -3,8 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
+  FiActivity,
   FiArrowRight,
   FiAward,
+  FiBarChart2,
   FiBookOpen,
   FiCalendar,
   FiChevronDown,
@@ -16,6 +18,7 @@ import {
   FiPlus,
   FiSearch,
   FiShield,
+  FiTrendingUp,
   FiTrash2,
   FiUser,
   FiUsers,
@@ -44,6 +47,19 @@ import {
 const DAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 const DISPLAY_DAYS = ["sat", "sun", "mon", "tue", "wed"];
 const HOME_CACHE_TTL = 2 * 60 * 1000;
+const SEMESTER_LABELS = Array.from({ length: 8 }, (_, index) => index + 1);
+const emptyHomeAnalytics = {
+  period: { from: "", to: "" },
+  resources: {
+    total: 0,
+    semesterDistribution: SEMESTER_LABELS.map((semester) => ({ semester, total: 0 })),
+    growth: [],
+  },
+  users: {
+    total: 0,
+    growth: [],
+  },
+};
 
 /**
  * Public landing and section routine lookup page.
@@ -72,6 +88,9 @@ const Home = () => {
   const [contributorsLoading, setContributorsLoading] = useState(false);
   const [showRoutineActions, setShowRoutineActions] = useState(false);
   const [expandedFeatureGroups, setExpandedFeatureGroups] = useState([]);
+  const [homeAnalytics, setHomeAnalytics] = useState(emptyHomeAnalytics);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [analyticsError, setAnalyticsError] = useState("");
   const { periods } = usePeriods();
 
   const userType = String(user?.type || "").toLowerCase();
@@ -90,6 +109,45 @@ const Home = () => {
       setSession((current) => current || activeSessionName);
     }
   }, [activeSessionName]);
+
+  useEffect(() => {
+    let ignoreResult = false;
+
+    async function fetchHomeAnalytics() {
+      setAnalyticsLoading(true);
+      setAnalyticsError("");
+
+      try {
+        const analytics = await cachedRequest(
+          "home:platform-analytics",
+          async () => {
+            const response = await api.get("/api/info/home/analytics");
+            return response.data || emptyHomeAnalytics;
+          },
+          { ttl: HOME_CACHE_TTL },
+        );
+
+        if (!ignoreResult) {
+          setHomeAnalytics(normalizeHomeAnalytics(analytics));
+        }
+      } catch {
+        if (!ignoreResult) {
+          setHomeAnalytics(emptyHomeAnalytics);
+          setAnalyticsError("Could not load platform analytics right now.");
+        }
+      } finally {
+        if (!ignoreResult) {
+          setAnalyticsLoading(false);
+        }
+      }
+    }
+
+    fetchHomeAnalytics();
+
+    return () => {
+      ignoreResult = true;
+    };
+  }, []);
 
   useEffect(() => {
     async function fetchTopContributors() {
@@ -678,6 +736,12 @@ const Home = () => {
           onFind={() => navigate("/resources")}
         />
 
+        <HomeAnalyticsSection
+          analytics={homeAnalytics}
+          loading={analyticsLoading}
+          error={analyticsError}
+        />
+
         <section id="contributors">
           <div className="surface-card p-6">
             <SectionHeading
@@ -789,6 +853,268 @@ function FeatureGroupLink({ item }) {
   );
 }
 
+function HomeAnalyticsSection({ analytics, loading, error }) {
+  const normalizedAnalytics = normalizeHomeAnalytics(analytics);
+  const resourceGrowth = normalizedAnalytics.resources.growth;
+
+  return (
+    <section id="platform-analytics" className="space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <SectionHeading
+          kicker="Platform insights"
+          title="Statistics & analytics"
+          description="Resource trends and current platform totals."
+        />
+        <span className="status-pill w-fit border-slate-200 bg-white text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200">
+          {loading ? "Refreshing charts..." : formatDateRange(normalizedAnalytics.period)}
+        </span>
+      </div>
+
+      {error && (
+        <Notice type="error">
+          {error}
+        </Notice>
+      )}
+
+      <div className="grid gap-4 md:grid-cols-3">
+        <HomeMetricCard
+          icon={<FiBookOpen aria-hidden="true" />}
+          label="Total resources"
+          value={normalizedAnalytics.resources.total}
+          loading={loading}
+          tooltip="Total shared resources currently available on the platform."
+        />
+        <HomeMetricCard
+          icon={<FiUsers aria-hidden="true" />}
+          label="Registered users"
+          value={normalizedAnalytics.users.total}
+          loading={loading}
+          tooltip="Current total registered users on the platform."
+        />
+        <HomeMetricCard
+          icon={<FiActivity aria-hidden="true" />}
+          label="Timeline window"
+          value={`${resourceGrowth.length || 0} days`}
+          loading={loading}
+          tooltip="Daily cumulative resource chart points included in the analytics window."
+        />
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-2">
+        <SemesterResourceChart
+          data={normalizedAnalytics.resources.semesterDistribution}
+          loading={loading}
+        />
+        <GrowthLineChart
+          title="Resource growth"
+          description="Cumulative shared resources from the selected start date."
+          data={resourceGrowth}
+          loading={loading}
+          icon={<FiTrendingUp aria-hidden="true" />}
+          tone="blue"
+        />
+      </div>
+    </section>
+  );
+}
+
+function HomeMetricCard({ icon, label, value, loading, tooltip }) {
+  return (
+    <article
+      className="group relative rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950"
+      title={tooltip}
+    >
+      <AnalyticsTooltip>{tooltip}</AnalyticsTooltip>
+      <div className="flex items-center gap-3">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-200">
+          {icon}
+        </span>
+        <div className="min-w-0">
+          <p className="text-xs font-bold uppercase text-slate-500 dark:text-slate-400">
+            {label}
+          </p>
+          {loading ? (
+            <span className="mt-2 block h-8 w-24 animate-pulse rounded-md bg-slate-200 dark:bg-slate-800" />
+          ) : (
+            <p className="safe-text mt-1 text-2xl font-black text-slate-950 dark:text-white">
+              {typeof value === "number" ? formatCompactNumber(value) : value}
+            </p>
+          )}
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function SemesterResourceChart({ data, loading }) {
+  const rows = normalizeSemesterDistribution(data);
+  const maxTotal = Math.max(...rows.map((item) => item.total), 1);
+
+  return (
+    <article className="surface-card p-6">
+      <ChartHeader
+        icon={<FiBarChart2 aria-hidden="true" />}
+        title="Semester-wise resources"
+        description="Number of shared resources grouped by course semester."
+      />
+
+      <div className="mt-6 grid min-h-64 grid-cols-4 items-end gap-3 sm:grid-cols-8">
+        {rows.map((item, index) => {
+          const height = loading
+            ? [46, 70, 52, 78, 60, 88, 56, 68][index]
+            : Math.max((item.total / maxTotal) * 100, item.total > 0 ? 8 : 2);
+          const tooltip = `${formatNumber(item.total)} resource${item.total === 1 ? "" : "s"} from semester ${item.semester}.`;
+
+          return (
+            <div
+              key={item.semester}
+              className="group/bar relative flex h-56 flex-col justify-end gap-2"
+              title={loading ? `Loading semester ${item.semester} resource count.` : tooltip}
+            >
+              <span className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 w-48 -translate-x-1/2 rounded-md bg-slate-950 px-3 py-2 text-center text-xs font-semibold text-white opacity-0 shadow-lg transition group-hover/bar:opacity-100 dark:bg-white dark:text-slate-950">
+                {loading ? `Loading semester ${item.semester} resource count.` : tooltip}
+              </span>
+              <div className="flex h-44 items-end rounded-lg bg-slate-100 p-1 dark:bg-slate-900">
+                <div
+                  className={`w-full rounded-md transition-all duration-500 ${
+                    loading
+                      ? "animate-pulse bg-slate-300 dark:bg-slate-700"
+                      : "bg-blue-600 dark:bg-blue-400"
+                  }`}
+                  style={{ height: `${height}%` }}
+                />
+              </div>
+              <div className="text-center">
+                <p className="text-xs font-bold text-slate-500 dark:text-slate-400">
+                  Sem {item.semester}
+                </p>
+                <p className="text-sm font-black text-slate-950 dark:text-white">
+                  {loading ? "-" : formatCompactNumber(item.total)}
+                </p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </article>
+  );
+}
+
+function GrowthLineChart({ title, description, data, loading, icon, tone = "blue" }) {
+  const rows = Array.isArray(data) ? data : [];
+  const maxTotal = Math.max(...rows.map((item) => item.total), 1);
+  const points = getLineChartPoints(rows, maxTotal);
+  const linePath = points.length ? `M ${points.map((point) => `${point.x} ${point.y}`).join(" L ")}` : "";
+  const areaPath = points.length
+    ? `${linePath} L ${points.at(-1).x} 42 L ${points[0].x} 42 Z`
+    : "";
+  const checkpoints = getTimelineCheckpoints(points, rows);
+  const toneClasses = {
+    blue: {
+      line: "stroke-blue-600 dark:stroke-blue-300",
+      fill: "fill-blue-500/10 dark:fill-blue-300/10",
+      icon: "bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-200",
+      marker: "bg-blue-600 ring-blue-100 dark:bg-blue-300 dark:ring-blue-500/20",
+    },
+    teal: {
+      line: "stroke-teal-600 dark:stroke-teal-300",
+      fill: "fill-teal-500/10 dark:fill-teal-300/10",
+      icon: "bg-teal-50 text-teal-700 dark:bg-teal-500/10 dark:text-teal-200",
+      marker: "bg-teal-600 ring-teal-100 dark:bg-teal-300 dark:ring-teal-500/20",
+    },
+  };
+  const classes = toneClasses[tone] || toneClasses.blue;
+
+  return (
+    <article className="surface-card p-6">
+      <ChartHeader
+        icon={icon}
+        iconClassName={classes.icon}
+        title={title}
+        description={description}
+      />
+
+      <div className="mt-6 grid grid-cols-[3.5rem_minmax(0,1fr)] gap-3">
+        <div className="flex h-56 flex-col justify-between text-right text-xs font-bold text-slate-500 dark:text-slate-400">
+          <span>{loading ? "-" : formatCompactNumber(maxTotal)}</span>
+          <span>{loading ? "-" : formatCompactNumber(Math.round(maxTotal / 2))}</span>
+          <span>0</span>
+        </div>
+        <div
+          className="relative h-56 overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950"
+          title={`${title}: daily cumulative totals over the selected resource period.`}
+        >
+          {loading ? (
+            <div className="absolute inset-0 p-4">
+              <div className="h-full w-full animate-pulse rounded-lg bg-slate-100 dark:bg-slate-900" />
+            </div>
+          ) : (
+            <>
+              <svg viewBox="0 0 100 42" preserveAspectRatio="none" className="absolute inset-0 h-full w-full">
+                <path d={areaPath} className={classes.fill} />
+                <path
+                  d={linePath}
+                  className={`${classes.line} transition-all duration-500`}
+                  fill="none"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <line x1="4" y1="36" x2="96" y2="36" className="stroke-slate-200 dark:stroke-slate-800" strokeWidth="0.6" />
+                <line x1="4" y1="20" x2="96" y2="20" className="stroke-slate-100 dark:stroke-slate-900" strokeWidth="0.4" />
+              </svg>
+              {checkpoints.map((point) => (
+                <span
+                  key={`${title}-${point.date}`}
+                  className={`group/point absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full ring-4 ${classes.marker}`}
+                  style={{ left: `${point.left}%`, top: `${point.top}%` }}
+                  title={`${formatDisplayDate(point.date)}: ${formatNumber(point.total)} total.`}
+                >
+                  <span className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 w-44 -translate-x-1/2 rounded-md bg-slate-950 px-3 py-2 text-center text-xs font-semibold text-white opacity-0 shadow-lg transition group-hover/point:opacity-100 dark:bg-white dark:text-slate-950">
+                    {formatDisplayDate(point.date)}: {formatNumber(point.total)} total.
+                  </span>
+                </span>
+              ))}
+            </>
+          )}
+        </div>
+      </div>
+
+      <div className="ml-[4.25rem] mt-3 grid grid-cols-3 text-xs font-semibold text-slate-500 dark:text-slate-400">
+        <span>{formatDisplayDate(rows[0]?.date)}</span>
+        <span className="text-center">{formatDisplayDate(rows[Math.floor(rows.length / 2)]?.date)}</span>
+        <span className="text-right">{formatDisplayDate(rows.at(-1)?.date)}</span>
+      </div>
+    </article>
+  );
+}
+
+function ChartHeader({ icon, title, description, iconClassName = "bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-200" }) {
+  return (
+    <div className="flex items-start gap-3">
+      <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg ${iconClassName}`}>
+        {icon}
+      </span>
+      <div className="min-w-0">
+        <h3 className="safe-text text-lg font-black text-slate-950 dark:text-white">
+          {title}
+        </h3>
+        <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-400">
+          {description}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function AnalyticsTooltip({ children }) {
+  return (
+    <span className="pointer-events-none absolute left-4 top-3 z-20 max-w-xs rounded-md bg-slate-950 px-3 py-2 text-xs font-semibold text-white opacity-0 shadow-lg transition group-hover:opacity-100 dark:bg-white dark:text-slate-950">
+      {children}
+    </span>
+  );
+}
+
 /**
  * Contributor summary card with rank and points.
  */
@@ -843,6 +1169,133 @@ function getContributorInitials(contributor) {
     .join("")
     .slice(0, 2)
     .toUpperCase();
+}
+
+function normalizeHomeAnalytics(value = emptyHomeAnalytics) {
+  const source = value || emptyHomeAnalytics;
+  const resourceGrowth = normalizeTimeline(source.resources?.growth);
+  const userGrowth = normalizeTimeline(source.users?.growth);
+
+  return {
+    period: {
+      from: source.period?.from || resourceGrowth[0]?.date || userGrowth[0]?.date || "",
+      to: source.period?.to || resourceGrowth.at(-1)?.date || userGrowth.at(-1)?.date || "",
+    },
+    resources: {
+      total: sanitizeNumber(source.resources?.total, resourceGrowth.at(-1)?.total || 0),
+      semesterDistribution: normalizeSemesterDistribution(source.resources?.semesterDistribution),
+      growth: resourceGrowth,
+    },
+    users: {
+      total: sanitizeNumber(source.users?.total, userGrowth.at(-1)?.total || 0),
+      growth: userGrowth,
+    },
+  };
+}
+
+function normalizeSemesterDistribution(rows = []) {
+  const totals = new Map(SEMESTER_LABELS.map((semester) => [semester, 0]));
+
+  (Array.isArray(rows) ? rows : []).forEach((item) => {
+    const semester = Number(item.semester);
+    const total = sanitizeNumber(item.total);
+
+    if (totals.has(semester)) {
+      totals.set(semester, total);
+    }
+  });
+
+  return SEMESTER_LABELS.map((semester) => ({
+    semester,
+    total: totals.get(semester) || 0,
+  }));
+}
+
+function normalizeTimeline(rows = []) {
+  return (Array.isArray(rows) ? rows : [])
+    .map((item) => ({
+      date: String(item.date || "").slice(0, 10),
+      total: sanitizeNumber(item.total),
+    }))
+    .filter((item) => item.date)
+    .sort((first, second) => first.date.localeCompare(second.date));
+}
+
+function getLineChartPoints(rows, maxTotal) {
+  if (!rows.length) return [];
+
+  const xStart = 4;
+  const xEnd = 96;
+  const yTop = 4;
+  const yBottom = 36;
+  const xRange = xEnd - xStart;
+  const yRange = yBottom - yTop;
+
+  return rows.map((item, index) => {
+    const x = rows.length === 1 ? (xStart + xEnd) / 2 : xStart + (index / (rows.length - 1)) * xRange;
+    const y = yBottom - (sanitizeNumber(item.total) / maxTotal) * yRange;
+
+    return {
+      ...item,
+      x: Number(x.toFixed(2)),
+      y: Number(y.toFixed(2)),
+      left: Number(x.toFixed(2)),
+      top: Number(((y / 42) * 100).toFixed(2)),
+    };
+  });
+}
+
+function getTimelineCheckpoints(points, rows) {
+  if (!points.length) return [];
+
+  const indexes = [0, 0.25, 0.5, 0.75, 1]
+    .map((ratio) => Math.round((points.length - 1) * ratio));
+
+  return [...new Set(indexes)].map((index) => ({
+    ...points[index],
+    date: rows[index]?.date || points[index].date,
+    total: rows[index]?.total || points[index].total,
+  }));
+}
+
+function formatDateRange(period) {
+  if (!period?.from || !period?.to) return "Resource timeline";
+
+  return `${formatDisplayDate(period.from)} - ${formatDisplayDate(period.to)}`;
+}
+
+function formatDisplayDate(value) {
+  if (!value) return "-";
+
+  const date = new Date(`${String(value).slice(0, 10)}T00:00:00`);
+
+  if (Number.isNaN(date.getTime())) return "-";
+
+  return date.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "2-digit",
+  });
+}
+
+function formatNumber(value) {
+  return sanitizeNumber(value).toLocaleString();
+}
+
+function formatCompactNumber(value) {
+  return sanitizeNumber(value).toLocaleString(undefined, {
+    maximumFractionDigits: 1,
+    notation: sanitizeNumber(value) >= 10000 ? "compact" : "standard",
+  });
+}
+
+function sanitizeNumber(value, fallback = 0) {
+  const numberValue = Number(value);
+  const fallbackValue = Number(fallback);
+
+  if (Number.isFinite(numberValue)) return numberValue;
+  if (Number.isFinite(fallbackValue)) return fallbackValue;
+  return 0;
 }
 
 /**
