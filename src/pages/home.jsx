@@ -38,6 +38,7 @@ import routineImage from "../assets/iiuc.webp";
 import api from "../api";
 import { useActiveSession, useAuth } from "../App";
 import { cachedRequest, clearCacheByPrefix } from "../services/cacheService";
+import { fetchFeaturedAnnouncement } from "../services/announcementService";
 import { getRoutineTimeSlots, usePeriods } from "../services/periodService";
 import {
   getRoutineClassDetails,
@@ -91,6 +92,7 @@ const Home = () => {
   const [homeAnalytics, setHomeAnalytics] = useState(emptyHomeAnalytics);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [analyticsError, setAnalyticsError] = useState("");
+  const [announcement, setAnnouncement] = useState(null);
   const { periods } = usePeriods();
 
   const userType = String(user?.type || "").toLowerCase();
@@ -109,6 +111,30 @@ const Home = () => {
       setSession((current) => current || activeSessionName);
     }
   }, [activeSessionName]);
+
+  useEffect(() => {
+    let ignoreResult = false;
+
+    async function loadAnnouncement() {
+      try {
+        const featuredAnnouncement = await fetchFeaturedAnnouncement();
+
+        if (!ignoreResult) {
+          setAnnouncement(featuredAnnouncement);
+        }
+      } catch {
+        if (!ignoreResult) {
+          setAnnouncement(null);
+        }
+      }
+    }
+
+    loadAnnouncement();
+
+    return () => {
+      ignoreResult = true;
+    };
+  }, []);
 
   useEffect(() => {
     let ignoreResult = false;
@@ -648,6 +674,10 @@ const Home = () => {
           </Notice>
         )}
 
+        {announcement && (
+          <FeaturedAnnouncementCard announcement={announcement} />
+        )}
+
         {hasSearched && (
           <RoutineTable
             title={`${normalizedSection || "Section"} Schedule`}
@@ -851,6 +881,73 @@ function FeatureGroupLink({ item }) {
       <FiArrowRight className="h-4 w-4 shrink-0 text-slate-400 transition group-hover:translate-x-0.5 group-hover:text-blue-600 dark:group-hover:text-blue-200" aria-hidden="true" />
     </Link>
   );
+}
+
+function FeaturedAnnouncementCard({ announcement }) {
+  const title = announcement.title || "Featured update";
+  const link = announcement.link || "/";
+  const isExternal = isExternalAnnouncementLink(link);
+  const actionClassName = "btn-primary w-full sm:w-fit";
+  const actionContent = (
+    <>
+      Learn More
+      <FiArrowRight aria-hidden="true" />
+    </>
+  );
+
+  return (
+    <section
+      id="featured-announcement"
+      className="surface-card overflow-hidden shadow-2xl shadow-slate-950/20 ring-1 ring-white/60 dark:shadow-black/45 dark:ring-white/10"
+    >
+      <div className="relative overflow-hidden bg-slate-950">
+        <img
+          src={announcement.image}
+          alt={`${title} cover`}
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/88 via-slate-950/35 to-slate-950/10" />
+        <div className="relative flex min-h-[420px] items-end p-4 sm:min-h-[500px] sm:p-8">
+          <div className="w-full max-w-5xl rounded-lg border border-white/20 bg-slate-950/35 p-5 text-white shadow-2xl backdrop-blur-xl sm:p-7">
+            <p className="text-sm font-bold text-teal-200">Featured update</p>
+            <h2 className="safe-text mt-2 text-3xl font-black leading-tight sm:text-4xl">
+              {title}
+            </h2>
+            <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_auto] lg:items-end">
+              <p className="max-w-3xl whitespace-pre-line text-sm leading-6 text-slate-100 sm:text-base">
+                {announcement.description}
+              </p>
+              {isExternal ? (
+                <a
+                  href={link}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={actionClassName}
+                >
+                  {actionContent}
+                </a>
+              ) : (
+                <Link to={link} className={actionClassName}>
+                  {actionContent}
+                </Link>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function isExternalAnnouncementLink(link) {
+  if (!link || link.startsWith("/")) return false;
+
+  try {
+    const parsed = new URL(link);
+    return parsed.origin !== window.location.origin;
+  } catch {
+    return false;
+  }
 }
 
 function HomeAnalyticsSection({ analytics, loading, error }) {

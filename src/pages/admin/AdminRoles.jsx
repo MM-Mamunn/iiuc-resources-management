@@ -9,6 +9,9 @@ import {
   FiClock,
   FiEdit3,
   FiEye,
+  FiEyeOff,
+  FiImage,
+  FiLink,
   FiMessageSquare,
   FiPlus,
   FiRefreshCw,
@@ -22,6 +25,11 @@ import {
 import api from "../../api";
 import campusImage from "../../assets/iiuc.webp";
 import { useActiveSession, useAuth } from "../../App";
+import {
+  fetchAdminAnnouncement,
+  saveAdminAnnouncement,
+  updateAdminAnnouncementVisibility,
+} from "../../services/announcementService";
 import {
   createSession,
   listSessions,
@@ -67,6 +75,11 @@ const emptySessionForm = {
   stop: "",
   isActive: true,
 };
+const emptyAnnouncementForm = {
+  title: "",
+  description: "",
+  link: "",
+};
 
 /**
  * Admin-only role and session management workspace.
@@ -107,6 +120,13 @@ const AdminRoles = () => {
   const [periods, setPeriods] = useState([]);
   const [periodsLoading, setPeriodsLoading] = useState(false);
   const [periodSavingKey, setPeriodSavingKey] = useState("");
+  const [announcement, setAnnouncement] = useState(null);
+  const [announcementForm, setAnnouncementForm] = useState(emptyAnnouncementForm);
+  const [announcementImageFile, setAnnouncementImageFile] = useState(null);
+  const [announcementPreview, setAnnouncementPreview] = useState("");
+  const [announcementLoading, setAnnouncementLoading] = useState(false);
+  const [announcementSaving, setAnnouncementSaving] = useState(false);
+  const [announcementVisibilitySaving, setAnnouncementVisibilitySaving] = useState(false);
 
   const fetchCrUsers = useCallback(async (page = 1) => {
     setLoading(true);
@@ -188,6 +208,35 @@ const AdminRoles = () => {
     }
   }, []);
 
+  const fetchAnnouncement = useCallback(async () => {
+    setAnnouncementLoading(true);
+    try {
+      const row = await fetchAdminAnnouncement();
+      setAnnouncement(row);
+      setAnnouncementForm({
+        title: row?.title || "",
+        description: row?.description || "",
+        link: row?.link || "",
+      });
+      setAnnouncementImageFile(null);
+      setAnnouncementPreview(row?.image || "");
+    } catch (announcementError) {
+      setAnnouncement(null);
+      setAnnouncementForm(emptyAnnouncementForm);
+      setAnnouncementImageFile(null);
+      setAnnouncementPreview("");
+      setMessage({
+        type: "error",
+        text:
+          announcementError.response?.data?.message ||
+          announcementError.response?.data?.msg ||
+          "Failed to load announcement.",
+      });
+    } finally {
+      setAnnouncementLoading(false);
+    }
+  }, []);
+
   const fetchSubmissionNotifications = useCallback(async () => {
     try {
       const response = await api.get("/api/admin/submissions/unviewed-count");
@@ -243,9 +292,10 @@ const AdminRoles = () => {
       fetchSessions(),
       fetchLoginLogs(),
       fetchPeriods(),
+      fetchAnnouncement(),
       fetchSubmissionNotifications(),
     ]);
-  }, [fetchCrUsers, fetchLoginLogs, fetchPeriods, fetchSessions, fetchSubmissionNotifications]);
+  }, [fetchAnnouncement, fetchCrUsers, fetchLoginLogs, fetchPeriods, fetchSessions, fetchSubmissionNotifications]);
 
   useEffect(() => {
     if (!isLoggedIn) {
@@ -271,6 +321,12 @@ const AdminRoles = () => {
       fetchAdminSubmissions(1);
     }
   }, [activeFeature, fetchAdminSubmissions]);
+
+  useEffect(() => () => {
+    if (announcementPreview.startsWith("blob:")) {
+      URL.revokeObjectURL(announcementPreview);
+    }
+  }, [announcementPreview]);
 
   useEffect(() => {
     const query = customId.trim();
@@ -584,6 +640,115 @@ const AdminRoles = () => {
     }
   };
 
+  const updateAnnouncementForm = (field, value) => {
+    setAnnouncementForm((current) => ({
+      ...current,
+      [field]: value,
+    }));
+  };
+
+  const handleAnnouncementImageChange = (event) => {
+    const file = event.target.files?.[0] || null;
+
+    setAnnouncementImageFile(file);
+    setAnnouncementPreview(file ? URL.createObjectURL(file) : announcement?.image || "");
+  };
+
+  const handleAnnouncementSubmit = async (event) => {
+    event.preventDefault();
+
+    const payload = {
+      title: announcementForm.title.trim(),
+      description: announcementForm.description.trim(),
+      link: announcementForm.link.trim(),
+      imageFile: announcementImageFile,
+    };
+
+    if (!payload.title || !payload.description || !payload.link) {
+      setMessage({
+        type: "error",
+        text: "Title, description, and action link are required.",
+      });
+      return;
+    }
+
+    if (!announcementPreview && !payload.imageFile) {
+      setMessage({ type: "error", text: "Cover image is required." });
+      return;
+    }
+
+    setAnnouncementSaving(true);
+    setMessage(null);
+
+    try {
+      const row = await saveAdminAnnouncement(payload);
+      setAnnouncement(row);
+      setAnnouncementForm({
+        title: row?.title || "",
+        description: row?.description || "",
+        link: row?.link || "",
+      });
+      setAnnouncementImageFile(null);
+      setAnnouncementPreview(row?.image || "");
+      setMessage({
+        type: "success",
+        text: "Announcement updated successfully.",
+      });
+    } catch (announcementError) {
+      setMessage({
+        type: "error",
+        text:
+          announcementError.response?.data?.message ||
+          announcementError.response?.data?.msg ||
+          "Failed to update announcement.",
+      });
+    } finally {
+      setAnnouncementSaving(false);
+    }
+  };
+
+  const handleAnnouncementVisibilityToggle = async () => {
+    if (!announcement) {
+      setMessage({
+        type: "error",
+        text: "Save announcement content before changing visibility.",
+      });
+      return;
+    }
+
+    const nextVisibility = !announcement.isActive;
+    setAnnouncementVisibilitySaving(true);
+    setMessage(null);
+
+    try {
+      const row = await updateAdminAnnouncementVisibility(nextVisibility);
+      setAnnouncement(row);
+      setAnnouncementForm({
+        title: row?.title || "",
+        description: row?.description || "",
+        link: row?.link || "",
+      });
+      setAnnouncementPreview(row?.image || "");
+      setAnnouncementImageFile(null);
+      setMessage({
+        type: "success",
+        text: row?.isActive
+          ? "Announcement is visible on the dashboard."
+          : "Announcement is hidden from the dashboard.",
+      });
+    } catch (announcementError) {
+      setMessage({
+        type: "error",
+        text:
+          announcementError.response?.data?.message ||
+          announcementError.response?.data?.msg ||
+          "Failed to update announcement visibility.",
+      });
+    } finally {
+      setAnnouncementVisibilitySaving(false);
+    }
+  };
+
   const features = [
     {
       id: "sessions",
@@ -612,6 +777,13 @@ const AdminRoles = () => {
       title: "Periods",
       value: periodsLoading ? "..." : periods.length || 12,
       description: "Edit male and female routine period times.",
+    },
+    {
+      id: "announcement",
+      icon: FiImage,
+      title: "Announcement",
+      value: announcementLoading ? "..." : announcement?.isActive ? "Live" : announcement ? "Hidden" : "Empty",
+      description: "Manage the dashboard featured update card.",
     },
     {
       id: "submissions",
@@ -654,10 +826,10 @@ const AdminRoles = () => {
               type="button"
               onClick={refreshAdminData}
               className="btn-secondary border-white/20 bg-white/10 text-white hover:bg-white/20 dark:border-white/20 dark:bg-white/10 dark:text-white"
-              disabled={loading || sessionsLoading || loginLogsLoading || periodsLoading || submissionsLoading}
+              disabled={loading || sessionsLoading || loginLogsLoading || periodsLoading || announcementLoading || submissionsLoading}
             >
               <FiRefreshCw
-                className={loading || sessionsLoading || loginLogsLoading || periodsLoading || submissionsLoading ? "animate-spin" : ""}
+                className={loading || sessionsLoading || loginLogsLoading || periodsLoading || announcementLoading || submissionsLoading ? "animate-spin" : ""}
                 aria-hidden="true"
               />
               Refresh
@@ -748,6 +920,23 @@ const AdminRoles = () => {
             />
           )}
 
+          {activeFeature === "announcement" && (
+            <AnnouncementManagementFeature
+              announcement={announcement}
+              form={announcementForm}
+              imageFile={announcementImageFile}
+              imagePreview={announcementPreview}
+              loading={announcementLoading}
+              saving={announcementSaving}
+              visibilitySaving={announcementVisibilitySaving}
+              onRefresh={fetchAnnouncement}
+              onFormChange={updateAnnouncementForm}
+              onImageChange={handleAnnouncementImageChange}
+              onVisibilityToggle={handleAnnouncementVisibilityToggle}
+              onSubmit={handleAnnouncementSubmit}
+            />
+          )}
+
           {activeFeature === "submissions" && (
             <SubmissionManagementFeature
               submissions={submissions}
@@ -794,7 +983,10 @@ const AdminRoles = () => {
  */
 function FeatureNavigation({ features, activeFeature, onSelect }) {
   return (
-    <section className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-6" aria-label="Admin features">
+    <section
+      className="mt-8 grid auto-cols-[minmax(150px,1fr)] grid-flow-col gap-3 overflow-x-auto pb-2 xl:grid-cols-7 xl:auto-cols-auto xl:overflow-visible"
+      aria-label="Admin features"
+    >
       {features.map((feature) => {
         const Icon = feature.icon;
         const isActive = activeFeature === feature.id;
@@ -805,28 +997,201 @@ function FeatureNavigation({ features, activeFeature, onSelect }) {
             type="button"
             onClick={() => onSelect(feature.id)}
             className={cx(
-              "interactive-card min-h-36 p-5 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
+              "interactive-card min-h-32 p-4 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
               isActive && "border-blue-400 bg-blue-50/80 dark:border-blue-500 dark:bg-blue-500/10",
             )}
           >
             <span className="flex items-start justify-between gap-4">
-              <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-slate-950 text-white dark:bg-white dark:text-slate-950">
+              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-950 text-white dark:bg-white dark:text-slate-950">
                 <Icon className="h-5 w-5" aria-hidden="true" />
               </span>
-              <span className="text-2xl font-black text-slate-950 dark:text-white">
+              <span className="text-xl font-black text-slate-950 dark:text-white">
                 {feature.value}
               </span>
             </span>
-            <span className="mt-4 block text-lg font-bold text-slate-950 dark:text-white">
+            <span className="safe-text mt-4 block text-base font-bold text-slate-950 dark:text-white">
               {feature.title}
             </span>
-            <span className="mt-2 block text-sm leading-6 text-slate-600 dark:text-slate-400">
+            <span className="mt-2 block text-xs leading-5 text-slate-600 dark:text-slate-400">
               {feature.description}
             </span>
           </button>
         );
       })}
     </section>
+  );
+}
+
+/**
+ * Admin editor for the dashboard announcement card.
+ */
+function AnnouncementManagementFeature({
+  announcement,
+  form,
+  imageFile,
+  imagePreview,
+  loading,
+  saving,
+  visibilitySaving,
+  onRefresh,
+  onFormChange,
+  onImageChange,
+  onVisibilityToggle,
+  onSubmit,
+}) {
+  const isVisible = Boolean(announcement?.isActive);
+  const visibilityButtonLabel = isVisible ? "Hide card" : "Show card";
+  const VisibilityIcon = isVisible ? FiEyeOff : FiEye;
+
+  return (
+    <div className="grid gap-8 lg:grid-cols-[1fr_420px]">
+      <form onSubmit={onSubmit} className="surface-card p-5">
+        <SectionHeading
+          kicker="Dashboard card"
+          title="Announcement / Featured Update"
+          description="Update the image, title, description, and action link shown on the dashboard."
+          actions={
+            <>
+              <button
+                type="button"
+                onClick={onVisibilityToggle}
+                className={isVisible ? "btn-secondary" : "btn-primary"}
+                disabled={!announcement || loading || saving || visibilitySaving}
+              >
+                <VisibilityIcon className={visibilitySaving ? "animate-pulse" : ""} aria-hidden="true" />
+                {visibilitySaving ? "Updating..." : visibilityButtonLabel}
+              </button>
+              <button type="button" onClick={onRefresh} className="btn-secondary" disabled={loading || saving}>
+                <FiRefreshCw className={loading ? "animate-spin" : ""} aria-hidden="true" />
+                Refresh
+              </button>
+            </>
+          }
+        />
+
+        <div className="mt-6 grid gap-5">
+          <FormField
+            id="announcement-image"
+            label="Cover Image"
+            helper={imageFile ? imageFile.name : imagePreview ? "Current image selected." : "Upload one image."}
+          >
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <label htmlFor="announcement-image" className="btn-secondary cursor-pointer">
+                <FiImage aria-hidden="true" />
+                Choose image
+              </label>
+              <input
+                id="announcement-image"
+                type="file"
+                accept="image/*"
+                onChange={onImageChange}
+                className="sr-only"
+              />
+              <span className="text-sm font-medium text-slate-600 dark:text-slate-300">
+                {imageFile ? "New cover ready" : imagePreview ? "Cover available" : "No cover selected"}
+              </span>
+            </div>
+          </FormField>
+
+          <FormField id="announcement-title" label="Title">
+            <input
+              id="announcement-title"
+              type="text"
+              value={form.title}
+              onChange={(event) => onFormChange("title", event.target.value)}
+              className="form-field"
+              maxLength={120}
+              placeholder="Short announcement title"
+            />
+          </FormField>
+
+          <FormField id="announcement-description" label="Description">
+            <textarea
+              id="announcement-description"
+              value={form.description}
+              onChange={(event) => onFormChange("description", event.target.value)}
+              className="form-field min-h-40 resize-y"
+              maxLength={1200}
+              placeholder="Announcement details"
+            />
+          </FormField>
+
+          <FormField id="announcement-link" label="Action Link">
+            <div className="relative">
+              <FiLink
+                className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"
+                aria-hidden="true"
+              />
+              <input
+                id="announcement-link"
+                type="text"
+                value={form.link}
+                onChange={(event) => onFormChange("link", event.target.value)}
+                className="form-field pl-12"
+                maxLength={2048}
+                placeholder="https://example.com/details"
+              />
+            </div>
+          </FormField>
+
+          <button type="submit" className="btn-primary w-full sm:w-fit" disabled={saving || loading}>
+            <FiSave className={saving ? "animate-pulse" : ""} aria-hidden="true" />
+            {saving ? "Saving..." : "Save announcement"}
+          </button>
+        </div>
+      </form>
+
+      <aside className="surface-card overflow-hidden shadow-2xl shadow-slate-950/15 ring-1 ring-white/60 dark:shadow-black/40 dark:ring-white/10">
+        <div className="border-b border-slate-200 p-5 dark:border-slate-800">
+          <SectionHeading
+            kicker={announcement ? (announcement.isActive ? "Live preview" : "Hidden preview") : "Preview"}
+            title={announcement ? "Saved card" : "Draft card"}
+            description={
+              announcement
+                ? announcement.isActive
+                  ? "Visible on the dashboard."
+                  : "Saved content is hidden from the dashboard."
+                : "Complete the form to publish the card."
+            }
+          />
+        </div>
+
+        {loading ? (
+          <LoadingState label="Loading announcement..." />
+        ) : imagePreview ? (
+          <div>
+            <div className="relative overflow-hidden bg-slate-950">
+              <img
+                src={imagePreview}
+                alt=""
+                className="absolute inset-0 h-full w-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/30 to-transparent" />
+              <div className="relative flex min-h-72 items-end p-4">
+                <div className="w-full rounded-lg border border-white/20 bg-slate-950/35 p-4 text-white shadow-2xl backdrop-blur-xl">
+                  <p className="text-xs font-bold uppercase text-teal-200">Featured update</p>
+                  <h3 className="safe-text mt-2 text-2xl font-black leading-tight">
+                    {form.title || "Announcement title"}
+                  </h3>
+                  <p className="mt-3 line-clamp-4 whitespace-pre-line text-sm leading-6 text-slate-100">
+                    {form.description || "Announcement description"}
+                  </p>
+                  <span className="mt-4 inline-flex min-h-10 items-center justify-center rounded-lg bg-white px-4 py-2 text-sm font-bold text-slate-950">
+                    Learn More
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <EmptyState
+            icon={<FiImage className="h-7 w-7" aria-hidden="true" />}
+            title="No announcement yet"
+            description="Add a cover image and content to publish the dashboard card."
+          />
+        )}
+      </aside>
+    </div>
   );
 }
 
