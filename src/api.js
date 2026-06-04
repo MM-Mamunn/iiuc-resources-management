@@ -1,9 +1,10 @@
 import axios from "axios";
 import Cookies from "js-cookie";
 
-const apiBaseURL = import.meta.env.DEV
-  ? import.meta.env.VITE_URL || "http://localhost:3000"
-  : "";
+// const apiBaseURL = import.meta.env.DEV
+//   ? import.meta.env.VITE_URL || "http://localhost:3000"
+//   : "";
+const apiBaseURL = import.meta.env.VITE_URL || "";
 
 const api = axios.create({
   baseURL: apiBaseURL,
