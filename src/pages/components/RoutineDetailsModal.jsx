@@ -79,8 +79,8 @@ function RoutineDetailsModal({ item, title = "Class Details", onClose }) {
   if (!item) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm">
-      <section className="surface-card max-h-[92vh] w-full max-w-5xl overflow-y-auto p-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-md">
+      <section className="surface-card max-h-[92vh] w-full max-w-5xl animate-enter overflow-y-auto rounded-2xl p-6">
         <div className="flex items-start justify-between gap-4">
           <SectionHeading
             kicker={item.dayLabel || "Routine period"}
@@ -133,7 +133,7 @@ function RoutineDetailsModal({ item, title = "Class Details", onClose }) {
             <div className="mt-5">
               {lookupLoading ? (
                 <div className="flex items-center gap-3 rounded-lg bg-white px-4 py-4 text-sm font-semibold text-slate-600 dark:bg-slate-950 dark:text-slate-300">
-                  <FiLoader className="h-5 w-5 animate-spin text-blue-600 dark:text-blue-300" aria-hidden="true" />
+                  <FiLoader className="h-5 w-5 animate-spin text-violet-600 dark:text-violet-300" aria-hidden="true" />
                   Loading details...
                 </div>
               ) : lookupError ? (
@@ -153,9 +153,9 @@ function RoutineDetailsModal({ item, title = "Class Details", onClose }) {
 
 function SummaryTile({ icon, label, value }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950">
+    <div className="rounded-xl border border-slate-200/80 bg-white p-4 transition-all duration-200 hover:shadow-md dark:border-slate-800 dark:bg-slate-950">
       <div className="flex items-center gap-3">
-        <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-200">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-200">
           {icon}
         </span>
         <div className="min-w-0">
@@ -173,7 +173,7 @@ function SummaryTile({ icon, label, value }) {
 
 function ClassDetailCard({ detail, onLookup }) {
   return (
-    <article className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950">
+    <article className="rounded-xl border border-slate-200/80 bg-white p-5 transition-all duration-200 hover:shadow-md dark:border-slate-800 dark:bg-slate-950">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <button
@@ -185,7 +185,7 @@ function ClassDetailCard({ detail, onLookup }) {
                 label: detail.courseCode,
               })
             }
-            className="safe-text text-left text-xl font-black text-blue-700 transition hover:text-blue-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-blue-300 dark:hover:text-blue-100"
+            className="safe-text text-left text-xl font-black text-violet-700 transition hover:text-violet-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 dark:text-violet-300 dark:hover:text-violet-100"
             disabled={!detail.courseCode}
           >
             {detail.courseCode || "Course"}
@@ -197,7 +197,7 @@ function ClassDetailCard({ detail, onLookup }) {
           )}
         </div>
         {detail.section && (
-          <span className="status-pill border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200">
+          <span className="status-pill border-violet-200 bg-violet-50 text-violet-800 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-200">
             {detail.section}
           </span>
         )}
@@ -219,7 +219,7 @@ function ClassDetailCard({ detail, onLookup }) {
                   label: detail.facultyLabel || detail.facultyCode,
                 })
               }
-              className="safe-text text-left font-bold text-blue-700 transition hover:text-blue-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-blue-300 dark:hover:text-blue-100"
+              className="safe-text text-left font-bold text-violet-700 transition hover:text-violet-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 dark:text-violet-300 dark:hover:text-violet-100"
               disabled={!detail.facultyCode}
             >
               {detail.facultyLabel || "N/A"}
@@ -233,7 +233,7 @@ function ClassDetailCard({ detail, onLookup }) {
 
 function DetailField({ label, value }) {
   return (
-    <div className="rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-900">
+    <div className="rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-900">
       <dt className="text-slate-500 dark:text-slate-400">{label}</dt>
       <dd className="safe-text mt-1 font-semibold text-slate-950 dark:text-white">
         {value || "N/A"}

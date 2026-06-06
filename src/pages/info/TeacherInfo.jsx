@@ -273,19 +273,19 @@ function TeacherInfo() {
             icon={<FiUsers className="h-5 w-5" aria-hidden="true" />}
             label="Teachers"
             value={directoryPagination.total}
-            tone="blue"
+            tone="violet"
           />
           <MetricCard
             icon={<FiUser className="h-5 w-5" aria-hidden="true" />}
             label="Search result"
             value={hasSearched ? `${searchPagination.total} found` : "None"}
-            tone={hasSearched && searchPagination.total > 0 ? "teal" : "amber"}
+            tone={hasSearched && searchPagination.total > 0 ? "green" : "amber"}
           />
           <MetricCard
             icon={<FiSearch className="h-5 w-5" aria-hidden="true" />}
             label="Lookup"
             value="Name or code"
-            tone="teal"
+            tone="green"
           />
         </section>
 
@@ -357,9 +357,9 @@ function TeacherInfo() {
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                   {tableRows.map((teacher, index) => (
-                    <tr key={`${teacher.code}-${index}`} className="transition hover:bg-blue-50/60 dark:hover:bg-slate-900">
+                    <tr key={`${teacher.code}-${index}`} className="transition hover:bg-violet-50/60 dark:hover:bg-slate-900">
                       <td className="px-5 py-4">
-                        <span className="status-pill border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200">
+                        <span className="status-pill border-violet-200 bg-violet-50 text-violet-800 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-200">
                           {teacher.code || "N/A"}
                         </span>
                       </td>

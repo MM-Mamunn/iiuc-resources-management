@@ -410,7 +410,7 @@ function Community() {
                 type="checkbox"
                 checked={sectionEnabled}
                 onChange={(event) => setSectionEnabled(event.target.checked)}
-                className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-950"
+                className="h-4 w-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500 dark:border-slate-700 dark:bg-slate-950"
               />
               Section
             </label>
@@ -444,7 +444,7 @@ function Community() {
                 type="checkbox"
                 checked={typeEnabled}
                 onChange={(event) => setTypeEnabled(event.target.checked)}
-                className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-950"
+                className="h-4 w-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500 dark:border-slate-700 dark:bg-slate-950"
               />
               Type
             </label>
@@ -476,7 +476,7 @@ function Community() {
                 type="checkbox"
                 checked={genderEnabled}
                 onChange={(event) => setGenderEnabled(event.target.checked)}
-                className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-950"
+                className="h-4 w-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500 dark:border-slate-700 dark:bg-slate-950"
               />
               Gender
             </label>
@@ -517,12 +517,12 @@ function Community() {
           {(search || activeSection || activeType || activeGender) && (
             <div className="mt-5 flex flex-wrap gap-2">
               {search && (
-                <span className="status-pill border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200">
+                <span className="status-pill border-violet-200 bg-violet-50 text-violet-800 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-200">
                   Search: {search}
                 </span>
               )}
               {activeSection && (
-                <span className="status-pill border-teal-200 bg-teal-50 text-teal-800 dark:border-teal-500/30 dark:bg-teal-500/10 dark:text-teal-200">
+                <span className="status-pill border-green-200 bg-green-50 text-green-800 dark:border-green-500/30 dark:bg-green-500/10 dark:text-green-200">
                   Section {activeSection}
                 </span>
               )}
@@ -663,7 +663,7 @@ function StudentSuggestionList({ suggestions, onSelect }) {
           <button
             type="button"
             onClick={() => onSelect(student)}
-            className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-blue-50 focus:bg-blue-50 focus:outline-none dark:hover:bg-slate-800 dark:focus:bg-slate-800"
+            className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-violet-50 focus:bg-violet-50 focus:outline-none dark:hover:bg-slate-800 dark:focus:bg-slate-800"
           >
             <StudentAvatar student={student} />
             <span className="min-w-0">
@@ -686,7 +686,7 @@ function StudentResultCard({ student, onOpen }) {
     <button
       type="button"
       onClick={onOpen}
-      className="interactive-card p-5 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+      className="interactive-card p-5 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
     >
       <div className="flex items-start gap-4">
         <StudentAvatar student={student} />
@@ -700,10 +700,10 @@ function StudentResultCard({ student, onOpen }) {
         </div>
       </div>
       <div className="mt-5 flex flex-wrap gap-2">
-        <span className="status-pill border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200">
+        <span className="status-pill border-violet-200 bg-violet-50 text-violet-800 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-200">
           Section {student.sec || "N/A"}
         </span>
-        <span className="status-pill border-teal-200 bg-teal-50 text-teal-800 dark:border-teal-500/30 dark:bg-teal-500/10 dark:text-teal-200">
+        <span className="status-pill border-green-200 bg-green-50 text-green-800 dark:border-green-500/30 dark:bg-green-500/10 dark:text-green-200">
           {formatType(student.type)}
         </span>
         <span className="status-pill border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">

@@ -178,7 +178,7 @@ function ResourceHighlights({
                     <button
                       type="button"
                       onClick={() => openContributorProfile(resource.by)}
-                      className="mt-2 block max-w-full text-left text-sm font-semibold text-slate-600 transition hover:text-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-slate-400 dark:hover:text-blue-300"
+                      className="mt-2 block max-w-full text-left text-sm font-semibold text-slate-600 transition hover:text-violet-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 dark:text-slate-400 dark:hover:text-violet-300"
                     >
                       <span className="safe-text block">
                         {resource.studentName || resource.by || "Student"}
@@ -210,7 +210,7 @@ function ResourceHighlights({
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={handleResourceOpen}
-                  className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-blue-700 hover:underline dark:text-blue-300"
+                  className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-violet-700 hover:underline dark:text-violet-300"
                 >
                   Open resource
                   <FiExternalLink aria-hidden="true" />

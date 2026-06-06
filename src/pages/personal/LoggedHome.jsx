@@ -168,13 +168,13 @@ function LoggedHome() {
             icon={<FiUser className="h-5 w-5" aria-hidden="true" />}
             label="Contributor"
             value={profile?.name || profile?.id || "Loading"}
-            tone="blue"
+            tone="violet"
           />
           <MetricCard
             icon={<FiCalendar className="h-5 w-5" aria-hidden="true" />}
             label="Session"
             value={formData.session || "Not set"}
-            tone="teal"
+            tone="green"
           />
           <MetricCard
             icon={<FiGrid className="h-5 w-5" aria-hidden="true" />}

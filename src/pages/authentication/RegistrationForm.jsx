@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Cookies from "js-cookie";
-import { FiEye, FiEyeOff, FiLock, FiUser, FiUsers } from "react-icons/fi";
+import { FiEye, FiEyeOff, FiLock, FiUser, FiUserPlus, FiUsers } from "react-icons/fi";
 import api from "../../api";
 import { useAuth } from "../../App";
 import Header from "../components/Header";
@@ -107,14 +107,19 @@ const RegisterPage = () => {
           </div>
 
           <div className="p-6 sm:p-8">
-            <div className="mb-8">
-              <p className="section-kicker">Create account</p>
-              <h2 className="mt-2 text-3xl font-bold text-slate-950 dark:text-white">
-                Join RMS
-              </h2>
-              <p className="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-400">
-                Use your university details to activate your personal dashboard.
-              </p>
+            <div className="mb-8 flex items-start gap-4">
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-sky-700 ring-1 ring-sky-100 transition-colors dark:bg-sky-500/10 dark:text-sky-200 dark:ring-sky-500/20">
+                <FiUserPlus className="h-5 w-5" aria-hidden="true" />
+              </span>
+              <div className="min-w-0">
+                <p className="section-kicker">Create account</p>
+                <h2 className="mt-2 text-3xl font-bold text-slate-950 dark:text-white">
+                  Join RMS
+                </h2>
+                <p className="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-400">
+                  Use your university details to activate your personal dashboard.
+                </p>
+              </div>
             </div>
 
             {error && (
@@ -213,7 +218,7 @@ const RegisterPage = () => {
                   <button
                     type="button"
                     onClick={() => setShowPassword((current) => !current)}
-                    className="absolute right-3 top-1/2 rounded-md p-2 -translate-y-1/2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:hover:bg-slate-800 dark:hover:text-white"
+                    className="absolute right-3 top-1/2 rounded-md p-2 -translate-y-1/2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 dark:hover:bg-slate-800 dark:hover:text-white"
                     aria-label={showPassword ? "Hide password" : "Show password"}
                     disabled={isLoading}
                   >
@@ -229,7 +234,10 @@ const RegisterPage = () => {
                     Creating account...
                   </>
                 ) : (
-                  "Create account"
+                  <>
+                    <FiUserPlus aria-hidden="true" />
+                    Create account
+                  </>
                 )}
               </button>
             </form>
@@ -238,7 +246,7 @@ const RegisterPage = () => {
               Already registered?{" "}
               <Link
                 to="/auth/login"
-                className="font-semibold text-blue-700 hover:text-blue-800 dark:text-blue-300 dark:hover:text-blue-200"
+                className="font-semibold text-violet-700 hover:text-violet-800 dark:text-violet-300 dark:hover:text-violet-200"
               >
                 Sign in
               </Link>

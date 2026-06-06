@@ -297,19 +297,19 @@ const ClassroomRoutine = () => {
             icon={<FiMapPin className="h-5 w-5" aria-hidden="true" />}
             label="Room"
             value={formData.room || "Not selected"}
-            tone="blue"
+            tone="violet"
           />
           <MetricCard
             icon={<FiCalendar className="h-5 w-5" aria-hidden="true" />}
             label="Day"
             value={displayDay}
-            tone="teal"
+            tone="green"
           />
           <MetricCard
             icon={<FiBookOpen className="h-5 w-5" aria-hidden="true" />}
             label="Classes"
             value={routineData.length}
-            tone={routineData.length ? "teal" : "amber"}
+            tone={routineData.length ? "green" : "amber"}
           />
         </section>
 
@@ -488,14 +488,14 @@ function ClassroomTable({
                             <button
                               type="button"
                               onClick={() => onCourseClick(classItem.subject)}
-                              className="safe-text text-sm font-bold text-blue-700 transition hover:text-blue-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-blue-300 dark:hover:text-blue-100"
+                              className="safe-text text-sm font-bold text-violet-700 transition hover:text-violet-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 dark:text-violet-300 dark:hover:text-violet-100"
                             >
                               {classItem.subject}
                             </button>
                             <button
                               type="button"
                               onClick={() => onFacultyClick(classItem.faculty)}
-                              className="safe-text mt-2 block text-xs font-semibold text-teal-700 transition hover:text-teal-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 dark:text-teal-300 dark:hover:text-teal-100"
+                              className="safe-text mt-2 block text-xs font-semibold text-green-700 transition hover:text-green-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500 dark:text-green-300 dark:hover:text-green-100"
                             >
                               {classItem.faculty}
                             </button>
@@ -528,7 +528,7 @@ function ClassroomTable({
 
 function DetailModal({ title, loading, children, onClose }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-md">
       <section
         role="dialog"
         aria-modal="true"

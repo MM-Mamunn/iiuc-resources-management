@@ -814,7 +814,7 @@ const AdminRoles = () => {
           <div className="absolute inset-0 -z-10 bg-slate-950/72" />
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-3xl">
-              <p className="text-sm font-bold text-teal-200">Admin dashboard</p>
+              <p className="text-sm font-bold text-green-200">Admin dashboard</p>
               <h1 className="mt-3 text-3xl font-black sm:text-5xl">
                 Manage sessions and roles from one focused workspace.
               </h1>
@@ -850,7 +850,7 @@ const AdminRoles = () => {
             icon={<FiUsers className="h-5 w-5" aria-hidden="true" />}
             label="CR users"
             value={crPagination.total}
-            tone="blue"
+            tone="violet"
           />
           <MetricCard
             icon={<FiShield className="h-5 w-5" aria-hidden="true" />}
@@ -862,7 +862,7 @@ const AdminRoles = () => {
             icon={<FiUserCheck className="h-5 w-5" aria-hidden="true" />}
             label="Signed in as"
             value={user?.id || "Admin"}
-            tone="teal"
+            tone="green"
           />
         </section>
 
@@ -997,8 +997,8 @@ function FeatureNavigation({ features, activeFeature, onSelect }) {
             type="button"
             onClick={() => onSelect(feature.id)}
             className={cx(
-              "interactive-card min-h-32 p-4 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
-              isActive && "border-blue-400 bg-blue-50/80 dark:border-blue-500 dark:bg-blue-500/10",
+              "interactive-card min-h-32 p-4 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500",
+              isActive && "border-violet-400 bg-violet-50/80 dark:border-violet-500 dark:bg-violet-500/10",
             )}
           >
             <span className="flex items-start justify-between gap-4">
@@ -1169,7 +1169,7 @@ function AnnouncementManagementFeature({
               <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/30 to-transparent" />
               <div className="relative flex min-h-72 items-end p-4">
                 <div className="w-full rounded-lg border border-white/20 bg-slate-950/35 p-4 text-white shadow-2xl backdrop-blur-xl">
-                  <p className="text-xs font-bold uppercase text-teal-200">Featured update</p>
+                  <p className="text-xs font-bold uppercase text-green-200">Featured update</p>
                   <h3 className="safe-text mt-2 text-2xl font-black leading-tight">
                     {form.title || "Announcement title"}
                   </h3>
@@ -1323,7 +1323,7 @@ function SessionFeature({
               type="checkbox"
               checked={sessionForm.isActive}
               onChange={(event) => onFormChange("isActive", event.target.checked)}
-              className="h-5 w-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-900"
+              className="h-5 w-5 rounded border-slate-300 text-violet-600 focus:ring-violet-500 dark:border-slate-700 dark:bg-slate-900"
             />
           </label>
 
@@ -1409,16 +1409,16 @@ function CrUsersFeature({
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {crUsers.map((student) => (
-                <tr key={student.id} className="transition hover:bg-blue-50/60 dark:hover:bg-slate-900">
+                <tr key={student.id} className="transition hover:bg-violet-50/60 dark:hover:bg-slate-900">
                   <td className="px-5 py-4">
                     <button
                       type="button"
                       onClick={() => onOpenProfile(student.id)}
-                      className="group flex min-w-0 items-center gap-3 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                      className="group flex min-w-0 items-center gap-3 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
                     >
                       <AdminAvatar image={student.profilePic} name={student.name || student.id} />
                       <span className="min-w-0">
-                        <span className="safe-text block font-bold text-slate-950 transition group-hover:text-blue-700 dark:text-white dark:group-hover:text-blue-200">
+                        <span className="safe-text block font-bold text-slate-950 transition group-hover:text-violet-700 dark:text-white dark:group-hover:text-violet-200">
                           {student.name || "Student"}
                         </span>
                         <span className="safe-text mt-1 block text-xs text-slate-500 dark:text-slate-400">
@@ -1512,17 +1512,17 @@ function LoginLogsFeature({ loginLogs, loading, onRefresh, onOpenProfile }) {
               {loginLogs.map((entry, index) => (
                 <tr
                   key={`${entry.id}-${entry.loginTime || index}`}
-                  className="transition hover:bg-blue-50/60 dark:hover:bg-slate-900"
+                  className="transition hover:bg-violet-50/60 dark:hover:bg-slate-900"
                 >
                   <td className="px-5 py-4">
                     <button
                       type="button"
                       onClick={() => onOpenProfile(entry.id)}
-                      className="group flex min-w-0 items-center gap-3 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                      className="group flex min-w-0 items-center gap-3 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
                     >
                       <AdminAvatar image={entry.profilePic} name={entry.studentName || entry.id} />
                       <div className="min-w-0">
-                        <p className="safe-text font-bold text-slate-950 transition group-hover:text-blue-700 dark:text-white dark:group-hover:text-blue-200">
+                        <p className="safe-text font-bold text-slate-950 transition group-hover:text-violet-700 dark:text-white dark:group-hover:text-violet-200">
                           {entry.studentName || "Unknown student"}
                         </p>
                         <p className="safe-text mt-1 text-xs text-slate-500 dark:text-slate-400">
@@ -1663,13 +1663,13 @@ function SubmissionManagementFeature({
                 className={`rounded-lg border p-4 transition ${
                   submission.view
                     ? "border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950"
-                    : "border-blue-300 bg-blue-50/70 dark:border-blue-500/40 dark:bg-blue-500/10"
+                    : "border-violet-300 bg-violet-50/70 dark:border-violet-500/40 dark:bg-violet-500/10"
                 }`}
               >
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="status-pill border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200">
+                      <span className="status-pill border-violet-200 bg-violet-50 text-violet-800 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-200">
                         {submission.type}
                       </span>
                       <ViewedStatus viewed={submission.view} />
@@ -1679,7 +1679,7 @@ function SubmissionManagementFeature({
                       <button
                         type="button"
                         onClick={() => onOpenProfile(submission.by)}
-                        className="safe-text text-left text-base font-bold text-slate-950 transition hover:text-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-white dark:hover:text-blue-200"
+                        className="safe-text text-left text-base font-bold text-slate-950 transition hover:text-violet-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 dark:text-white dark:hover:text-violet-200"
                       >
                         {submission.studentName || "Student"} ({submission.by})
                       </button>
@@ -1766,7 +1766,7 @@ function ViewedStatus({ viewed }) {
       className={
         viewed
           ? "status-pill border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
-          : "status-pill border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200"
+          : "status-pill border-violet-200 bg-violet-50 text-violet-800 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-200"
       }
     >
       {viewed ? "Viewed" : "Unviewed"}
@@ -2080,7 +2080,7 @@ function AdminStudentSuggestionList({ suggestions, onSelect }) {
           <button
             type="button"
             onClick={() => onSelect(studentRecord)}
-            className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-blue-50 focus:bg-blue-50 focus:outline-none dark:hover:bg-slate-800 dark:focus:bg-slate-800"
+            className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-violet-50 focus:bg-violet-50 focus:outline-none dark:hover:bg-slate-800 dark:focus:bg-slate-800"
           >
             <AdminAvatar image={studentRecord.profilePic} name={studentRecord.name || studentRecord.id} />
             <span className="min-w-0 flex-1">
@@ -2103,7 +2103,7 @@ function AdminStudentSuggestionList({ suggestions, onSelect }) {
 
 function SelectedAdminStudent({ student, onOpenProfile }) {
   return (
-    <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-500/30 dark:bg-blue-500/10">
+    <div className="rounded-lg border border-violet-200 bg-violet-50 p-3 dark:border-violet-500/30 dark:bg-violet-500/10">
       <div className="flex items-center gap-3">
         <AdminAvatar image={student.profilePic} name={student.name || student.id} />
         <div className="min-w-0 flex-1">

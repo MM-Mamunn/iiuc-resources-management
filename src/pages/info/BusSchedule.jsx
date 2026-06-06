@@ -320,9 +320,9 @@ const BusSchedule = () => {
                     type="button"
                     onClick={() => setScheduleType(key)}
                     className={cx(
-                      "rounded-md px-4 py-2 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
+                      "rounded-md px-4 py-2 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500",
                       scheduleType === key
-                        ? "bg-white text-blue-700 shadow-sm dark:bg-slate-800 dark:text-blue-200"
+                        ? "bg-white text-violet-700 shadow-sm dark:bg-slate-800 dark:text-violet-200"
                         : "text-slate-600 hover:text-slate-950 dark:text-slate-400 dark:hover:text-white",
                     )}
                   >
@@ -356,13 +356,13 @@ const BusSchedule = () => {
             icon={<FiTruck className="h-5 w-5" aria-hidden="true" />}
             label="Schedule"
             value={activeSchedule.label}
-            tone="blue"
+            tone="violet"
           />
           <MetricCard
             icon={<FiMap className="h-5 w-5" aria-hidden="true" />}
             label="Visible trips"
             value={`${visibleTrips}/${totalTrips}`}
-            tone="teal"
+            tone="green"
           />
           <MetricCard
             icon={<FiDownload className="h-5 w-5" aria-hidden="true" />}
@@ -372,7 +372,7 @@ const BusSchedule = () => {
           />
         </section>
 
-        <section className="mt-8 rounded-lg border border-blue-200 bg-blue-50 px-5 py-4 text-sm font-semibold text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-100">
+        <section className="mt-8 rounded-lg border border-violet-200 bg-violet-50 px-5 py-4 text-sm font-semibold text-violet-800 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-100">
           {activeSchedule.effective}
         </section>
 
@@ -450,7 +450,7 @@ function RouteTable({ title, rows, direction, emptyQuery }) {
               {rows.map((row) => (
                 <tr
                   key={`${direction}-${row.sl}-${row.time}`}
-                  className="border-b border-slate-100 transition last:border-b-0 hover:bg-blue-50/60 dark:border-slate-800 dark:hover:bg-slate-900"
+                  className="border-b border-slate-100 transition last:border-b-0 hover:bg-violet-50/60 dark:border-slate-800 dark:hover:bg-slate-900"
                 >
                   {columns.map((column) => (
                     <td
@@ -458,7 +458,7 @@ function RouteTable({ title, rows, direction, emptyQuery }) {
                       className={cx(
                         "whitespace-pre-line px-4 py-4 align-top text-slate-700 dark:text-slate-300",
                         column.key === "sl" && "font-bold text-slate-950 dark:text-white",
-                        column.key === "time" && "font-semibold text-blue-700 dark:text-blue-300",
+                        column.key === "time" && "font-semibold text-violet-700 dark:text-violet-300",
                         column.className,
                       )}
                     >

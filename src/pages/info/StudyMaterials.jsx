@@ -101,13 +101,13 @@ export default function Semester() {
             icon={<FiBookOpen className="h-5 w-5" aria-hidden="true" />}
             label="Semesters"
             value={materialsData.length}
-            tone="blue"
+            tone="violet"
           />
           <MetricCard
             icon={<FiFolder className="h-5 w-5" aria-hidden="true" />}
             label="Available folders"
             value={availableLinks}
-            tone="teal"
+            tone="green"
           />
           <MetricCard
             icon={<FiFileText className="h-5 w-5" aria-hidden="true" />}
@@ -131,7 +131,7 @@ export default function Semester() {
                       {semester.name}
                     </h2>
                   </div>
-                  <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-200">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-200">
                     <FiFolder aria-hidden="true" />
                   </span>
                 </div>
@@ -145,7 +145,7 @@ export default function Semester() {
                           href={link}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex min-h-11 items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-blue-300 hover:text-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-blue-500 dark:hover:text-blue-300"
+                          className="flex min-h-11 items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-violet-300 hover:text-violet-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-violet-500 dark:hover:text-violet-300"
                         >
                           {linkLabels[index]}
                           <FiExternalLink className="h-4 w-4" aria-hidden="true" />

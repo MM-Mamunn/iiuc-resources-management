@@ -300,13 +300,13 @@ const SectionRoutine = () => {
             icon={<FiCalendar className="h-5 w-5" aria-hidden="true" />}
             label="Section"
             value={normalizedSection || "None"}
-            tone="blue"
+            tone="violet"
           />
           <MetricCard
             icon={<FiCalendar className="h-5 w-5" aria-hidden="true" />}
             label="Session"
             value={session}
-            tone="teal"
+            tone="green"
           />
           <MetricCard
             icon={<FiCalendar className="h-5 w-5" aria-hidden="true" />}

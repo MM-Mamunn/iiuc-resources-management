@@ -828,9 +828,9 @@ const CrRoutine = ({
               </FormField>
 
               {facultyQuery.trim() && !facultyLoading && !selectedFaculty && facultySuggestions.length === 0 && (
-                <div className="mt-3 rounded-lg border border-dashed border-blue-300 bg-blue-50 p-3 dark:border-blue-500/40 dark:bg-blue-500/10">
+                <div className="mt-3 rounded-lg border border-dashed border-violet-300 bg-violet-50 p-3 dark:border-violet-500/40 dark:bg-violet-500/10">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <p className="text-sm font-semibold text-blue-900 dark:text-blue-100">
+                    <p className="text-sm font-semibold text-violet-900 dark:text-violet-100">
                       Faculty not found?
                     </p>
                     <button
@@ -984,11 +984,11 @@ const CrRoutine = ({
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <p className="safe-text font-bold text-blue-700 dark:text-blue-300">
+                          <p className="safe-text font-bold text-violet-700 dark:text-violet-300">
                             {classItem.code}
                           </p>
                           <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-                            {getDayLabel(classItem.day)} · Slot {classItem.slot} · Room {classItem.room}
+                            {getDayLabel(classItem.day)} Ã‚Â· Slot {classItem.slot} Ã‚Â· Room {classItem.room}
                           </p>
                         </div>
                         <button
@@ -1032,7 +1032,7 @@ const CrRoutine = ({
                   <button
                     type="button"
                     onClick={() => handleEditClass(item)}
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-blue-600 text-white transition hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-violet-600 text-white transition hover:bg-violet-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
                     aria-label={`Edit ${item.subject}`}
                     title="Edit class"
                   >
@@ -1121,18 +1121,18 @@ function RoutineModeCard({ title, description, icon: Icon, active, onClick }) {
     <button
       type="button"
       onClick={onClick}
-      className={`interactive-card p-5 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+      className={`interactive-card p-5 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 ${
         active
-          ? "border-blue-300 bg-blue-50/80 shadow-lg shadow-blue-500/10 ring-2 ring-blue-500/20 dark:border-blue-500/50 dark:bg-blue-500/10"
+          ? "border-violet-300 bg-violet-50/80 shadow-lg shadow-violet-500/10 ring-2 ring-violet-500/20 dark:border-violet-500/50 dark:bg-violet-500/10"
           : ""
       }`}
     >
       <div className="flex items-start justify-between gap-4">
-        <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-200">
+        <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-200">
           <Icon className="h-5 w-5" aria-hidden="true" />
         </span>
         {active && (
-          <span className="status-pill border-blue-200 bg-white text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200">
+          <span className="status-pill border-violet-200 bg-white text-violet-800 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-200">
             Active
           </span>
         )}
@@ -1167,7 +1167,7 @@ function ClassModal({
   submitLabel,
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-md">
       <section className="surface-card max-h-[90vh] w-full max-w-xl overflow-y-auto p-6">
         <div className="flex items-start justify-between gap-4">
           <SectionHeading kicker="Class cell" title={title} />
@@ -1278,7 +1278,7 @@ function QuickFacultyModal({
   onSubmit,
 }) {
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-md">
       <section className="surface-card max-h-[90vh] w-full max-w-xl overflow-y-auto p-6">
         <div className="flex items-start justify-between gap-4">
           <SectionHeading
@@ -1405,9 +1405,9 @@ function AutocompleteField({
         />
         <SuggestionList suggestions={suggestions} onSelect={onSelect} />
         {showEmptyAction && (
-          <div className="mt-2 rounded-lg border border-dashed border-blue-300 bg-blue-50 p-3 dark:border-blue-500/40 dark:bg-blue-500/10">
+          <div className="mt-2 rounded-lg border border-dashed border-violet-300 bg-violet-50 p-3 dark:border-violet-500/40 dark:bg-violet-500/10">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm font-semibold text-blue-900 dark:text-blue-100">
+              <p className="text-sm font-semibold text-violet-900 dark:text-violet-100">
                 No matching faculty found.
               </p>
               <button type="button" onClick={onEmptyAction} className="btn-secondary">

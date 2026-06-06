@@ -277,9 +277,9 @@ const TeacherRoutine = () => {
                     type="button"
                     onClick={() => handleGenderChange(option)}
                     className={cx(
-                      "rounded-md px-4 py-2 text-sm font-semibold capitalize transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
+                      "rounded-md px-4 py-2 text-sm font-semibold capitalize transition focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500",
                       gender === option
-                        ? "bg-white text-blue-700 shadow-sm dark:bg-slate-800 dark:text-blue-200"
+                        ? "bg-white text-violet-700 shadow-sm dark:bg-slate-800 dark:text-violet-200"
                         : "text-slate-600 hover:text-slate-950 dark:text-slate-400 dark:hover:text-white",
                     )}
                   >
@@ -395,19 +395,19 @@ const TeacherRoutine = () => {
             icon={<FiUsers className="h-5 w-5" aria-hidden="true" />}
             label="Teacher"
             value={teacherLabel}
-            tone="blue"
+            tone="violet"
           />
           <MetricCard
             icon={<FiCalendar className="h-5 w-5" aria-hidden="true" />}
             label="Session"
             value={session}
-            tone="teal"
+            tone="green"
           />
           <MetricCard
             icon={<FiClock className="h-5 w-5" aria-hidden="true" />}
             label="Current class"
             value={currentClass?.code || "None"}
-            tone={currentClass ? "teal" : "amber"}
+            tone={currentClass ? "green" : "amber"}
           />
         </section>
 

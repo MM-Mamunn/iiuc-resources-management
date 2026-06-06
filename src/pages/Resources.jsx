@@ -30,13 +30,14 @@ function Resources() {
           />
           <div className="absolute inset-0 -z-10 bg-slate-950/72" />
 
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div className="mx-auto flex max-w-4xl flex-col items-center gap-6 text-center">
             <div className="max-w-3xl">
-              <p className="text-sm font-bold text-teal-200">Resources</p>
-              <h1 className="mt-3 text-3xl font-black text-white sm:text-5xl">
+              <p className="section-kicker border-white/20 bg-white/10 text-sky-100 shadow-none">Resources</p>
+              <h1 className="display-heading hero-heading-glow mt-4 text-3xl text-white sm:text-5xl">
                 Find Course Resources
               </h1>
-              <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-200 sm:text-base">
+              <div className="heading-accent-line mx-auto" aria-hidden="true" />
+              <p className="mx-auto mt-4 max-w-2xl text-sm leading-6 text-slate-200 sm:text-base">
                 Search links, filter by course keywords, sort by newest uploads or highest average rating, and open student-submitted material.
               </p>
             </div>

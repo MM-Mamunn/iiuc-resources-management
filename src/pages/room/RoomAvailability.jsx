@@ -141,13 +141,13 @@ const RoomAvailability = () => {
             icon={<FiGrid className="h-5 w-5" aria-hidden="true" />}
             label="Available rooms"
             value={rooms.length}
-            tone="blue"
+            tone="violet"
           />
           <MetricCard
             icon={<FiSearch className="h-5 w-5" aria-hidden="true" />}
             label="Selected slot"
             value={slot ? `Slot ${slot}` : "None"}
-            tone="teal"
+            tone="green"
           />
           <MetricCard
             icon={<FiGrid className="h-5 w-5" aria-hidden="true" />}

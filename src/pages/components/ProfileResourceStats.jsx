@@ -83,7 +83,7 @@ function ProfileStatCard({ icon, label, value, tooltip, tone = "default" }) {
         }
       : {
           card: "border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900",
-          icon: "bg-white text-blue-700 dark:bg-slate-950 dark:text-blue-300",
+          icon: "bg-white text-violet-700 dark:bg-slate-950 dark:text-violet-300",
         };
 
   return (
@@ -162,7 +162,7 @@ function RatingDistributionChart({ distribution, loading }) {
               <div className="h-2.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-900">
                 <div
                   className={`h-full rounded-full transition-all ${
-                    loading ? "animate-pulse bg-slate-300 dark:bg-slate-700" : "bg-blue-600 dark:bg-blue-400"
+                    loading ? "animate-pulse bg-slate-300 dark:bg-slate-700" : "bg-violet-600 dark:bg-violet-400"
                   }`}
                   style={{ width: `${width}%` }}
                 />

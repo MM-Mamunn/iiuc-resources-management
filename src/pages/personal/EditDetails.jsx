@@ -996,9 +996,9 @@ function EditDetails() {
                         key={mode.key}
                         type="button"
                         onClick={() => handleResourceEntryModeChange(mode.key)}
-                        className={`rounded-md px-4 py-3 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                        className={`rounded-md px-4 py-3 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 ${
                           active
-                            ? "bg-white text-blue-700 shadow-sm dark:bg-slate-950 dark:text-blue-200"
+                            ? "bg-white text-violet-700 shadow-sm dark:bg-slate-950 dark:text-violet-200"
                             : "text-slate-600 hover:bg-white/70 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
                         }`}
                         role="tab"
@@ -1194,15 +1194,15 @@ function EditDetails() {
                                 key={courseItem.code}
                                 className={`flex min-h-24 cursor-pointer gap-3 rounded-lg border p-4 transition ${
                                   checked
-                                    ? "border-blue-400 bg-blue-50 text-blue-950 dark:border-blue-500 dark:bg-blue-500/10 dark:text-blue-100"
-                                    : "border-slate-200 bg-white text-slate-900 hover:border-blue-300 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+                                    ? "border-violet-400 bg-violet-50 text-violet-950 dark:border-violet-500 dark:bg-violet-500/10 dark:text-violet-100"
+                                    : "border-slate-200 bg-white text-slate-900 hover:border-violet-300 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
                                 }`}
                               >
                                 <input
                                   type="checkbox"
                                   checked={checked}
                                   onChange={() => toggleSemesterCourse(courseItem.code)}
-                                  className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                  className="mt-1 h-4 w-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500"
                                 />
                                 <span className="min-w-0">
                                   <span className="safe-text block text-base font-black">
@@ -1430,7 +1430,7 @@ function SectionChangeWarningModal({
               type="checkbox"
               checked={accepted}
               onChange={(event) => onAcceptedChange(event.target.checked)}
-              className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-900"
+              className="mt-1 h-4 w-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500 dark:border-slate-700 dark:bg-slate-900"
             />
             <span>
               I understand that changing my section will set my account type to student, and I will need to apply again for CR access.
@@ -1488,7 +1488,7 @@ function ProfileSummaryCard({
             <h1 className="safe-text text-3xl font-black text-slate-950 dark:text-white">
               {currentProfile?.name || "Student"}
             </h1>
-            <span className="inline-flex w-fit items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1.5 text-sm font-bold text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200">
+            <span className="inline-flex w-fit items-center gap-2 rounded-full border border-violet-200 bg-violet-50 px-3 py-1.5 text-sm font-bold text-violet-800 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-200">
               <FiEye className="h-4 w-4" aria-hidden="true" />
               {formatProfileViews(currentProfile?.view)} views
             </span>
@@ -1592,16 +1592,16 @@ function ProfileNavCard({ item, active, onSelect }) {
     <button
       type="button"
       onClick={onSelect}
-      className={`interactive-card group p-5 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
-        active ? "border-blue-400 bg-blue-50/80 ring-2 ring-blue-500/20 dark:border-blue-500 dark:bg-blue-500/10" : ""
+      className={`interactive-card group p-5 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 ${
+        active ? "border-violet-400 bg-violet-50/80 ring-2 ring-violet-500/20 dark:border-violet-500 dark:bg-violet-500/10" : ""
       }`}
     >
       <div className="flex items-start justify-between gap-4">
-        <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-200">
+        <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-200">
           <Icon className="h-5 w-5" aria-hidden="true" />
         </span>
         <FiChevronRight
-          className="h-5 w-5 text-slate-400 transition group-hover:text-blue-600 dark:group-hover:text-blue-300"
+          className="h-5 w-5 text-slate-400 transition group-hover:text-violet-600 dark:group-hover:text-violet-300"
           aria-hidden="true"
         />
       </div>
@@ -1719,7 +1719,7 @@ function ApplicationsFeedbackSection({
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="status-pill border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200">
+                      <span className="status-pill border-violet-200 bg-violet-50 text-violet-800 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-200">
                         {submission.type}
                       </span>
                       <SubmissionStatus resolved={submission.resolved} />
@@ -1824,7 +1824,7 @@ function PasswordField({ id, label, name, value, show, onToggle, onChange }) {
         <button
           type="button"
           onClick={onToggle}
-          className="absolute right-3 top-1/2 rounded-md p-2 -translate-y-1/2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:hover:bg-slate-800 dark:hover:text-white"
+          className="absolute right-3 top-1/2 rounded-md p-2 -translate-y-1/2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 dark:hover:bg-slate-800 dark:hover:text-white"
           aria-label={show ? "Hide password" : "Show password"}
         >
           {show ? <FiEyeOff aria-hidden="true" /> : <FiEye aria-hidden="true" />}

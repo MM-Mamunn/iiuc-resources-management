@@ -54,7 +54,7 @@ function GlobalFooter({ isLoggedIn, authReady = true }) {
 
   return (
     <>
-      <footer className="border-t border-slate-200 bg-white py-10 dark:border-slate-800 dark:bg-slate-950">
+      <footer className="border-t border-slate-200/60 bg-gradient-to-b from-white to-slate-50 py-10 dark:border-slate-800/60 dark:from-slate-950 dark:to-slate-950">
         <div className="page-wrap flex flex-col gap-4 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between dark:text-slate-400">
           <div>
             <p className="font-semibold text-slate-900 dark:text-white">
@@ -75,8 +75,8 @@ function GlobalFooter({ isLoggedIn, authReady = true }) {
       </footer>
 
       {open && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm">
-          <section className="surface-card w-full max-w-lg p-6">
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-md">
+          <section className="surface-card w-full max-w-lg animate-enter rounded-2xl p-6">
             <div className="flex items-start justify-between gap-4">
               <SectionHeading
                 kicker="Feedback"

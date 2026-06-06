@@ -123,7 +123,7 @@ export default function Contributor() {
             icon={<FiUsers className="h-5 w-5" aria-hidden="true" />}
             label="Contributors"
             value={contributorsData.length}
-            tone="blue"
+            tone="violet"
           />
           <MetricCard
             icon={<FiAward className="h-5 w-5" aria-hidden="true" />}
@@ -135,7 +135,7 @@ export default function Contributor() {
             icon={<FiUserCheck className="h-5 w-5" aria-hidden="true" />}
             label="Primary focus"
             value="Resources"
-            tone="teal"
+            tone="green"
           />
         </section>
 
@@ -166,12 +166,12 @@ export default function Contributor() {
                 </div>
 
                 <div className="mt-5 space-y-3">
-                  <span className="status-pill border-teal-200 bg-teal-50 text-teal-800 dark:border-teal-500/30 dark:bg-teal-500/10 dark:text-teal-200">
+                  <span className="status-pill border-green-200 bg-green-50 text-green-800 dark:border-green-500/30 dark:bg-green-500/10 dark:text-green-200">
                     {contributor.field}
                   </span>
                   <a
                     href={`mailto:${contributor.email}`}
-                    className="flex items-center gap-2 text-sm font-medium text-slate-600 transition hover:text-blue-700 dark:text-slate-300 dark:hover:text-blue-300"
+                    className="flex items-center gap-2 text-sm font-medium text-slate-600 transition hover:text-violet-700 dark:text-slate-300 dark:hover:text-violet-300"
                   >
                     <FiMail className="h-4 w-4" aria-hidden="true" />
                     <span className="safe-text">{contributor.email}</span>

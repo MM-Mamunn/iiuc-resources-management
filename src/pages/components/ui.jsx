@@ -35,21 +35,28 @@ export function PageShell({ children, className = "" }) {
 /**
  * Reusable heading block with a compact kicker and accessible hierarchy.
  */
-export function SectionHeading({ kicker, title, description, actions }) {
+export function SectionHeading({ kicker, title, description, actions, align = "left", className = "" }) {
   return (
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-      <div className="max-w-3xl">
+    <div
+      className={cx(
+        "section-heading",
+        align === "center" ? "section-heading--center" : "section-heading--left",
+        className
+      )}
+    >
+      <div className="section-heading__content">
         {kicker && <p className="section-kicker">{kicker}</p>}
-        <h2 className="mt-2 text-2xl font-bold text-slate-950 sm:text-3xl dark:text-white">
+        <h2 className="section-heading__title mt-3 text-2xl sm:text-3xl">
           {title}
         </h2>
+        <div className="heading-accent-line" aria-hidden="true" />
         {description && (
-          <p className="mt-3 text-sm leading-6 text-slate-600 sm:text-base dark:text-slate-300">
+          <p className="mt-4 text-sm leading-6 text-slate-600 sm:text-base dark:text-slate-300">
             {description}
           </p>
         )}
       </div>
-      {actions && <div className="flex flex-wrap gap-3">{actions}</div>}
+      {actions && <div className="section-heading__actions">{actions}</div>}
     </div>
   );
 }
@@ -103,7 +110,7 @@ export function SuggestionList({ suggestions, onSelect, getLabel = (item) => ite
             <button
               type="button"
               onClick={() => onSelect(suggestion)}
-              className="w-full px-4 py-3 text-left text-sm font-medium text-slate-700 transition hover:bg-blue-50 focus:bg-blue-50 focus:outline-none dark:text-slate-100 dark:hover:bg-slate-800 dark:focus:bg-slate-800"
+              className="w-full px-4 py-3 text-left text-sm font-medium text-slate-700 transition hover:bg-violet-50 focus:bg-violet-50 focus:outline-none dark:text-slate-100 dark:hover:bg-slate-800 dark:focus:bg-slate-800"
             >
               {label}
             </button>
@@ -117,22 +124,24 @@ export function SuggestionList({ suggestions, onSelect, getLabel = (item) => ite
 /**
  * Small metric card used for dashboards and summary rows.
  */
-export function MetricCard({ icon, label, value, tone = "blue" }) {
+export function MetricCard({ icon, label, value, tone = "violet" }) {
   const tones = {
-    blue: "bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-200",
-    teal: "bg-teal-50 text-teal-700 dark:bg-teal-500/10 dark:text-teal-200",
+    violet: "bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-200",
+    green: "bg-green-50 text-green-700 dark:bg-green-500/10 dark:text-green-200",
+    sky: "bg-sky-50 text-sky-700 dark:bg-sky-500/10 dark:text-sky-200",
+    cyan: "bg-cyan-50 text-cyan-700 dark:bg-cyan-500/10 dark:text-cyan-200",
     amber: "bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-200",
     rose: "bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-200",
   };
 
   return (
-    <div className="surface-card p-5">
+    <div className="surface-card p-5 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5">
       <div className="flex items-center gap-4">
-        <div className={cx("flex h-11 w-11 items-center justify-center rounded-lg", tones[tone])}>
+        <div className={cx("flex h-11 w-11 shrink-0 items-center justify-center rounded-xl", tones[tone])}>
           {icon}
         </div>
         <div className="min-w-0">
-          <p className="text-sm text-slate-500 dark:text-slate-400">{label}</p>
+          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{label}</p>
           <p className="safe-text mt-1 text-xl font-bold text-slate-950 dark:text-white">
             {value}
           </p>
@@ -149,7 +158,7 @@ export function LoadingState({ label = "Loading..." }) {
   return (
     <div className="flex min-h-[220px] items-center justify-center">
       <div className="surface-card flex items-center gap-3 px-5 py-4 text-sm font-semibold text-slate-700 dark:text-slate-200">
-        <FiLoader className="h-5 w-5 animate-spin text-blue-600 dark:text-blue-300" aria-hidden="true" />
+        <FiLoader className="h-5 w-5 animate-spin text-violet-600 dark:text-violet-300" aria-hidden="true" />
         <span>{label}</span>
       </div>
     </div>
@@ -161,19 +170,19 @@ export function LoadingState({ label = "Loading..." }) {
  */
 export function EmptyState({ icon, title, description, action }) {
   return (
-    <div className="flex min-h-[260px] flex-col items-center justify-center px-6 py-12 text-center">
+    <div className="flex min-h-[260px] flex-col items-center justify-center px-6 py-14 text-center">
       {icon && (
-        <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-lg bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+        <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500">
           {icon}
         </div>
       )}
       <h3 className="text-lg font-bold text-slate-950 dark:text-white">{title}</h3>
       {description && (
-        <p className="mt-2 max-w-md text-sm leading-6 text-slate-600 dark:text-slate-400">
+        <p className="mt-2 max-w-md text-sm leading-6 text-slate-500 dark:text-slate-400">
           {description}
         </p>
       )}
-      {action && <div className="mt-5">{action}</div>}
+      {action && <div className="mt-6">{action}</div>}
     </div>
   );
 }
@@ -222,7 +231,7 @@ function NotificationCard({ notification }) {
       role={notification.type === "error" ? "alert" : "status"}
       aria-live={notification.type === "error" ? "assertive" : "polite"}
       className={cx(
-        "notification-card pointer-events-auto overflow-hidden rounded-lg border bg-white shadow-2xl shadow-slate-950/15 backdrop-blur dark:bg-slate-950",
+        "notification-card pointer-events-auto overflow-hidden rounded-xl border bg-white/95 shadow-2xl shadow-slate-950/15 backdrop-blur-lg dark:bg-slate-950/95",
         notification.exiting && "is-leaving",
         tone.card,
       )}
@@ -285,10 +294,10 @@ const notificationTones = {
   info: {
     label: "Info",
     icon: FiInfo,
-    card: "border-blue-200 dark:border-blue-500/30",
-    iconWrap: "bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-200",
-    title: "text-blue-800 dark:text-blue-100",
-    progress: "bg-blue-500",
+    card: "border-violet-200 dark:border-violet-500/30",
+    iconWrap: "bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-200",
+    title: "text-violet-800 dark:text-violet-100",
+    progress: "bg-violet-500",
   },
 };
 
@@ -301,7 +310,7 @@ function InlineNotice({ type = "info", children, onDismiss }) {
     warning:
       "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100",
     info:
-      "border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-100",
+      "border-violet-200 bg-violet-50 text-violet-800 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-100",
   };
 
   return (

@@ -280,13 +280,13 @@ const HomePersonal = () => {
       label: "Student ID",
       value: profile?.id || "Loading",
       icon: <FiUser className="h-5 w-5" aria-hidden="true" />,
-      tone: "blue",
+      tone: "violet",
     },
     {
       label: "Section",
       value: profile?.sec || "N/A",
       icon: <FiGrid className="h-5 w-5" aria-hidden="true" />,
-      tone: "teal",
+      tone: "green",
     },
     {
       label: "Session",
@@ -298,7 +298,7 @@ const HomePersonal = () => {
       label: "Current class",
       value: selectedCurrentClass?.code || "No live class",
       icon: <FiClock className="h-5 w-5" aria-hidden="true" />,
-      tone: selectedCurrentClass ? "teal" : "rose",
+      tone: selectedCurrentClass ? "green" : "rose",
     },
   ];
 
@@ -323,7 +323,7 @@ const HomePersonal = () => {
 
           <div className="grid gap-8 lg:grid-cols-[1fr_320px] lg:items-end">
             <div>
-              <p className="text-sm font-bold text-teal-200">Personal dashboard</p>
+              <p className="text-sm font-bold text-green-200">Personal dashboard</p>
               <h1 className="mt-3 text-3xl font-black text-white sm:text-5xl">
                 Welcome back{profile?.name ? `, ${profile.name}` : ""}.
               </h1>
@@ -508,9 +508,9 @@ function RoutineTypeToggle({ value, onChange }) {
             type="button"
             onClick={() => onChange(option.key)}
             className={cx(
-              "inline-flex min-h-10 items-center gap-2 rounded-md px-3 py-2 text-sm font-bold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
+              "inline-flex min-h-10 items-center gap-2 rounded-md px-3 py-2 text-sm font-bold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500",
               isActive
-                ? "bg-white text-blue-700 shadow-sm dark:bg-slate-800 dark:text-blue-200"
+                ? "bg-white text-violet-700 shadow-sm dark:bg-slate-800 dark:text-violet-200"
                 : "text-slate-600 hover:text-slate-950 dark:text-slate-400 dark:hover:text-white",
             )}
           >
@@ -532,7 +532,7 @@ function CurrentClassPanel({ currentClass, sectionCurrentClass, sectionLabel }) 
   return (
     <div className="rounded-lg border border-white/15 bg-white/10 p-5 backdrop-blur">
       <div className="flex items-center gap-3">
-        <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-teal-300/20 text-teal-100">
+        <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-green-300/20 text-green-100">
           <FiClock className="h-5 w-5" aria-hidden="true" />
         </span>
         <div>
@@ -638,7 +638,7 @@ function LiveClassDetails({ label, classInfo, emptyText }) {
 
   return (
     <div className="border-t border-white/15 pt-3 first:border-t-0 first:pt-0">
-      <p className="text-xs font-bold uppercase text-teal-100">
+      <p className="text-xs font-bold uppercase text-green-100">
         {label}
       </p>
       {classInfo ? (
@@ -703,9 +703,9 @@ function DashboardAction({ icon, label, onClick }) {
     <button
       type="button"
       onClick={onClick}
-      className="flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-semibold text-slate-700 transition hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-slate-200 dark:hover:bg-slate-800"
+      className="flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-semibold text-slate-700 transition hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 dark:text-slate-200 dark:hover:bg-slate-800"
     >
-      <span className="text-blue-700 dark:text-blue-300">{icon}</span>
+      <span className="text-violet-700 dark:text-violet-300">{icon}</span>
       {label}
     </button>
   );

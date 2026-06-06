@@ -181,7 +181,7 @@ const PersonalRoutine = () => {
           />
 
           <div className="mt-6 flex flex-wrap items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200">
-            <span className="h-2.5 w-2.5 animate-soft-pulse rounded-full bg-teal-500" />
+            <span className="h-2.5 w-2.5 animate-soft-pulse rounded-full bg-green-500" />
             {currentTime.toLocaleString("en-US", {
               weekday: "long",
               year: "numeric",
@@ -257,19 +257,19 @@ const PersonalRoutine = () => {
             icon={<FiCalendar className="h-5 w-5" aria-hidden="true" />}
             label="Session"
             value={session}
-            tone="blue"
+            tone="violet"
           />
           <MetricCard
             icon={<FiClock className="h-5 w-5" aria-hidden="true" />}
             label="Current class"
             value={currentClass?.code || "None"}
-            tone={currentClass ? "teal" : "amber"}
+            tone={currentClass ? "green" : "amber"}
           />
           <MetricCard
             icon={<FiCalendar className="h-5 w-5" aria-hidden="true" />}
             label="Loaded classes"
             value={schedule.length}
-            tone="teal"
+            tone="green"
           />
         </section>
 

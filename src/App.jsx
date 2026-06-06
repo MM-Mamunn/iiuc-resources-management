@@ -292,7 +292,7 @@ function AppLoading({ label }) {
   return (
     <main className="app-root flex min-h-screen items-center justify-center px-4">
       <div className="surface-card flex items-center gap-3 px-6 py-5 text-sm font-semibold text-slate-700 dark:text-slate-200">
-        <FiLoader className="h-5 w-5 animate-spin text-blue-600 dark:text-blue-300" aria-hidden="true" />
+        <FiLoader className="h-5 w-5 animate-spin text-violet-600 dark:text-violet-300" aria-hidden="true" />
         {label}
       </div>
     </main>

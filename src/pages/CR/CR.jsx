@@ -75,7 +75,7 @@ function CR() {
       title: "Routine editor",
       description: "Edit routine cells directly in this workspace.",
       icon: FiEdit3,
-      tone: "blue",
+      tone: "violet",
     },
     {
       key: "bulk",
@@ -89,7 +89,7 @@ function CR() {
       title: "Faculty management",
       description: "Add new faculty or update teacher information.",
       icon: FiUserPlus,
-      tone: "teal",
+      tone: "green",
     },
   ];
 
@@ -183,7 +183,7 @@ function CR() {
 
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-3xl">
-              <p className="text-sm font-bold text-teal-200">CR Dashboard</p>
+              <p className="text-sm font-bold text-green-200">CR Dashboard</p>
               <h1 className="mt-3 text-3xl font-black text-white sm:text-5xl">
                 Class Management
               </h1>
@@ -263,9 +263,9 @@ function CR() {
                 key={item.key}
                 type="button"
                 onClick={() => setActivePanel(item.key)}
-                className={`interactive-card group p-5 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                className={`interactive-card group p-5 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 ${
                   active
-                    ? "border-blue-300 bg-blue-50/80 shadow-lg shadow-blue-500/10 ring-2 ring-blue-500/20 dark:border-blue-500/50 dark:bg-blue-500/10"
+                    ? "border-violet-300 bg-violet-50/80 shadow-lg shadow-violet-500/10 ring-2 ring-violet-500/20 dark:border-violet-500/50 dark:bg-violet-500/10"
                     : ""
                 }`}
               >
@@ -276,12 +276,12 @@ function CR() {
                     <Icon className="h-5 w-5" aria-hidden="true" />
                   </div>
                   {active ? (
-                    <span className="status-pill border-blue-200 bg-white text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200">
+                    <span className="status-pill border-violet-200 bg-white text-violet-800 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-200">
                       Active
                     </span>
                   ) : (
                     <FiArrowRight
-                      className="h-5 w-5 text-slate-400 transition group-hover:translate-x-1 group-hover:text-blue-600 dark:group-hover:text-blue-300"
+                      className="h-5 w-5 text-slate-400 transition group-hover:translate-x-1 group-hover:text-violet-600 dark:group-hover:text-violet-300"
                       aria-hidden="true"
                     />
                   )}
@@ -321,7 +321,7 @@ function CR() {
                         {course.code}
                       </h2>
                     </div>
-                    <span className="status-pill border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200">
+                    <span className="status-pill border-violet-200 bg-violet-50 text-violet-800 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-200">
                       {course.sec}
                     </span>
                   </div>
@@ -750,12 +750,12 @@ function CourseField({ label, value }) {
 
 function getActionTone(tone) {
   const tones = {
-    blue: "bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-200",
-    teal: "bg-teal-50 text-teal-700 dark:bg-teal-500/10 dark:text-teal-200",
+    violet: "bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-200",
+    green: "bg-green-50 text-green-700 dark:bg-green-500/10 dark:text-green-200",
     amber: "bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-200",
   };
 
-  return tones[tone] || tones.blue;
+  return tones[tone] || tones.violet;
 }
 
 function getFacultyFormFromRow(faculty) {

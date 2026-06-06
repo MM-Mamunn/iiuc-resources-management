@@ -213,19 +213,19 @@ function CourseInfo() {
             icon={<FiBookOpen className="h-5 w-5" aria-hidden="true" />}
             label="Courses"
             value={courses.length}
-            tone="blue"
+            tone="violet"
           />
           <MetricCard
             icon={<FiSearch className="h-5 w-5" aria-hidden="true" />}
             label="Search result"
             value={searchResult?.code || "None"}
-            tone={searchResult ? "teal" : "amber"}
+            tone={searchResult ? "green" : "amber"}
           />
           <MetricCard
             icon={<FiBookOpen className="h-5 w-5" aria-hidden="true" />}
             label="Semesters"
             value={SEMESTERS.length}
-            tone="teal"
+            tone="green"
           />
         </section>
 
@@ -265,7 +265,7 @@ function CourseInfo() {
                       <button
                         type="button"
                         onClick={() => toggleSemester(semester)}
-                        className="flex w-full items-center justify-between gap-4 rounded-lg px-4 py-4 text-left transition hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:hover:bg-slate-900"
+                        className="flex w-full items-center justify-between gap-4 rounded-lg px-4 py-4 text-left transition hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 dark:hover:bg-slate-900"
                         aria-expanded={Boolean(isExpanded)}
                       >
                         <span>
@@ -329,7 +329,7 @@ function CourseAccordion({ course, isExpanded, onToggle }) {
       <button
         type="button"
         onClick={onToggle}
-        className="flex w-full flex-col gap-3 rounded-lg px-4 py-4 text-left transition hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 sm:flex-row sm:items-center sm:justify-between dark:hover:bg-slate-950"
+        className="flex w-full flex-col gap-3 rounded-lg px-4 py-4 text-left transition hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 sm:flex-row sm:items-center sm:justify-between dark:hover:bg-slate-950"
         aria-expanded={isExpanded}
       >
         <span className="min-w-0">
@@ -344,7 +344,7 @@ function CourseAccordion({ course, isExpanded, onToggle }) {
           <span className="status-pill border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200">
             {course.credit} credits
           </span>
-          <span className="status-pill border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200">
+          <span className="status-pill border-violet-200 bg-violet-50 text-violet-800 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-200">
             {course.type}
           </span>
           <FiChevronDown

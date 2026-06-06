@@ -184,13 +184,13 @@ function ShowAllCourse() {
             icon={<FiBookOpen className="h-5 w-5" aria-hidden="true" />}
             label="Courses"
             value={courses.length}
-            tone="blue"
+            tone="violet"
           />
           <MetricCard
             icon={<FiBookOpen className="h-5 w-5" aria-hidden="true" />}
             label="Total credits"
             value={totalCredits.toFixed(1)}
-            tone="teal"
+            tone="green"
           />
           <MetricCard
             icon={<FiCalendar className="h-5 w-5" aria-hidden="true" />}

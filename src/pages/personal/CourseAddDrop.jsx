@@ -458,13 +458,13 @@ function PersonalCourseManage() {
             icon={<FiSearch className="h-5 w-5" aria-hidden="true" />}
             label="Search results"
             value={searchResults.length}
-            tone="blue"
+            tone="violet"
           />
           <MetricCard
             icon={<FiCheckCircle className="h-5 w-5" aria-hidden="true" />}
             label="Course status"
             value={statusLoading ? "Checking" : "Auto-detected"}
-            tone="teal"
+            tone="green"
           />
           <MetricCard
             icon={<FiUser className="h-5 w-5" aria-hidden="true" />}
@@ -514,7 +514,7 @@ function SearchToggle({ id, label, checked, onChange }) {
   return (
     <label
       htmlFor={id}
-      className="flex min-h-14 cursor-pointer items-center justify-between gap-4 rounded-lg border border-slate-200 bg-white px-4 py-3 font-semibold text-slate-800 transition hover:border-blue-300 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+      className="flex min-h-14 cursor-pointer items-center justify-between gap-4 rounded-lg border border-slate-200 bg-white px-4 py-3 font-semibold text-slate-800 transition hover:border-violet-300 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
     >
       <span>{label}</span>
       <input
@@ -522,7 +522,7 @@ function SearchToggle({ id, label, checked, onChange }) {
         type="checkbox"
         checked={checked}
         onChange={(event) => onChange(event.target.checked)}
-        className="h-5 w-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-900"
+        className="h-5 w-5 rounded border-slate-300 text-violet-600 focus:ring-violet-500 dark:border-slate-700 dark:bg-slate-900"
       />
     </label>
   );
@@ -595,7 +595,7 @@ function ClassResultCard({
               </p>
             )}
           </div>
-          <span className="status-pill border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200">
+          <span className="status-pill border-violet-200 bg-violet-50 text-violet-800 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-200">
             Section {classItem.sec}
           </span>
         </div>
@@ -740,7 +740,7 @@ function getStatusView(status, loading) {
       label: "Checking status",
       message: "Looking for enrolled sections and schedule conflicts.",
       className:
-        "border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-100",
+        "border-violet-200 bg-violet-50 text-violet-800 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-100",
     };
   }
 

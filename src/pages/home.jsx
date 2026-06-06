@@ -21,6 +21,7 @@ import {
   FiTrendingUp,
   FiTrash2,
   FiUser,
+  FiUserPlus,
   FiUsers,
 } from "react-icons/fi";
 import Header from "./components/Header";
@@ -197,13 +198,13 @@ const Home = () => {
         label: "Active session",
         value: sessionLabel,
         icon: <FiCalendar className="h-5 w-5" aria-hidden="true" />,
-        tone: "blue",
+        tone: "violet",
       },
       {
         label: "Visible days",
         value: DISPLAY_DAYS.length,
         icon: <FiGrid className="h-5 w-5" aria-hidden="true" />,
-        tone: "teal",
+        tone: "green",
       },
       {
         label: "Contributors",
@@ -454,7 +455,7 @@ const Home = () => {
       title: "Routine",
       description: "Section, personal, teacher, and room schedules.",
       icon: FiCalendar,
-      tone: "blue",
+      tone: "violet",
       items: [
         { label: "Find Routine", href: "/#routine-search", icon: FiSearch },
         { label: "Section Routine", href: "/routine/section", icon: FiGrid },
@@ -468,7 +469,7 @@ const Home = () => {
       title: "Resources",
       description: "Course files, study materials, and contribution actions.",
       icon: FiBookOpen,
-      tone: "teal",
+      tone: "green",
       items: [
         { label: "Resources", href: "/resources", icon: FiBookOpen },
         { label: "Study Materials", href: "/info/materials", icon: FiGrid },
@@ -491,7 +492,7 @@ const Home = () => {
       title: "Information",
       description: "Teacher, course, section, and room references.",
       icon: FiInfo,
-      tone: "blue",
+      tone: "violet",
       items: [
         { label: "Teacher Info", href: "/info/teacher", icon: FiUsers },
         { label: "Course Info", href: "/info/course", icon: FiBookOpen },
@@ -506,7 +507,7 @@ const Home = () => {
         ? "Dashboard, course selection, and profile settings."
         : "Login or create an account for personal tools.",
       icon: isLoggedIn ? FiUser : FiLogIn,
-      tone: "teal",
+      tone: "green",
       items: isLoggedIn
         ? [
             { label: "Dashboard", href: "/homepersonal", icon: FiGrid },
@@ -516,7 +517,7 @@ const Home = () => {
           ]
         : [
             { label: "Login", href: "/auth/login", icon: FiLogIn },
-            { label: "Register", href: "/auth/reg", icon: FiUser },
+            { label: "Register", href: "/auth/reg", icon: FiUserPlus },
           ],
     },
     {
@@ -553,24 +554,25 @@ const Home = () => {
         <div className="absolute inset-0 -z-10 bg-slate-950/55" />
 
         <div className="page-wrap grid gap-8 py-12 lg:grid-cols-[1fr_430px] lg:items-center lg:py-16">
-          <div className="max-w-3xl animate-enter">
-            <p className="inline-flex rounded-lg bg-white/10 px-3 py-2 text-sm font-semibold text-teal-100 ring-1 ring-white/15">
+          <div className="mx-auto flex max-w-3xl animate-enter flex-col items-center text-center">
+            <p className="section-kicker border-white/20 bg-white/10 text-sky-100 shadow-none ring-1 ring-white/15">
               IIUC CSE Resources
             </p>
-            <h1 className="mt-6 text-4xl font-black leading-tight sm:text-5xl lg:text-6xl">
+            <h1 className="display-heading hero-heading-glow mt-6 text-4xl text-white sm:text-5xl lg:text-6xl">
               Find routines, rooms, and study resources faster.
             </h1>
-            <p className="mt-5 max-w-2xl text-base leading-7 text-slate-200 sm:text-lg">
+            <div className="heading-accent-line mx-auto" aria-hidden="true" />
+            <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-slate-200 sm:text-lg">
               Search section routines instantly, then save courses into your personal dashboard after signing in.
             </p>
 
-            <div className="mt-8 grid gap-3 sm:grid-cols-3">
+            <div className="mt-8 grid w-full gap-3 sm:grid-cols-3">
               {summaryStats.map((stat) => (
                 <div
                   key={stat.label}
                   className="hero-glass-card p-4"
                 >
-                  <div className="mb-3 text-teal-200">{stat.icon}</div>
+                  <div className="mb-3 text-green-200">{stat.icon}</div>
                   <p className="text-sm text-slate-300">{stat.label}</p>
                   <p className="mt-1 text-2xl font-bold text-white">{stat.value}</p>
                 </div>
@@ -580,10 +582,11 @@ const Home = () => {
 
           <form id="routine-search" onSubmit={handleSearch} className="hero-glass-card hero-form-card p-5 text-white">
             <div className="mb-5">
-              <p className="text-sm font-semibold text-teal-200">Routine lookup</p>
-              <h2 className="mt-2 text-2xl font-bold text-white">
+              <p className="section-kicker border-white/15 bg-white/10 text-sky-100 shadow-none">Routine lookup</p>
+              <h2 className="display-heading hero-heading-glow mt-3 text-2xl text-white">
                 Search a section
               </h2>
+              <div className="heading-accent-line mt-2 h-0.5 w-16" aria-hidden="true" />
             </div>
 
             <div className="grid gap-4">
@@ -820,20 +823,20 @@ const Home = () => {
 function FeatureGroupCard({ group, expanded, onToggle }) {
   const Icon = group.icon;
   const tones = {
-    blue: "bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-200",
-    teal: "bg-teal-50 text-teal-700 dark:bg-teal-500/10 dark:text-teal-200",
+    violet: "bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-200",
+    green: "bg-green-50 text-green-700 dark:bg-green-500/10 dark:text-green-200",
     amber: "bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-200",
   };
 
   return (
-    <article className="subtle-card overflow-hidden">
+    <article className="subtle-card overflow-hidden hover:-translate-y-1 hover:border-violet-200 hover:shadow-xl hover:shadow-violet-500/10 dark:hover:border-violet-500/40">
       <button
         type="button"
         onClick={onToggle}
-        className="flex w-full items-start gap-4 p-5 text-left transition hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:hover:bg-slate-900"
+        className="flex w-full items-start gap-4 p-5 text-left transition-colors duration-200 ease-out hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 dark:hover:bg-slate-900"
         aria-expanded={expanded}
       >
-        <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg ${tones[group.tone] || tones.blue}`}>
+        <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg ${tones[group.tone] || tones.violet}`}>
           <Icon className="h-5 w-5" aria-hidden="true" />
         </span>
         <span className="min-w-0 flex-1">
@@ -872,13 +875,13 @@ function FeatureGroupLink({ item }) {
   return (
     <Link
       to={item.href}
-      className="group flex min-h-12 items-center gap-3 rounded-lg border border-transparent bg-slate-50 px-3 py-2 text-sm font-bold text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-blue-500/30 dark:hover:bg-blue-500/10 dark:hover:text-blue-200"
+      className="group flex min-h-12 items-center gap-3 rounded-lg border border-transparent bg-slate-50 px-3 py-2 text-sm font-bold text-slate-700 transition-all duration-200 ease-out hover:translate-x-1 hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-violet-500/30 dark:hover:bg-violet-500/10 dark:hover:text-violet-200"
     >
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-slate-500 ring-1 ring-slate-200 transition group-hover:text-blue-600 dark:bg-slate-950 dark:text-slate-300 dark:ring-slate-700 dark:group-hover:text-blue-200">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-slate-500 ring-1 ring-slate-200 transition group-hover:text-violet-600 dark:bg-slate-950 dark:text-slate-300 dark:ring-slate-700 dark:group-hover:text-violet-200">
         <Icon className="h-4 w-4" aria-hidden="true" />
       </span>
       <span className="min-w-0 flex-1 truncate">{item.label}</span>
-      <FiArrowRight className="h-4 w-4 shrink-0 text-slate-400 transition group-hover:translate-x-0.5 group-hover:text-blue-600 dark:group-hover:text-blue-200" aria-hidden="true" />
+      <FiArrowRight className="h-4 w-4 shrink-0 text-slate-400 transition group-hover:translate-x-0.5 group-hover:text-violet-600 dark:group-hover:text-violet-200" aria-hidden="true" />
     </Link>
   );
 }
@@ -909,7 +912,7 @@ function FeaturedAnnouncementCard({ announcement }) {
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/88 via-slate-950/35 to-slate-950/10" />
         <div className="relative flex min-h-[420px] items-end p-4 sm:min-h-[500px] sm:p-8">
           <div className="w-full max-w-5xl rounded-lg border border-white/20 bg-slate-950/35 p-5 text-white shadow-2xl backdrop-blur-xl sm:p-7">
-            <p className="text-sm font-bold text-teal-200">Featured update</p>
+            <p className="text-sm font-bold text-sky-200">Featured update</p>
             <h2 className="safe-text mt-2 text-3xl font-black leading-tight sm:text-4xl">
               {title}
             </h2>
@@ -1008,7 +1011,7 @@ function HomeAnalyticsSection({ analytics, loading, error }) {
           data={resourceGrowth}
           loading={loading}
           icon={<FiTrendingUp aria-hidden="true" />}
-          tone="blue"
+          tone="violet"
         />
       </div>
     </section>
@@ -1023,7 +1026,7 @@ function HomeMetricCard({ icon, label, value, loading, tooltip }) {
     >
       <AnalyticsTooltip>{tooltip}</AnalyticsTooltip>
       <div className="flex items-center gap-3">
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-200">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-200">
           {icon}
         </span>
         <div className="min-w-0">
@@ -1076,7 +1079,7 @@ function SemesterResourceChart({ data, loading }) {
                   className={`w-full rounded-md transition-all duration-500 ${
                     loading
                       ? "animate-pulse bg-slate-300 dark:bg-slate-700"
-                      : "bg-blue-600 dark:bg-blue-400"
+                      : "bg-violet-600 dark:bg-violet-400"
                   }`}
                   style={{ height: `${height}%` }}
                 />
@@ -1097,7 +1100,7 @@ function SemesterResourceChart({ data, loading }) {
   );
 }
 
-function GrowthLineChart({ title, description, data, loading, icon, tone = "blue" }) {
+function GrowthLineChart({ title, description, data, loading, icon, tone = "violet" }) {
   const rows = Array.isArray(data) ? data : [];
   const maxTotal = Math.max(...rows.map((item) => item.total), 1);
   const points = getLineChartPoints(rows, maxTotal);
@@ -1107,20 +1110,20 @@ function GrowthLineChart({ title, description, data, loading, icon, tone = "blue
     : "";
   const checkpoints = getTimelineCheckpoints(points, rows);
   const toneClasses = {
-    blue: {
-      line: "stroke-blue-600 dark:stroke-blue-300",
-      fill: "fill-blue-500/10 dark:fill-blue-300/10",
-      icon: "bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-200",
-      marker: "bg-blue-600 ring-blue-100 dark:bg-blue-300 dark:ring-blue-500/20",
+    violet: {
+      line: "stroke-violet-600 dark:stroke-violet-300",
+      fill: "fill-violet-500/10 dark:fill-violet-300/10",
+      icon: "bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-200",
+      marker: "bg-violet-600 ring-violet-100 dark:bg-violet-300 dark:ring-violet-500/20",
     },
-    teal: {
-      line: "stroke-teal-600 dark:stroke-teal-300",
-      fill: "fill-teal-500/10 dark:fill-teal-300/10",
-      icon: "bg-teal-50 text-teal-700 dark:bg-teal-500/10 dark:text-teal-200",
-      marker: "bg-teal-600 ring-teal-100 dark:bg-teal-300 dark:ring-teal-500/20",
+    green: {
+      line: "stroke-green-600 dark:stroke-green-300",
+      fill: "fill-green-500/10 dark:fill-green-300/10",
+      icon: "bg-green-50 text-green-700 dark:bg-green-500/10 dark:text-green-200",
+      marker: "bg-green-600 ring-green-100 dark:bg-green-300 dark:ring-green-500/20",
     },
   };
-  const classes = toneClasses[tone] || toneClasses.blue;
+  const classes = toneClasses[tone] || toneClasses.violet;
 
   return (
     <article className="surface-card p-6">
@@ -1186,7 +1189,7 @@ function GrowthLineChart({ title, description, data, loading, icon, tone = "blue
   );
 }
 
-function ChartHeader({ icon, title, description, iconClassName = "bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-200" }) {
+function ChartHeader({ icon, title, description, iconClassName = "bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-200" }) {
   return (
     <div className="flex items-start gap-3">
       <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg ${iconClassName}`}>
@@ -1228,7 +1231,7 @@ function ContributorCard({ contributor, rank, onOpenProfile }) {
         highlighted
           ? "border-amber-200 bg-amber-50/80 shadow-sm shadow-amber-500/10 dark:border-amber-500/30 dark:bg-amber-500/10"
           : "border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900"
-      } text-left hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500`}
+      } text-left hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500`}
     >
       <div className="flex items-center gap-4">
         <span className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-950 text-sm font-black text-white ring-2 ring-white dark:bg-white dark:text-slate-950 dark:ring-slate-800">
@@ -1467,7 +1470,7 @@ function buildPrintableRoutine({ title, subtitle, timeSlots, displayDays, getIte
       thead th { background: #f1f5f9; color: #0f172a; }
       tbody th { text-transform: capitalize; background: #f8fafc; }
       td span { display: block; margin-top: 4px; font-size: 12px; color: #475569; }
-      .course-cell { background: #ffffff; border-left: 4px solid #2563eb; }
+      .course-cell { background: #ffffff; border-left: 4px solid #7c3aed; }
       .break-cell { background: #fffbeb; color: #92400e; font-weight: 700; }
       .empty-cell { color: #94a3b8; }
       @media print { body { padding: 0; } header { border-radius: 0; } }

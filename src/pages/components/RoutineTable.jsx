@@ -22,18 +22,19 @@ function RoutineTable({
   return (
     <section className="table-shell animate-enter">
       <div className="flex flex-col gap-4 border-b border-slate-200 bg-white px-5 py-5 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800 dark:bg-slate-900">
-        <div>
+        <div className="max-w-3xl">
           <p className="section-kicker">Routine</p>
-          <h2 className="mt-1 text-2xl font-bold text-slate-950 dark:text-white">
+          <h2 className="display-heading heading-gradient-text mt-3 text-2xl">
             {title}
           </h2>
+          <div className="heading-accent-line" aria-hidden="true" />
           {subtitle && (
-            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+            <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">
               {subtitle}
             </p>
           )}
         </div>
-        {actions && <div className="flex flex-wrap gap-3">{actions}</div>}
+        {actions && <div className="flex flex-wrap gap-3 sm:justify-end">{actions}</div>}
       </div>
 
       {!displayDays.length ? (
@@ -74,9 +75,9 @@ function RoutineTable({
                   <tr
                     key={day}
                     className={cx(
-                      "border-b border-slate-100 transition last:border-b-0 hover:bg-blue-50/50 dark:border-slate-800 dark:hover:bg-slate-900",
+                      "border-b border-slate-100 transition last:border-b-0 hover:bg-violet-50/50 dark:border-slate-800 dark:hover:bg-slate-900",
                       dayMeta.active &&
-                        "bg-teal-50/60 dark:bg-teal-500/10"
+                        "bg-green-50/60 dark:bg-green-500/10"
                     )}
                   >
                     <th
@@ -88,13 +89,13 @@ function RoutineTable({
                           className={cx(
                             "h-2.5 w-2.5 rounded-full bg-slate-300 dark:bg-slate-600",
                             dayMeta.active &&
-                              "animate-soft-pulse bg-teal-500 dark:bg-teal-300"
+                              "animate-soft-pulse bg-green-500 dark:bg-green-300"
                           )}
                         />
                         {day}
                       </span>
                       {dayMeta.label && (
-                        <span className="mt-2 inline-flex rounded-full bg-teal-100 px-2 py-1 text-xs font-semibold text-teal-800 dark:bg-teal-500/15 dark:text-teal-200">
+                        <span className="mt-2 inline-flex rounded-full bg-green-100 px-2 py-1 text-xs font-semibold text-green-800 dark:bg-green-500/15 dark:text-green-200">
                           {dayMeta.label}
                         </span>
                       )}
@@ -145,7 +146,7 @@ function RoutineTable({
                               !item.isBreak &&
                               "bg-white dark:bg-slate-950",
                             canOpenDetails &&
-                              "cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
+                              "cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500",
                             cellMeta.active &&
                               "bg-emerald-50 ring-2 ring-inset ring-emerald-400/70 dark:bg-emerald-500/10"
                           )}
@@ -161,7 +162,7 @@ function RoutineTable({
                                 <span className="absolute right-0 top-0 h-2.5 w-2.5 rounded-full bg-emerald-500" />
                               )}
                               <div className="space-y-1">
-                                <p className="safe-text text-sm font-bold text-blue-700 dark:text-blue-300">
+                                <p className="safe-text text-sm font-bold text-violet-700 dark:text-violet-300">
                                   {item.subject}
                                 </p>
                                 {item.title && (

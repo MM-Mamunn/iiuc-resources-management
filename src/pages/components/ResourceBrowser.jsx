@@ -525,12 +525,12 @@ function ResourceBrowser({
       {(enableCourseFilters && (semesterFilter || creditFilter || contributorId)) || fixedContributorId ? (
         <div className="mt-4 flex flex-wrap gap-2">
           {semesterFilter && (
-            <span className="status-pill border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200">
+            <span className="status-pill border-violet-200 bg-violet-50 text-violet-800 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-200">
               Semester {semesterFilter}
             </span>
           )}
           {creditFilter && (
-            <span className="status-pill border-teal-200 bg-teal-50 text-teal-800 dark:border-teal-500/30 dark:bg-teal-500/10 dark:text-teal-200">
+            <span className="status-pill border-green-200 bg-green-50 text-green-800 dark:border-green-500/30 dark:bg-green-500/10 dark:text-green-200">
               {creditFilter} credit{creditFilter === "1" ? "" : "s"}
             </span>
           )}
@@ -735,12 +735,12 @@ function ResourceRow({
       className={`transition ${
         isFiveStarResource
           ? "bg-amber-50/90 hover:bg-amber-100 dark:bg-amber-500/10 dark:hover:bg-amber-500/15"
-          : "hover:bg-blue-50/60 dark:hover:bg-slate-900"
+          : "hover:bg-violet-50/60 dark:hover:bg-slate-900"
       }`}
     >
       <td className="px-5 py-5 align-top">
         <div className="min-w-0">
-          <h3 className="safe-text mt-1 text-2xl font-black text-blue-700 dark:text-blue-200">
+          <h3 className="safe-text mt-1 text-2xl font-black text-violet-700 dark:text-violet-200">
             {courseCode}
           </h3>
           {isFiveStarResource && (
@@ -766,12 +766,12 @@ function ResourceRow({
           type="button"
           onClick={() => onOpenContributor(resource.by)}
           disabled={!hasContributorProfile}
-          className="group flex min-w-56 items-center gap-3 rounded-lg p-1 text-left transition hover:bg-blue-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-default disabled:hover:bg-transparent dark:hover:bg-slate-900"
+          className="group flex min-w-56 items-center gap-3 rounded-lg p-1 text-left transition hover:bg-violet-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 disabled:cursor-default disabled:hover:bg-transparent dark:hover:bg-slate-900"
           aria-label={`Open community profile for ${studentName}`}
         >
           <Avatar image={profilePic} name={studentName} />
           <div className="min-w-0">
-            <p className="safe-text text-sm font-bold text-slate-950 transition group-hover:text-blue-700 dark:text-white dark:group-hover:text-blue-300">
+            <p className="safe-text text-sm font-bold text-slate-950 transition group-hover:text-violet-700 dark:text-white dark:group-hover:text-violet-300">
               {studentName}
             </p>
             <p className="safe-text mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">
@@ -877,7 +877,7 @@ function ContributorPreview({ profile }) {
             <span className="status-pill border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
               ID {profile.id}
             </span>
-            <span className="status-pill border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200">
+            <span className="status-pill border-violet-200 bg-violet-50 text-violet-800 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-200">
               Section {profile.sec || "N/A"}
             </span>
           </div>
@@ -896,7 +896,7 @@ function EditResourceModal({
   onFormChange,
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-md">
       <section className="surface-card w-full max-w-2xl p-6">
         <div className="flex items-start justify-between gap-4">
           <SectionHeading
@@ -972,7 +972,7 @@ export function RatingModal({
   const myRating = ratings.find((rating) => rating.by === currentUserId);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-md">
       <section className="surface-card max-h-[90vh] w-full max-w-3xl overflow-y-auto p-6">
         <div className="flex items-start justify-between gap-4">
           <SectionHeading
