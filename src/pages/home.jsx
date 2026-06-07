@@ -481,7 +481,7 @@ const Home = () => {
       title: "Community",
       description: "Student discovery and contributor activity.",
       icon: FiUsers,
-      tone: "amber",
+      tone: "sky",
       items: [
         { label: "Community", href: "/info/community", icon: FiUsers },
         { label: "Top Contributors", href: "/#contributors", icon: FiAward },
@@ -492,7 +492,7 @@ const Home = () => {
       title: "Information",
       description: "Teacher, course, section, and room references.",
       icon: FiInfo,
-      tone: "violet",
+      tone: "cyan",
       items: [
         { label: "Teacher Info", href: "/info/teacher", icon: FiUsers },
         { label: "Course Info", href: "/info/course", icon: FiBookOpen },
@@ -507,7 +507,7 @@ const Home = () => {
         ? "Dashboard, course selection, and profile settings."
         : "Login or create an account for personal tools.",
       icon: isLoggedIn ? FiUser : FiLogIn,
-      tone: "green",
+      tone: isLoggedIn ? "green" : "sky",
       items: isLoggedIn
         ? [
             { label: "Dashboard", href: "/homepersonal", icon: FiGrid },
@@ -553,7 +553,7 @@ const Home = () => {
         />
         <div className="absolute inset-0 -z-10 bg-slate-950/55" />
 
-        <div className="page-wrap grid gap-8 py-12 lg:grid-cols-[1fr_430px] lg:items-center lg:py-16">
+        <div className="page-wrap grid gap-8 py-14 lg:grid-cols-[minmax(0,1fr)_minmax(360px,430px)] lg:items-center lg:py-[4.5rem]">
           <div className="mx-auto flex max-w-3xl animate-enter flex-col items-center text-center">
             <p className="section-kicker border-white/20 bg-white/10 text-sky-100 shadow-none ring-1 ring-white/15">
               IIUC CSE Resources
@@ -567,20 +567,17 @@ const Home = () => {
             </p>
 
             <div className="mt-8 grid w-full gap-3 sm:grid-cols-3">
-              {summaryStats.map((stat) => (
-                <div
-                  key={stat.label}
-                  className="hero-glass-card p-4"
-                >
-                  <div className="mb-3 text-green-200">{stat.icon}</div>
-                  <p className="text-sm text-slate-300">{stat.label}</p>
-                  <p className="mt-1 text-2xl font-bold text-white">{stat.value}</p>
-                </div>
+              {summaryStats.map((stat, index) => (
+                <HeroStatCard key={stat.label} stat={stat} index={index} />
               ))}
             </div>
           </div>
 
-          <form id="routine-search" onSubmit={handleSearch} className="hero-glass-card hero-form-card p-5 text-white">
+          <form
+            id="routine-search"
+            onSubmit={handleSearch}
+            className="hero-glass-card hero-form-card animate-enter p-5 text-white shadow-2xl shadow-black/20 transition-all duration-300 ease-out hover:-translate-y-1 hover:bg-white/[0.13] hover:shadow-violet-950/30"
+          >
             <div className="mb-5">
               <p className="section-kicker border-white/15 bg-white/10 text-sky-100 shadow-none">Routine lookup</p>
               <h2 className="display-heading hero-heading-glow mt-3 text-2xl text-white">
@@ -670,7 +667,7 @@ const Home = () => {
         </div>
       </section>
 
-      <main className="page-wrap space-y-14 py-12">
+      <main className="page-wrap space-y-16 py-12 sm:py-14">
         {notice && (
           <Notice type={notice.type} onDismiss={() => setNotice(null)}>
             {notice.text}
@@ -745,14 +742,14 @@ const Home = () => {
           />
         )}
 
-        <section className="space-y-6">
+        <section className="animate-enter space-y-6">
           <SectionHeading
             kicker="Navigation hub"
             title="Explore by category"
             description="Important navbar destinations are grouped into expandable sections for faster discovery."
           />
 
-          <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+          <div className="grid items-stretch gap-4 lg:grid-cols-2 xl:grid-cols-3">
             {featureGroups.map((group) => (
               <FeatureGroupCard
                 key={group.id}
@@ -764,10 +761,12 @@ const Home = () => {
           </div>
         </section>
 
-        <ResourceHighlights
-          onAdd={() => navigate(isLoggedIn ? "/edit/details?tab=resources" : "/auth/login")}
-          onFind={() => navigate("/resources")}
-        />
+        <div className="animate-enter">
+          <ResourceHighlights
+            onAdd={() => navigate(isLoggedIn ? "/edit/details?tab=resources" : "/auth/login")}
+            onFind={() => navigate("/resources")}
+          />
+        </div>
 
         <HomeAnalyticsSection
           analytics={homeAnalytics}
@@ -775,8 +774,8 @@ const Home = () => {
           error={analyticsError}
         />
 
-        <section id="contributors">
-          <div className="surface-card p-6">
+        <section id="contributors" className="animate-enter">
+          <div className="surface-card p-6 transition-all duration-300 ease-out hover:shadow-xl hover:shadow-violet-500/10 sm:p-8">
             <SectionHeading
               kicker="Contributors"
               title="Top routine contributors"
@@ -785,13 +784,13 @@ const Home = () => {
 
             <div className="mt-6">
               {contributorsLoading ? (
-                <div className="grid gap-3 sm:grid-cols-2">
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                   {[1, 2, 3, 4].map((item) => (
-                    <div key={item} className="h-24 animate-pulse rounded-lg bg-slate-100 dark:bg-slate-800" />
+                    <div key={item} className="h-28 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-800" />
                   ))}
                 </div>
               ) : topContributors.length ? (
-                <div className="grid gap-3 sm:grid-cols-2">
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                   {topContributors.slice(0, 6).map((contributor, index) => (
                     <ContributorCard
                       key={contributor.id || index}
@@ -817,6 +816,34 @@ const Home = () => {
   );
 };
 
+function HeroStatCard({ stat, index }) {
+  const tones = {
+    violet: "bg-violet-400/15 text-violet-100 ring-violet-300/20",
+    green: "bg-green-400/15 text-green-100 ring-green-300/20",
+    amber: "bg-amber-400/15 text-amber-100 ring-amber-300/20",
+    sky: "bg-sky-400/15 text-sky-100 ring-sky-300/20",
+  };
+
+  return (
+    <article
+      className="hero-glass-card h-full p-4 text-left shadow-lg shadow-black/10 transition-all duration-300 ease-out hover:-translate-y-1 hover:bg-white/[0.14] hover:shadow-xl hover:shadow-violet-950/25"
+      style={{ animationDelay: `${index * 70}ms` }}
+    >
+      <div className={`mb-4 flex h-10 w-10 items-center justify-center rounded-lg ring-1 ${tones[stat.tone] || tones.violet}`}>
+        {stat.icon}
+      </div>
+      <p className="text-sm font-semibold text-slate-300">{stat.label}</p>
+      <p className="safe-text mt-1 text-2xl font-black text-white">
+        {typeof stat.value === "number" ? (
+          <AnimatedNumber value={stat.value} formatter={formatCompactNumber} />
+        ) : (
+          stat.value
+        )}
+      </p>
+    </article>
+  );
+}
+
 /**
  * Expandable home navigation group that mirrors related navbar destinations.
  */
@@ -825,18 +852,20 @@ function FeatureGroupCard({ group, expanded, onToggle }) {
   const tones = {
     violet: "bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-200",
     green: "bg-green-50 text-green-700 dark:bg-green-500/10 dark:text-green-200",
+    sky: "bg-sky-50 text-sky-700 dark:bg-sky-500/10 dark:text-sky-200",
+    cyan: "bg-cyan-50 text-cyan-700 dark:bg-cyan-500/10 dark:text-cyan-200",
     amber: "bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-200",
   };
 
   return (
-    <article className="subtle-card overflow-hidden hover:-translate-y-1 hover:border-violet-200 hover:shadow-xl hover:shadow-violet-500/10 dark:hover:border-violet-500/40">
+    <article className="group subtle-card h-full overflow-hidden hover:-translate-y-1 hover:border-violet-200 hover:shadow-xl hover:shadow-violet-500/10 dark:hover:border-violet-500/40">
       <button
         type="button"
         onClick={onToggle}
-        className="flex w-full items-start gap-4 p-5 text-left transition-colors duration-200 ease-out hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 dark:hover:bg-slate-900"
+        className="flex min-h-44 w-full items-start gap-4 p-5 text-left transition-colors duration-200 ease-out hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 dark:hover:bg-slate-900"
         aria-expanded={expanded}
       >
-        <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg ${tones[group.tone] || tones.violet}`}>
+        <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg ring-1 ring-current/10 transition-transform duration-300 ease-out group-hover:scale-105 ${tones[group.tone] || tones.violet}`}>
           <Icon className="h-5 w-5" aria-hidden="true" />
         </span>
         <span className="min-w-0 flex-1">
@@ -845,21 +874,21 @@ function FeatureGroupCard({ group, expanded, onToggle }) {
               {group.title}
             </span>
             <FiChevronDown
-              className={`h-5 w-5 shrink-0 text-slate-400 transition ${expanded ? "rotate-180" : ""}`}
+              className={`h-5 w-5 shrink-0 text-slate-400 transition-transform duration-300 ${expanded ? "rotate-180 text-violet-600 dark:text-violet-300" : ""}`}
               aria-hidden="true"
             />
           </span>
           <span className="mt-2 block text-sm leading-6 text-slate-600 dark:text-slate-400">
             {group.description}
           </span>
-          <span className="mt-4 inline-flex rounded-lg bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+          <span className="mt-4 inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600 transition-colors group-hover:bg-violet-50 group-hover:text-violet-700 dark:bg-slate-800 dark:text-slate-300 dark:group-hover:bg-violet-500/10 dark:group-hover:text-violet-200">
             {group.items.length} option{group.items.length === 1 ? "" : "s"}
           </span>
         </span>
       </button>
 
       {expanded && (
-        <div className="grid gap-2 border-t border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950">
+        <div className="grid animate-enter gap-2 border-t border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950">
           {group.items.map((item) => (
             <FeatureGroupLink key={`${group.id}-${item.href}-${item.label}`} item={item} />
           ))}
@@ -901,19 +930,22 @@ function FeaturedAnnouncementCard({ announcement }) {
   return (
     <section
       id="featured-announcement"
-      className="surface-card overflow-hidden shadow-2xl shadow-slate-950/20 ring-1 ring-white/60 dark:shadow-black/45 dark:ring-white/10"
+      className="surface-card group animate-enter overflow-hidden shadow-2xl shadow-slate-950/20 ring-1 ring-white/60 transition-all duration-500 ease-out hover:-translate-y-1 hover:shadow-violet-500/15 dark:shadow-black/45 dark:ring-white/10"
     >
       <div className="relative overflow-hidden bg-slate-950">
         <img
           src={announcement.image}
           alt={`${title} cover`}
-          className="absolute inset-0 h-full w-full object-cover"
+          className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/88 via-slate-950/35 to-slate-950/10" />
-        <div className="relative flex min-h-[420px] items-end p-4 sm:min-h-[500px] sm:p-8">
-          <div className="w-full max-w-5xl rounded-lg border border-white/20 bg-slate-950/35 p-5 text-white shadow-2xl backdrop-blur-xl sm:p-7">
-            <p className="text-sm font-bold text-sky-200">Featured update</p>
-            <h2 className="safe-text mt-2 text-3xl font-black leading-tight sm:text-4xl">
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/92 via-slate-950/45 to-slate-950/10" />
+        <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-violet-950/35 to-transparent" />
+        <div className="relative flex min-h-[400px] items-end p-4 sm:min-h-[480px] sm:p-8">
+          <div className="w-full max-w-5xl rounded-xl border border-white/20 bg-slate-950/45 p-5 text-white shadow-2xl shadow-black/30 backdrop-blur-xl transition-colors duration-300 group-hover:bg-slate-950/52 sm:p-7">
+            <p className="inline-flex rounded-full bg-sky-400/15 px-3 py-1 text-xs font-black uppercase text-sky-100 ring-1 ring-sky-300/20">
+              Featured update
+            </p>
+            <h2 className="safe-text mt-3 text-3xl font-black leading-tight sm:text-4xl">
               {title}
             </h2>
             <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_auto] lg:items-end">
@@ -958,14 +990,14 @@ function HomeAnalyticsSection({ analytics, loading, error }) {
   const resourceGrowth = normalizedAnalytics.resources.growth;
 
   return (
-    <section id="platform-analytics" className="space-y-6">
+    <section id="platform-analytics" className="animate-enter space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <SectionHeading
           kicker="Platform insights"
           title="Statistics & analytics"
           description="Resource trends and current platform totals."
         />
-        <span className="status-pill w-fit border-slate-200 bg-white text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200">
+        <span className="status-pill w-fit border-slate-200 bg-white text-slate-700 shadow-sm transition-all duration-300 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200">
           {loading ? "Refreshing charts..." : formatDateRange(normalizedAnalytics.period)}
         </span>
       </div>
@@ -994,7 +1026,8 @@ function HomeAnalyticsSection({ analytics, loading, error }) {
         <HomeMetricCard
           icon={<FiActivity aria-hidden="true" />}
           label="Timeline window"
-          value={`${resourceGrowth.length || 0} days`}
+          value={resourceGrowth.length || 0}
+          suffix=" days"
           loading={loading}
           tooltip="Daily cumulative resource chart points included in the analytics window."
         />
@@ -1018,15 +1051,15 @@ function HomeAnalyticsSection({ analytics, loading, error }) {
   );
 }
 
-function HomeMetricCard({ icon, label, value, loading, tooltip }) {
+function HomeMetricCard({ icon, label, value, loading, tooltip, suffix = "" }) {
   return (
     <article
-      className="group relative rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950"
+      className="group relative h-full rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-300 ease-out hover:-translate-y-1 hover:border-violet-200 hover:shadow-xl hover:shadow-violet-500/10 dark:border-slate-800 dark:bg-slate-950 dark:hover:border-violet-500/40"
       title={tooltip}
     >
       <AnalyticsTooltip>{tooltip}</AnalyticsTooltip>
       <div className="flex items-center gap-3">
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-200">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-violet-50 text-violet-700 transition-transform duration-300 group-hover:scale-105 dark:bg-violet-500/10 dark:text-violet-200">
           {icon}
         </span>
         <div className="min-w-0">
@@ -1037,7 +1070,11 @@ function HomeMetricCard({ icon, label, value, loading, tooltip }) {
             <span className="mt-2 block h-8 w-24 animate-pulse rounded-md bg-slate-200 dark:bg-slate-800" />
           ) : (
             <p className="safe-text mt-1 text-2xl font-black text-slate-950 dark:text-white">
-              {typeof value === "number" ? formatCompactNumber(value) : value}
+              {typeof value === "number" ? (
+                <AnimatedNumber value={value} formatter={formatCompactNumber} suffix={suffix} />
+              ) : (
+                value
+              )}
             </p>
           )}
         </div>
@@ -1046,12 +1083,23 @@ function HomeMetricCard({ icon, label, value, loading, tooltip }) {
   );
 }
 
+function getSemesterBarClass(index) {
+  const classes = [
+    "bg-gradient-to-t from-violet-700 to-violet-400 dark:from-violet-500 dark:to-violet-300",
+    "bg-gradient-to-t from-sky-700 to-sky-400 dark:from-sky-500 dark:to-sky-300",
+    "bg-gradient-to-t from-green-700 to-green-400 dark:from-green-500 dark:to-green-300",
+    "bg-gradient-to-t from-cyan-700 to-cyan-400 dark:from-cyan-500 dark:to-cyan-300",
+  ];
+
+  return classes[index % classes.length];
+}
+
 function SemesterResourceChart({ data, loading }) {
   const rows = normalizeSemesterDistribution(data);
   const maxTotal = Math.max(...rows.map((item) => item.total), 1);
 
   return (
-    <article className="surface-card p-6">
+    <article className="surface-card p-6 transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-xl hover:shadow-violet-500/10">
       <ChartHeader
         icon={<FiBarChart2 aria-hidden="true" />}
         title="Semester-wise resources"
@@ -1074,12 +1122,12 @@ function SemesterResourceChart({ data, loading }) {
               <span className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 w-48 -translate-x-1/2 rounded-md bg-slate-950 px-3 py-2 text-center text-xs font-semibold text-white opacity-0 shadow-lg transition group-hover/bar:opacity-100 dark:bg-white dark:text-slate-950">
                 {loading ? `Loading semester ${item.semester} resource count.` : tooltip}
               </span>
-              <div className="flex h-44 items-end rounded-lg bg-slate-100 p-1 dark:bg-slate-900">
+              <div className="flex h-44 items-end rounded-lg bg-slate-100 p-1 ring-1 ring-slate-200/70 transition-colors group-hover/bar:bg-violet-50 dark:bg-slate-900 dark:ring-slate-800 dark:group-hover/bar:bg-violet-500/10">
                 <div
                   className={`w-full rounded-md transition-all duration-500 ${
                     loading
                       ? "animate-pulse bg-slate-300 dark:bg-slate-700"
-                      : "bg-violet-600 dark:bg-violet-400"
+                      : getSemesterBarClass(index)
                   }`}
                   style={{ height: `${height}%` }}
                 />
@@ -1089,7 +1137,7 @@ function SemesterResourceChart({ data, loading }) {
                   Sem {item.semester}
                 </p>
                 <p className="text-sm font-black text-slate-950 dark:text-white">
-                  {loading ? "-" : formatCompactNumber(item.total)}
+                  {loading ? "-" : <AnimatedNumber value={item.total} formatter={formatCompactNumber} />}
                 </p>
               </div>
             </div>
@@ -1126,7 +1174,7 @@ function GrowthLineChart({ title, description, data, loading, icon, tone = "viol
   const classes = toneClasses[tone] || toneClasses.violet;
 
   return (
-    <article className="surface-card p-6">
+    <article className="surface-card p-6 transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-xl hover:shadow-violet-500/10">
       <ChartHeader
         icon={icon}
         iconClassName={classes.icon}
@@ -1141,7 +1189,7 @@ function GrowthLineChart({ title, description, data, loading, icon, tone = "viol
           <span>0</span>
         </div>
         <div
-          className="relative h-56 overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950"
+          className="relative h-56 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-inner shadow-slate-950/[0.02] dark:border-slate-800 dark:bg-slate-950"
           title={`${title}: daily cumulative totals over the selected resource period.`}
         >
           {loading ? (
@@ -1227,14 +1275,14 @@ function ContributorCard({ contributor, rank, onOpenProfile }) {
     <button
       type="button"
       onClick={() => onOpenProfile(contributor.id)}
-      className={`rounded-lg border p-4 transition ${
+      className={`group h-full rounded-xl border p-4 transition-all duration-300 ease-out ${
         highlighted
           ? "border-amber-200 bg-amber-50/80 shadow-sm shadow-amber-500/10 dark:border-amber-500/30 dark:bg-amber-500/10"
           : "border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900"
-      } text-left hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500`}
+      } text-left hover:-translate-y-1 hover:border-violet-200 hover:shadow-xl hover:shadow-violet-500/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 dark:hover:border-violet-500/40`}
     >
       <div className="flex items-center gap-4">
-        <span className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-950 text-sm font-black text-white ring-2 ring-white dark:bg-white dark:text-slate-950 dark:ring-slate-800">
+        <span className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-950 text-sm font-black text-white ring-2 ring-white transition-transform duration-300 group-hover:scale-105 dark:bg-white dark:text-slate-950 dark:ring-slate-800">
           {contributor.profilePic ? (
             <img src={contributor.profilePic} alt="" className="h-full w-full object-cover" />
           ) : (
@@ -1242,18 +1290,20 @@ function ContributorCard({ contributor, rank, onOpenProfile }) {
           )}
         </span>
         <div className="min-w-0 flex-1">
-          <span className={`text-xs font-black uppercase ${highlighted ? "text-amber-700 dark:text-amber-200" : "text-slate-500 dark:text-slate-400"}`}>
+          <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-black uppercase ${highlighted ? "bg-amber-100 text-amber-700 dark:bg-amber-400/10 dark:text-amber-200" : "bg-white text-slate-500 ring-1 ring-slate-200 dark:bg-slate-950 dark:text-slate-400 dark:ring-slate-800"}`}>
             Rank #{rank}
           </span>
-          <p className="safe-text font-bold text-slate-950 dark:text-white">
+          <p className="safe-text mt-2 font-bold text-slate-950 dark:text-white">
             {contributor.name || "Contributor"}
           </p>
           <p className="safe-text mt-1 text-xs text-slate-500 dark:text-slate-400">
             ID: {contributor.id || "N/A"}
           </p>
         </div>
-        <span className="rounded-lg bg-white px-3 py-2 text-right text-sm font-bold text-slate-950 ring-1 ring-slate-200 dark:bg-slate-950 dark:text-white dark:ring-slate-800">
-          <span className="block text-lg">{Number.isFinite(points) ? points.toLocaleString() : 0}</span>
+        <span className="rounded-lg bg-white px-3 py-2 text-right text-sm font-bold text-slate-950 ring-1 ring-slate-200 transition-colors group-hover:bg-violet-50 group-hover:text-violet-800 dark:bg-slate-950 dark:text-white dark:ring-slate-800 dark:group-hover:bg-violet-500/10 dark:group-hover:text-violet-100">
+          <span className="block text-lg">
+            <AnimatedNumber value={Number.isFinite(points) ? points : 0} formatter={formatNumber} />
+          </span>
           <span className="block text-[11px] uppercase text-slate-500 dark:text-slate-400">resources</span>
         </span>
       </div>
@@ -1387,6 +1437,46 @@ function formatCompactNumber(value) {
     maximumFractionDigits: 1,
     notation: sanitizeNumber(value) >= 10000 ? "compact" : "standard",
   });
+}
+
+function AnimatedNumber({ value, formatter = formatNumber, suffix = "" }) {
+  const targetValue = sanitizeNumber(value);
+  const [displayValue, setDisplayValue] = useState(0);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      setDisplayValue(targetValue);
+      return undefined;
+    }
+
+    const prefersReducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+
+    if (prefersReducedMotion) {
+      setDisplayValue(targetValue);
+      return undefined;
+    }
+
+    let animationFrame = 0;
+    const startTime = performance.now();
+    const duration = 650;
+
+    const step = (now) => {
+      const progress = Math.min((now - startTime) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setDisplayValue(Math.round(targetValue * eased));
+
+      if (progress < 1) {
+        animationFrame = requestAnimationFrame(step);
+      }
+    };
+
+    setDisplayValue(0);
+    animationFrame = requestAnimationFrame(step);
+
+    return () => cancelAnimationFrame(animationFrame);
+  }, [targetValue]);
+
+  return `${formatter(displayValue)}${suffix}`;
 }
 
 function sanitizeNumber(value, fallback = 0) {

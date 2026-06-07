@@ -135,7 +135,7 @@ function ResourceHighlights({
   };
 
   return (
-    <section className="surface-card p-6 sm:p-8">
+    <section className="surface-card p-6 transition-all duration-300 ease-out hover:shadow-xl hover:shadow-violet-500/10 sm:p-8">
       <SectionHeading
         kicker="Resources"
         title={title}
@@ -166,9 +166,12 @@ function ResourceHighlights({
         {loading ? (
           <LoadingState label="Loading latest resources..." />
         ) : resources.length > 0 ? (
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid items-stretch gap-4 md:grid-cols-3">
             {resources.map((resource) => (
-              <article key={resource.id} className="subtle-card p-4">
+              <article
+                key={resource.id}
+                className="subtle-card group flex h-full flex-col justify-between p-4 hover:-translate-y-1 hover:border-violet-200 hover:shadow-xl hover:shadow-violet-500/10 dark:hover:border-violet-500/40"
+              >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="section-kicker">{resource.course || "Course"}</p>
@@ -178,7 +181,7 @@ function ResourceHighlights({
                     <button
                       type="button"
                       onClick={() => openContributorProfile(resource.by)}
-                      className="mt-2 block max-w-full text-left text-sm font-semibold text-slate-600 transition hover:text-violet-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 dark:text-slate-400 dark:hover:text-violet-300"
+                    className="mt-2 block max-w-full rounded-md text-left text-sm font-semibold text-slate-600 transition-colors hover:text-violet-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 dark:text-slate-400 dark:hover:text-violet-300"
                     >
                       <span className="safe-text block">
                         {resource.studentName || resource.by || "Student"}
@@ -193,13 +196,13 @@ function ResourceHighlights({
                   <button
                     type="button"
                     onClick={() => openRatings(resource)}
-                    className="group inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2.5 py-1.5 text-sm font-bold text-amber-800 ring-1 ring-amber-200 transition hover:bg-amber-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 dark:bg-amber-500/10 dark:text-amber-200 dark:ring-amber-500/30 dark:hover:bg-amber-500/15"
+                    className="group/rating inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2.5 py-1.5 text-sm font-bold text-amber-800 ring-1 ring-amber-200 transition-all duration-200 hover:-translate-y-0.5 hover:bg-amber-100 hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 dark:bg-amber-500/10 dark:text-amber-200 dark:ring-amber-500/30 dark:hover:bg-amber-500/15"
                     aria-label={`Rate or view ratings for ${resource.course || "resource"}`}
                   >
                     <FiStar aria-hidden="true" />
                     {formatStar(resource.star)}
                     <FiChevronRight
-                      className="h-4 w-4 transition group-hover:translate-x-0.5"
+                      className="h-4 w-4 transition group-hover/rating:translate-x-0.5"
                       aria-hidden="true"
                     />
                   </button>
@@ -210,7 +213,7 @@ function ResourceHighlights({
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={handleResourceOpen}
-                  className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-violet-700 hover:underline dark:text-violet-300"
+                  className="mt-5 inline-flex w-fit items-center gap-2 rounded-lg text-sm font-semibold text-violet-700 transition-all duration-200 hover:translate-x-0.5 hover:text-sky-700 hover:underline dark:text-violet-300 dark:hover:text-sky-300"
                 >
                   Open resource
                   <FiExternalLink aria-hidden="true" />

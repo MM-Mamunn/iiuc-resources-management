@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
+  FiArrowRight,
   FiBookOpen,
   FiCalendar,
   FiClock,
@@ -306,14 +307,14 @@ const HomePersonal = () => {
     <div className="min-h-screen">
       <Header />
 
-      <main className="page-wrap space-y-8 py-10">
+      <main className="page-wrap space-y-8 py-8 sm:py-10">
         {notice && (
           <Notice type={notice.type} onDismiss={() => setNotice(null)}>
             {notice.text}
           </Notice>
         )}
 
-        <section className="relative isolate overflow-hidden rounded-lg bg-slate-950 px-6 py-8 text-white shadow-2xl sm:px-8">
+        <section className="relative isolate overflow-hidden rounded-xl bg-slate-950 px-5 py-7 text-white shadow-2xl shadow-slate-950/20 ring-1 ring-white/10 sm:px-8 lg:px-10">
           <img
             src={campusImage}
             alt=""
@@ -321,10 +322,10 @@ const HomePersonal = () => {
           />
           <div className="absolute inset-0 -z-10 bg-slate-950/72" />
 
-          <div className="grid gap-8 lg:grid-cols-[1fr_320px] lg:items-end">
-            <div>
-              <p className="text-sm font-bold text-green-200">Personal dashboard</p>
-              <h1 className="mt-3 text-3xl font-black text-white sm:text-5xl">
+          <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(280px,360px)] lg:items-end">
+            <div className="max-w-3xl">
+              <p className="text-sm font-bold text-sky-200">Personal dashboard</p>
+              <h1 className="display-heading hero-heading-glow mt-3 text-3xl text-white sm:text-5xl">
                 Welcome back{profile?.name ? `, ${profile.name}` : ""}.
               </h1>
               <p className="mt-4 max-w-2xl text-base leading-7 text-slate-200">
@@ -359,7 +360,7 @@ const HomePersonal = () => {
           </div>
         </section>
 
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <section className="grid animate-enter gap-4 md:grid-cols-2 xl:grid-cols-4">
           {stats.map((stat) => (
             <MetricCard key={stat.label} {...stat} />
           ))}
@@ -370,8 +371,8 @@ const HomePersonal = () => {
           onFind={() => navigate("/resources")}
         />
 
-        <section className="grid gap-8 xl:grid-cols-[320px_1fr]">
-          <aside className="space-y-4">
+        <section className="grid gap-6 xl:grid-cols-[340px_minmax(0,1fr)] xl:items-start">
+          <aside className="space-y-4 xl:sticky xl:top-28">
             <ProfilePanel
               profile={profile}
               loading={profileLoading}
@@ -379,7 +380,7 @@ const HomePersonal = () => {
               onPrivacySettings={() => navigate("/edit/details?tab=settings")}
             />
 
-            <div className="surface-card p-5">
+            <div className="surface-card p-5 transition-all duration-300 ease-out hover:shadow-xl hover:shadow-violet-500/10">
               <SectionHeading kicker="Shortcuts" title="Common actions" />
               <div className="mt-5 grid gap-2">
                 <DashboardAction
@@ -401,8 +402,17 @@ const HomePersonal = () => {
             </div>
           </aside>
 
-          <div className="space-y-4">
-            <div className="flex justify-end">
+          <div className="min-w-0 space-y-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="section-kicker">Routine workspace</p>
+                <h2 className="mt-2 text-xl font-black text-slate-950 dark:text-white">
+                  Schedule view
+                </h2>
+                <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                  Switch between your saved courses and the full section routine.
+                </p>
+              </div>
               <RoutineTypeToggle value={routineView} onChange={setRoutineView} />
             </div>
 
@@ -411,6 +421,7 @@ const HomePersonal = () => {
             ) : routineView === "personal" ? (
               schedule.length ? (
                 <RoutineTable
+                  key="personal-routine"
                   title="Personal Schedule"
                   subtitle={`${profile?.name || "Student"} - ${sessionLabel}`}
                   timeSlots={timeSlots}
@@ -432,7 +443,7 @@ const HomePersonal = () => {
                   })}
                 />
               ) : (
-                <div className="table-shell">
+                <div className="table-shell animate-enter">
                   <EmptyState
                     icon={<FiCalendar className="h-7 w-7" aria-hidden="true" />}
                     title="No personal routine found"
@@ -447,6 +458,7 @@ const HomePersonal = () => {
               )
             ) : sectionSchedule.length ? (
               <RoutineTable
+                key="section-routine"
                 title="Section Routine"
                 subtitle={`${sectionLabel} - ${sessionLabel}`}
                 timeSlots={sectionTimeSlots}
@@ -462,7 +474,7 @@ const HomePersonal = () => {
                 })}
               />
             ) : (
-              <div className="table-shell">
+              <div className="table-shell animate-enter">
                 <EmptyState
                   icon={<FiCalendar className="h-7 w-7" aria-hidden="true" />}
                   title="No section routine found"
@@ -497,7 +509,7 @@ const HomePersonal = () => {
  */
 function RoutineTypeToggle({ value, onChange }) {
   return (
-    <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1 dark:border-slate-800 dark:bg-slate-950">
+    <div className="inline-flex w-full rounded-lg border border-slate-200 bg-slate-50 p-1 shadow-sm sm:w-auto dark:border-slate-800 dark:bg-slate-950">
       {ROUTINE_VIEW_OPTIONS.map((option) => {
         const Icon = option.icon;
         const isActive = value === option.key;
@@ -508,10 +520,10 @@ function RoutineTypeToggle({ value, onChange }) {
             type="button"
             onClick={() => onChange(option.key)}
             className={cx(
-              "inline-flex min-h-10 items-center gap-2 rounded-md px-3 py-2 text-sm font-bold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500",
+              "inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-bold transition-all duration-200 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 sm:flex-none",
               isActive
-                ? "bg-white text-violet-700 shadow-sm dark:bg-slate-800 dark:text-violet-200"
-                : "text-slate-600 hover:text-slate-950 dark:text-slate-400 dark:hover:text-white",
+                ? "bg-white text-violet-700 shadow-md shadow-violet-500/10 dark:bg-slate-800 dark:text-violet-200 dark:shadow-black/20"
+                : "text-slate-600 hover:bg-white/70 hover:text-slate-950 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-white",
             )}
           >
             <Icon className="h-4 w-4" aria-hidden="true" />
@@ -530,14 +542,14 @@ function CurrentClassPanel({ currentClass, sectionCurrentClass, sectionLabel }) 
   const hasLiveClass = Boolean(currentClass || sectionCurrentClass);
 
   return (
-    <div className="rounded-lg border border-white/15 bg-white/10 p-5 backdrop-blur">
+    <div className="rounded-xl border border-white/15 bg-white/10 p-5 shadow-xl shadow-black/10 backdrop-blur-md">
       <div className="flex items-center gap-3">
-        <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-green-300/20 text-green-100">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-sky-300/20 text-sky-100 ring-1 ring-white/15">
           <FiClock className="h-5 w-5" aria-hidden="true" />
         </span>
-        <div>
+        <div className="min-w-0">
           <p className="text-sm text-slate-300">Now</p>
-          <h2 className="text-lg font-bold text-white">
+          <h2 className="safe-text text-lg font-bold text-white">
             {hasLiveClass ? "Class in progress" : "No live class"}
           </h2>
         </div>
@@ -581,9 +593,9 @@ function ProfilePanel({ profile, loading, onEdit, onPrivacySettings }) {
   }
 
   return (
-    <div className="surface-card p-5">
+    <div className="surface-card p-5 transition-all duration-300 ease-out hover:shadow-xl hover:shadow-violet-500/10">
       <div className="flex items-center gap-4">
-        <span className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-950 text-sm font-black text-white ring-1 ring-slate-200 dark:bg-white dark:text-slate-950 dark:ring-slate-700">
+        <span className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-950 text-sm font-black text-white ring-2 ring-violet-100 dark:bg-white dark:text-slate-950 dark:ring-violet-500/30">
           {profileImage ? (
             <img src={profileImage} alt="" className="h-full w-full object-cover" />
           ) : (
@@ -638,7 +650,7 @@ function LiveClassDetails({ label, classInfo, emptyText }) {
 
   return (
     <div className="border-t border-white/15 pt-3 first:border-t-0 first:pt-0">
-      <p className="text-xs font-bold uppercase text-green-100">
+      <p className="text-xs font-bold uppercase text-sky-100">
         {label}
       </p>
       {classInfo ? (
@@ -685,7 +697,7 @@ function getProfileInitials(profile) {
  */
 function ProfileRow({ label, value, icon = null }) {
   return (
-    <div className="flex items-center justify-between gap-4 rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-900">
+    <div className="flex items-center justify-between gap-4 rounded-lg bg-slate-50 px-3 py-2 transition-colors hover:bg-violet-50/70 dark:bg-slate-900 dark:hover:bg-violet-500/10">
       <dt className="text-slate-500 dark:text-slate-400">{label}</dt>
       <dd className="safe-text flex items-center justify-end gap-2 text-right font-semibold text-slate-900 dark:text-slate-100">
         {icon}
@@ -703,10 +715,15 @@ function DashboardAction({ icon, label, onClick }) {
     <button
       type="button"
       onClick={onClick}
-      className="flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-semibold text-slate-700 transition hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 dark:text-slate-200 dark:hover:bg-slate-800"
+      className="group flex min-h-11 items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm font-semibold text-slate-700 transition-all duration-200 ease-out hover:translate-x-1 hover:bg-violet-50 hover:text-violet-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 dark:text-slate-200 dark:hover:bg-violet-500/10 dark:hover:text-violet-200"
     >
-      <span className="text-violet-700 dark:text-violet-300">{icon}</span>
-      {label}
+      <span className="flex min-w-0 items-center gap-3">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-50 text-violet-700 transition-colors group-hover:bg-white dark:bg-violet-500/10 dark:text-violet-200 dark:group-hover:bg-violet-400/10">
+          {icon}
+        </span>
+        <span className="safe-text">{label}</span>
+      </span>
+      <FiArrowRight className="h-4 w-4 shrink-0 text-slate-400 transition group-hover:translate-x-0.5 group-hover:text-violet-600 dark:group-hover:text-violet-200" aria-hidden="true" />
     </button>
   );
 }

@@ -135,7 +135,7 @@ export function MetricCard({ icon, label, value, tone = "violet" }) {
   };
 
   return (
-    <div className="surface-card p-5 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5">
+    <div className="surface-card h-full p-5 transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-xl hover:shadow-violet-500/10">
       <div className="flex items-center gap-4">
         <div className={cx("flex h-11 w-11 shrink-0 items-center justify-center rounded-xl", tones[tone])}>
           {icon}
