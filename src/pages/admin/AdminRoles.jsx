@@ -7,6 +7,7 @@ import {
   FiChevronLeft,
   FiChevronRight,
   FiClock,
+  FiCpu,
   FiEdit3,
   FiEye,
   FiEyeOff,
@@ -24,7 +25,7 @@ import {
 } from "react-icons/fi";
 import api from "../../api";
 import campusImage from "../../assets/iiuc.webp";
-import { useActiveSession, useAuth } from "../../App";
+import { useActiveSession, useAuth, useFeatureSettings } from "../../App";
 import {
   fetchAdminAnnouncement,
   saveAdminAnnouncement,
@@ -35,6 +36,10 @@ import {
   listSessions,
   updateSession,
 } from "../../services/sessionService";
+import {
+  fetchAiFeatureSetting,
+  updateAiFeatureSetting,
+} from "../../services/settingsService";
 import {
   isValidPeriodRange,
   listPeriods,
@@ -87,6 +92,7 @@ const emptyAnnouncementForm = {
 const AdminRoles = () => {
   const { user, isLoggedIn } = useAuth();
   const { refreshActiveSession } = useActiveSession();
+  const { setAiFeatureEnabled, refreshFeatureSettings } = useFeatureSettings();
   const navigate = useNavigate();
   const [activeFeature, setActiveFeature] = useState("sessions");
   const [crUsers, setCrUsers] = useState([]);
@@ -127,6 +133,9 @@ const AdminRoles = () => {
   const [announcementLoading, setAnnouncementLoading] = useState(false);
   const [announcementSaving, setAnnouncementSaving] = useState(false);
   const [announcementVisibilitySaving, setAnnouncementVisibilitySaving] = useState(false);
+  const [aiFeatureEnabledDraft, setAiFeatureEnabledDraft] = useState(false);
+  const [aiFeatureLoading, setAiFeatureLoading] = useState(false);
+  const [aiFeatureSaving, setAiFeatureSaving] = useState(false);
 
   const fetchCrUsers = useCallback(async (page = 1) => {
     setLoading(true);
@@ -237,6 +246,25 @@ const AdminRoles = () => {
     }
   }, []);
 
+  const fetchAiFeature = useCallback(async () => {
+    setAiFeatureLoading(true);
+    try {
+      const setting = await fetchAiFeatureSetting();
+      setAiFeatureEnabledDraft(Boolean(setting.aiFeatureEnabled));
+      setAiFeatureEnabled(Boolean(setting.aiFeatureEnabled));
+    } catch (aiFeatureError) {
+      setMessage({
+        type: "error",
+        text:
+          aiFeatureError.response?.data?.message ||
+          aiFeatureError.response?.data?.msg ||
+          "Failed to load AI feature setting.",
+      });
+    } finally {
+      setAiFeatureLoading(false);
+    }
+  }, [setAiFeatureEnabled]);
+
   const fetchSubmissionNotifications = useCallback(async () => {
     try {
       const response = await api.get("/api/admin/submissions/unviewed-count");
@@ -293,9 +321,10 @@ const AdminRoles = () => {
       fetchLoginLogs(),
       fetchPeriods(),
       fetchAnnouncement(),
+      fetchAiFeature(),
       fetchSubmissionNotifications(),
     ]);
-  }, [fetchAnnouncement, fetchCrUsers, fetchLoginLogs, fetchPeriods, fetchSessions, fetchSubmissionNotifications]);
+  }, [fetchAiFeature, fetchAnnouncement, fetchCrUsers, fetchLoginLogs, fetchPeriods, fetchSessions, fetchSubmissionNotifications]);
 
   useEffect(() => {
     if (!isLoggedIn) {
@@ -749,6 +778,36 @@ const AdminRoles = () => {
     }
   };
 
+  const handleAiFeatureToggle = async () => {
+    const nextEnabled = !aiFeatureEnabledDraft;
+
+    setAiFeatureSaving(true);
+    setMessage(null);
+
+    try {
+      const setting = await updateAiFeatureSetting(nextEnabled);
+      setAiFeatureEnabledDraft(Boolean(setting.aiFeatureEnabled));
+      setAiFeatureEnabled(Boolean(setting.aiFeatureEnabled));
+      await refreshFeatureSettings();
+      setMessage({
+        type: "success",
+        text: setting.aiFeatureEnabled
+          ? "AI feature is now enabled."
+          : "AI feature is now disabled.",
+      });
+    } catch (aiFeatureError) {
+      setMessage({
+        type: "error",
+        text:
+          aiFeatureError.response?.data?.message ||
+          aiFeatureError.response?.data?.msg ||
+          "Failed to update AI feature setting.",
+      });
+    } finally {
+      setAiFeatureSaving(false);
+    }
+  };
+
   const features = [
     {
       id: "sessions",
@@ -784,6 +843,13 @@ const AdminRoles = () => {
       title: "Announcement",
       value: announcementLoading ? "..." : announcement?.isActive ? "Live" : announcement ? "Hidden" : "Empty",
       description: "Manage the dashboard featured update card.",
+    },
+    {
+      id: "aiFeature",
+      icon: FiCpu,
+      title: "AI Feature",
+      value: aiFeatureLoading ? "..." : aiFeatureEnabledDraft ? "Enabled" : "Disabled",
+      description: "Control global AI assistant availability.",
     },
     {
       id: "submissions",
@@ -826,10 +892,10 @@ const AdminRoles = () => {
               type="button"
               onClick={refreshAdminData}
               className="btn-secondary border-white/20 bg-white/10 text-white hover:bg-white/20 dark:border-white/20 dark:bg-white/10 dark:text-white"
-              disabled={loading || sessionsLoading || loginLogsLoading || periodsLoading || announcementLoading || submissionsLoading}
+              disabled={loading || sessionsLoading || loginLogsLoading || periodsLoading || announcementLoading || aiFeatureLoading || submissionsLoading}
             >
               <FiRefreshCw
-                className={loading || sessionsLoading || loginLogsLoading || periodsLoading || announcementLoading || submissionsLoading ? "animate-spin" : ""}
+                className={loading || sessionsLoading || loginLogsLoading || periodsLoading || announcementLoading || aiFeatureLoading || submissionsLoading ? "animate-spin" : ""}
                 aria-hidden="true"
               />
               Refresh
@@ -937,6 +1003,16 @@ const AdminRoles = () => {
             />
           )}
 
+          {activeFeature === "aiFeature" && (
+            <AiFeatureManagementFeature
+              enabled={aiFeatureEnabledDraft}
+              loading={aiFeatureLoading}
+              saving={aiFeatureSaving}
+              onRefresh={fetchAiFeature}
+              onToggle={handleAiFeatureToggle}
+            />
+          )}
+
           {activeFeature === "submissions" && (
             <SubmissionManagementFeature
               submissions={submissions}
@@ -984,7 +1060,7 @@ const AdminRoles = () => {
 function FeatureNavigation({ features, activeFeature, onSelect }) {
   return (
     <section
-      className="mt-8 grid auto-cols-[minmax(150px,1fr)] grid-flow-col gap-3 overflow-x-auto pb-2 xl:grid-cols-7 xl:auto-cols-auto xl:overflow-visible"
+      className="mt-8 grid auto-cols-[minmax(150px,1fr)] grid-flow-col gap-3 overflow-x-auto pb-2 xl:grid-cols-8 xl:auto-cols-auto xl:overflow-visible"
       aria-label="Admin features"
     >
       {features.map((feature) => {
@@ -1018,6 +1094,99 @@ function FeatureNavigation({ features, activeFeature, onSelect }) {
           </button>
         );
       })}
+    </section>
+  );
+}
+
+/**
+ * Admin toggle for the globally available AI assistant.
+ */
+function AiFeatureManagementFeature({
+  enabled,
+  loading,
+  saving,
+  onRefresh,
+  onToggle,
+}) {
+  const statusClass = enabled
+    ? "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200"
+    : "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200";
+
+  return (
+    <section className="grid gap-8 lg:grid-cols-[1fr_360px]">
+      <div className="surface-card p-5 sm:p-6">
+        <SectionHeading
+          kicker="Feature toggle"
+          title="AI Assistant Availability"
+          description="Enable or disable the AI assistant globally. When disabled, the AI navbar item is hidden and direct AI page visits show a disabled state."
+          actions={
+            <button type="button" onClick={onRefresh} className="btn-secondary" disabled={loading || saving}>
+              <FiRefreshCw className={loading ? "animate-spin" : ""} aria-hidden="true" />
+              Refresh
+            </button>
+          }
+        />
+
+        {loading ? (
+          <LoadingState label="Loading AI feature setting..." />
+        ) : (
+          <div className="mt-6 rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-950">
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-4">
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-slate-950 text-white shadow-lg shadow-violet-600/20 dark:bg-white dark:text-slate-950">
+                  <FiCpu className="h-6 w-6" aria-hidden="true" />
+                </span>
+                <div>
+                  <p className="text-lg font-black text-slate-950 dark:text-white">
+                    AI Feature: {enabled ? "Enabled" : "Disabled"}
+                  </p>
+                  <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                    This setting controls the frontend AI workspace for all users.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={onToggle}
+                disabled={saving}
+                className={enabled ? "btn-secondary" : "btn-primary"}
+              >
+                {saving ? (
+                  <FiRefreshCw className="animate-spin" aria-hidden="true" />
+                ) : enabled ? (
+                  <FiEyeOff aria-hidden="true" />
+                ) : (
+                  <FiEye aria-hidden="true" />
+                )}
+                {saving ? "Updating..." : enabled ? "Disable AI" : "Enable AI"}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <aside className="surface-card p-5">
+        <p className="section-kicker">Current state</p>
+        <div className="mt-4 flex items-center gap-3">
+          <span
+            className={cx(
+              "flex h-11 w-11 items-center justify-center rounded-lg border",
+              statusClass,
+            )}
+          >
+            <span className="h-3 w-3 rounded-full bg-current" aria-hidden="true" />
+          </span>
+          <div>
+            <p className="text-xl font-black text-slate-950 dark:text-white">
+              {enabled ? "Enabled" : "Disabled"}
+            </p>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+              {enabled ? "AI navigation and requests are available." : "AI navigation and requests are blocked."}
+            </p>
+          </div>
+        </div>
+      </aside>
     </section>
   );
 }

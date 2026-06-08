@@ -8,6 +8,7 @@ import {
   FiCalendar,
   FiChevronDown,
   FiChevronRight,
+  FiCpu,
   FiGrid,
   FiHome,
   FiInfo,
@@ -23,7 +24,7 @@ import {
   FiUsers,
   FiX,
 } from "react-icons/fi";
-import { useActiveSession, useAuth, useTheme } from "../../App";
+import { useActiveSession, useAuth, useTheme, useFeatureSettings } from "../../App";
 import { cx } from "./ui";
 
 /**
@@ -37,6 +38,7 @@ function Header() {
   const location = useLocation();
   const { user, isLoggedIn } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { aiFeatureEnabled } = useFeatureSettings();
 
   const userType = String(user?.type || "").toLowerCase();
   const isAdmin = isLoggedIn && userType === "admin";
@@ -102,6 +104,7 @@ function Header() {
     { label: "Home", to: "/", icon: FiHome },
     isLoggedIn && { label: "Dashboard", to: "/homepersonal", icon: FiGrid },
     { label: "Resources", to: "/resources", icon: FiBookOpen },
+    aiFeatureEnabled && { label: "AI", to: "/ai", icon: FiCpu },
     isCrOrAdmin && { label: "CR", to: "/CR", icon: FiUsers },
     isAdmin && { label: "Admin", to: "/admin/users", icon: FiShield },
   ].filter(Boolean);

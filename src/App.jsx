@@ -16,6 +16,7 @@ import api from "./api";
 import GlobalFooter from "./pages/components/GlobalFooter";
 import { NotificationViewport } from "./pages/components/ui";
 import { fetchActiveSession } from "./services/sessionService";
+import { fetchAiFeatureSetting } from "./services/settingsService";
 
 const Home = lazy(() => import("./pages/home"));
 const LoggedHome = lazy(() => import("./pages/personal/LoggedHome"));
@@ -40,10 +41,12 @@ const SectionRoutine = lazy(() => import("./pages/SectionRoutine"));
 const Semester = lazy(() => import("./pages/info/StudyMaterials"));
 const ClassroomRoutine = lazy(() => import("./pages/room/ClassroomRoutine"));
 const Resources = lazy(() => import("./pages/Resources"));
+const AI = lazy(() => import("./pages/AI"));
 
 const AuthContext = createContext(null);
 const ThemeContext = createContext(null);
 const SessionContext = createContext(null);
+const FeatureSettingsContext = createContext(null);
 
 /**
  * Returns the authenticated user state shared by pages and navigation.
@@ -64,6 +67,59 @@ export function useTheme() {
  */
 export function useActiveSession() {
   return useContext(SessionContext);
+}
+
+/**
+ * Returns globally configured feature availability.
+ */
+export function useFeatureSettings() {
+  return useContext(FeatureSettingsContext);
+}
+
+/**
+ * Loads app-wide feature settings used by navigation and gated pages.
+ */
+function FeatureSettingsProvider({ children }) {
+  const [aiFeatureEnabled, setAiFeatureEnabled] = useState(false);
+  const [aiFeatureLoading, setAiFeatureLoading] = useState(true);
+  const [aiFeatureError, setAiFeatureError] = useState("");
+
+  const refreshFeatureSettings = useCallback(async () => {
+    setAiFeatureLoading(true);
+    setAiFeatureError("");
+
+    try {
+      const setting = await fetchAiFeatureSetting();
+      setAiFeatureEnabled(Boolean(setting.aiFeatureEnabled));
+    } catch (error) {
+      setAiFeatureEnabled(false);
+      setAiFeatureError(
+        error.response?.data?.message ||
+          error.response?.data?.msg ||
+          "AI feature settings could not be loaded.",
+      );
+    } finally {
+      setAiFeatureLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshFeatureSettings();
+  }, [refreshFeatureSettings]);
+
+  return (
+    <FeatureSettingsContext.Provider
+      value={{
+        aiFeatureEnabled,
+        aiFeatureLoading,
+        aiFeatureError,
+        refreshFeatureSettings,
+        setAiFeatureEnabled,
+      }}
+    >
+      {children}
+    </FeatureSettingsContext.Provider>
+  );
 }
 
 /**
@@ -262,6 +318,10 @@ function AppRoutes() {
         <Route path="/routine/teacher" element={<Fullroutine />} />
         <Route path="/classroom/routine" element={<ClassroomRoutine />} />
         <Route path="/resources" element={<Resources />} />
+        <Route
+          path="/ai"
+          element={isLoggedIn ? <AI /> : <Navigate to="/auth/login" replace />}
+        />
         <Route path="/info/teacher" element={<TeacherInfo />} />
         <Route
           path="/info/course"
@@ -342,7 +402,9 @@ function App() {
         <BrowserRouter>
           <SessionProvider>
             <AuthProvider>
-              <AppFrame />
+              <FeatureSettingsProvider>
+                <AppFrame />
+              </FeatureSettingsProvider>
             </AuthProvider>
           </SessionProvider>
         </BrowserRouter>
