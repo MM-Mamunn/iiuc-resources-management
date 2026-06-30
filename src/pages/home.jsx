@@ -28,6 +28,7 @@ import Header from "./components/Header";
 import ResourceHighlights from "./components/ResourceHighlights";
 import RoutineActionToggle from "./components/RoutineActionToggle";
 import RoutineTable from "./components/RoutineTable";
+import { SponsorSection } from "./components/SponsorDisplay";
 import {
   EmptyState,
   FormField,
@@ -40,6 +41,7 @@ import api from "../api";
 import { useActiveSession, useAuth } from "../App";
 import { cachedRequest, clearCacheByPrefix } from "../services/cacheService";
 import { fetchFeaturedAnnouncement } from "../services/announcementService";
+import { fetchFeaturedSponsor } from "../services/sponsorService";
 import { getRoutineTimeSlots, usePeriods } from "../services/periodService";
 import {
   getRoutineClassDetails,
@@ -94,6 +96,7 @@ const Home = () => {
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [analyticsError, setAnalyticsError] = useState("");
   const [announcement, setAnnouncement] = useState(null);
+  const [featuredSponsor, setFeaturedSponsor] = useState(null);
   const { periods } = usePeriods();
 
   const userType = String(user?.type || "").toLowerCase();
@@ -131,6 +134,30 @@ const Home = () => {
     }
 
     loadAnnouncement();
+
+    return () => {
+      ignoreResult = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let ignoreResult = false;
+
+    async function loadSponsor() {
+      try {
+        const data = await fetchFeaturedSponsor();
+
+        if (!ignoreResult) {
+          setFeaturedSponsor(data.sponsorFeatureEnabled ? data.sponsor : null);
+        }
+      } catch {
+        if (!ignoreResult) {
+          setFeaturedSponsor(null);
+        }
+      }
+    }
+
+    loadSponsor();
 
     return () => {
       ignoreResult = true;
@@ -810,6 +837,8 @@ const Home = () => {
             </div>
           </div>
         </section>
+
+        <SponsorSection sponsor={featuredSponsor} />
       </main>
 
     </div>

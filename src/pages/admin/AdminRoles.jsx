@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
+  FiAward,
   FiBell,
   FiCalendar,
   FiCheckCircle,
@@ -11,14 +12,17 @@ import {
   FiEdit3,
   FiEye,
   FiEyeOff,
+  FiGlobe,
   FiImage,
   FiLink,
   FiMessageSquare,
+  FiMoon,
   FiPlus,
   FiRefreshCw,
   FiSave,
   FiSearch,
   FiShield,
+  FiSun,
   FiUserCheck,
   FiUsers,
   FiX,
@@ -41,11 +45,22 @@ import {
   updateAiFeatureSetting,
 } from "../../services/settingsService";
 import {
+  emptySponsorSocialLinks,
+  fetchAdminSponsor,
+  saveAdminSponsor,
+  updateSponsorFeatureSetting,
+} from "../../services/sponsorService";
+import {
   isValidPeriodRange,
   listPeriods,
   updatePeriod,
 } from "../../services/periodService";
 import Header from "../components/Header";
+import {
+  SPONSOR_SOCIAL_CONFIG,
+  SponsorLogoPlate,
+  SponsorSocialLinks,
+} from "../components/SponsorDisplay";
 import {
   EmptyState,
   FormField,
@@ -85,6 +100,13 @@ const emptyAnnouncementForm = {
   description: "",
   link: "",
 };
+const emptySponsorForm = {
+  name: "",
+  description: "",
+  websiteUrl: "",
+  contactInfo: "",
+  socialLinks: emptySponsorSocialLinks,
+};
 
 /**
  * Admin-only role and session management workspace.
@@ -94,7 +116,7 @@ const AdminRoles = () => {
   const { refreshActiveSession } = useActiveSession();
   const { setAiFeatureEnabled, refreshFeatureSettings } = useFeatureSettings();
   const navigate = useNavigate();
-  const [activeFeature, setActiveFeature] = useState("sessions");
+  const [activeFeature, setActiveFeature] = useState("loginLogs");
   const [crUsers, setCrUsers] = useState([]);
   const [crPagination, setCrPagination] = useState(DEFAULT_CR_PAGINATION);
   const [loading, setLoading] = useState(false);
@@ -133,6 +155,15 @@ const AdminRoles = () => {
   const [announcementLoading, setAnnouncementLoading] = useState(false);
   const [announcementSaving, setAnnouncementSaving] = useState(false);
   const [announcementVisibilitySaving, setAnnouncementVisibilitySaving] = useState(false);
+  const [sponsor, setSponsor] = useState(null);
+  const [sponsorForm, setSponsorForm] = useState(emptySponsorForm);
+  const [sponsorLogoFile, setSponsorLogoFile] = useState(null);
+  const [sponsorLogoPreview, setSponsorLogoPreview] = useState("");
+  const [sponsorLogoBackground, setSponsorLogoBackground] = useState("black");
+  const [sponsorFeatureEnabledDraft, setSponsorFeatureEnabledDraft] = useState(false);
+  const [sponsorLoading, setSponsorLoading] = useState(false);
+  const [sponsorSaving, setSponsorSaving] = useState(false);
+  const [sponsorVisibilitySaving, setSponsorVisibilitySaving] = useState(false);
   const [aiFeatureEnabledDraft, setAiFeatureEnabledDraft] = useState(false);
   const [aiFeatureLoading, setAiFeatureLoading] = useState(false);
   const [aiFeatureSaving, setAiFeatureSaving] = useState(false);
@@ -246,6 +277,32 @@ const AdminRoles = () => {
     }
   }, []);
 
+  const fetchSponsor = useCallback(async () => {
+    setSponsorLoading(true);
+    try {
+      const data = await fetchAdminSponsor();
+      setSponsor(data.sponsor);
+      setSponsorFeatureEnabledDraft(Boolean(data.sponsorFeatureEnabled));
+      setSponsorForm(getSponsorFormFromRow(data.sponsor));
+      setSponsorLogoFile(null);
+      setSponsorLogoPreview(data.sponsor?.logo || "");
+    } catch (sponsorError) {
+      setSponsor(null);
+      setSponsorForm(getSponsorFormFromRow(null));
+      setSponsorLogoFile(null);
+      setSponsorLogoPreview("");
+      setMessage({
+        type: "error",
+        text:
+          sponsorError.response?.data?.message ||
+          sponsorError.response?.data?.msg ||
+          "Failed to load sponsor.",
+      });
+    } finally {
+      setSponsorLoading(false);
+    }
+  }, []);
+
   const fetchAiFeature = useCallback(async () => {
     setAiFeatureLoading(true);
     try {
@@ -321,10 +378,11 @@ const AdminRoles = () => {
       fetchLoginLogs(),
       fetchPeriods(),
       fetchAnnouncement(),
+      fetchSponsor(),
       fetchAiFeature(),
       fetchSubmissionNotifications(),
     ]);
-  }, [fetchAiFeature, fetchAnnouncement, fetchCrUsers, fetchLoginLogs, fetchPeriods, fetchSessions, fetchSubmissionNotifications]);
+  }, [fetchAiFeature, fetchAnnouncement, fetchCrUsers, fetchLoginLogs, fetchPeriods, fetchSessions, fetchSponsor, fetchSubmissionNotifications]);
 
   useEffect(() => {
     if (!isLoggedIn) {
@@ -356,6 +414,12 @@ const AdminRoles = () => {
       URL.revokeObjectURL(announcementPreview);
     }
   }, [announcementPreview]);
+
+  useEffect(() => () => {
+    if (sponsorLogoPreview.startsWith("blob:")) {
+      URL.revokeObjectURL(sponsorLogoPreview);
+    }
+  }, [sponsorLogoPreview]);
 
   useEffect(() => {
     const query = customId.trim();
@@ -778,6 +842,117 @@ const AdminRoles = () => {
     }
   };
 
+  const updateSponsorForm = (field, value) => {
+    setSponsorForm((current) => ({
+      ...current,
+      [field]: value,
+    }));
+  };
+
+  const updateSponsorSocialLink = (field, value) => {
+    setSponsorForm((current) => ({
+      ...current,
+      socialLinks: {
+        ...current.socialLinks,
+        [field]: value,
+      },
+    }));
+  };
+
+  const handleSponsorLogoChange = (event) => {
+    const file = event.target.files?.[0] || null;
+
+    setSponsorLogoFile(file);
+    setSponsorLogoPreview(file ? URL.createObjectURL(file) : sponsor?.logo || "");
+  };
+
+  const handleSponsorSubmit = async (event) => {
+    event.preventDefault();
+
+    const payload = {
+      name: sponsorForm.name.trim(),
+      description: sponsorForm.description.trim(),
+      websiteUrl: sponsorForm.websiteUrl.trim(),
+      socialLinks: sponsorForm.socialLinks,
+      contactInfo: sponsorForm.contactInfo.trim(),
+      logoFile: sponsorLogoFile,
+    };
+
+    if (!payload.name || !payload.description) {
+      setMessage({
+        type: "error",
+        text: "Sponsor name and description are required.",
+      });
+      return;
+    }
+
+    if (!sponsorLogoPreview && !payload.logoFile) {
+      setMessage({ type: "error", text: "Sponsor logo is required." });
+      return;
+    }
+
+    setSponsorSaving(true);
+    setMessage(null);
+
+    try {
+      const row = await saveAdminSponsor(payload);
+      setSponsor(row);
+      setSponsorForm(getSponsorFormFromRow(row));
+      setSponsorLogoFile(null);
+      setSponsorLogoPreview(row?.logo || "");
+      setMessage({
+        type: "success",
+        text: "Sponsor updated successfully.",
+      });
+    } catch (sponsorError) {
+      setMessage({
+        type: "error",
+        text:
+          sponsorError.response?.data?.message ||
+          sponsorError.response?.data?.msg ||
+          "Failed to update sponsor.",
+      });
+    } finally {
+      setSponsorSaving(false);
+    }
+  };
+
+  const handleSponsorVisibilityToggle = async () => {
+    const nextEnabled = !sponsorFeatureEnabledDraft;
+
+    if (nextEnabled && !sponsor) {
+      setMessage({
+        type: "error",
+        text: "Save sponsor content before enabling sponsor display.",
+      });
+      return;
+    }
+
+    setSponsorVisibilitySaving(true);
+    setMessage(null);
+
+    try {
+      const setting = await updateSponsorFeatureSetting(nextEnabled);
+      setSponsorFeatureEnabledDraft(Boolean(setting.sponsorFeatureEnabled));
+      setMessage({
+        type: "success",
+        text: setting.sponsorFeatureEnabled
+          ? "Sponsor is now visible across the website."
+          : "Sponsor is hidden across the website.",
+      });
+    } catch (sponsorError) {
+      setMessage({
+        type: "error",
+        text:
+          sponsorError.response?.data?.message ||
+          sponsorError.response?.data?.msg ||
+          "Failed to update sponsor visibility.",
+      });
+    } finally {
+      setSponsorVisibilitySaving(false);
+    }
+  };
+
   const handleAiFeatureToggle = async () => {
     const nextEnabled = !aiFeatureEnabledDraft;
 
@@ -810,6 +985,20 @@ const AdminRoles = () => {
 
   const features = [
     {
+      id: "loginLogs",
+      icon: FiClock,
+      title: "Latest Logins",
+      value: loginLogsLoading ? "..." : loginLogs.length,
+      description: "See the latest 10 successful student login records.",
+    },
+    {
+      id: "submissions",
+      icon: FiBell,
+      title: `Notifications (${unviewedSubmissionCount})`,
+      value: submissionsLoading ? "..." : unviewedSubmissionCount,
+      description: "Review applications, feedback, requests, and complaints.",
+    },
+    {
       id: "sessions",
       icon: FiCalendar,
       title: "Sessions",
@@ -822,13 +1011,6 @@ const AdminRoles = () => {
       title: "CR Users",
       value: loading ? "..." : crPagination.total,
       description: "Review CR accounts with paginated controls.",
-    },
-    {
-      id: "loginLogs",
-      icon: FiClock,
-      title: "Latest Logins",
-      value: loginLogsLoading ? "..." : loginLogs.length,
-      description: "See the latest 10 successful student login records.",
     },
     {
       id: "periods",
@@ -845,18 +1027,18 @@ const AdminRoles = () => {
       description: "Manage the dashboard featured update card.",
     },
     {
+      id: "sponsor",
+      icon: FiAward,
+      title: "Sponsor",
+      value: sponsorLoading ? "..." : sponsorFeatureEnabledDraft ? "Enabled" : sponsor ? "Hidden" : "Empty",
+      description: "Manage the Supported By content and visibility.",
+    },
+    {
       id: "aiFeature",
       icon: FiCpu,
       title: "AI Feature",
       value: aiFeatureLoading ? "..." : aiFeatureEnabledDraft ? "Enabled" : "Disabled",
       description: "Control global AI assistant availability.",
-    },
-    {
-      id: "submissions",
-      icon: FiBell,
-      title: `Notifications (${unviewedSubmissionCount})`,
-      value: submissionsLoading ? "..." : unviewedSubmissionCount,
-      description: "Review applications, feedback, requests, and complaints.",
     },
     {
       id: "roleUpdate",
@@ -892,10 +1074,10 @@ const AdminRoles = () => {
               type="button"
               onClick={refreshAdminData}
               className="btn-secondary border-white/20 bg-white/10 text-white hover:bg-white/20 dark:border-white/20 dark:bg-white/10 dark:text-white"
-              disabled={loading || sessionsLoading || loginLogsLoading || periodsLoading || announcementLoading || aiFeatureLoading || submissionsLoading}
+              disabled={loading || sessionsLoading || loginLogsLoading || periodsLoading || announcementLoading || sponsorLoading || aiFeatureLoading || submissionsLoading}
             >
               <FiRefreshCw
-                className={loading || sessionsLoading || loginLogsLoading || periodsLoading || announcementLoading || aiFeatureLoading || submissionsLoading ? "animate-spin" : ""}
+                className={loading || sessionsLoading || loginLogsLoading || periodsLoading || announcementLoading || sponsorLoading || aiFeatureLoading || submissionsLoading ? "animate-spin" : ""}
                 aria-hidden="true"
               />
               Refresh
@@ -1003,6 +1185,27 @@ const AdminRoles = () => {
             />
           )}
 
+          {activeFeature === "sponsor" && (
+            <SponsorManagementFeature
+              sponsor={sponsor}
+              form={sponsorForm}
+              logoFile={sponsorLogoFile}
+              logoPreview={sponsorLogoPreview}
+              enabled={sponsorFeatureEnabledDraft}
+              loading={sponsorLoading}
+              saving={sponsorSaving}
+              visibilitySaving={sponsorVisibilitySaving}
+              logoBackground={sponsorLogoBackground}
+              onRefresh={fetchSponsor}
+              onFormChange={updateSponsorForm}
+              onSocialLinkChange={updateSponsorSocialLink}
+              onLogoChange={handleSponsorLogoChange}
+              onLogoBackgroundChange={setSponsorLogoBackground}
+              onVisibilityToggle={handleSponsorVisibilityToggle}
+              onSubmit={handleSponsorSubmit}
+            />
+          )}
+
           {activeFeature === "aiFeature" && (
             <AiFeatureManagementFeature
               enabled={aiFeatureEnabledDraft}
@@ -1060,7 +1263,7 @@ const AdminRoles = () => {
 function FeatureNavigation({ features, activeFeature, onSelect }) {
   return (
     <section
-      className="mt-8 grid auto-cols-[minmax(150px,1fr)] grid-flow-col gap-3 overflow-x-auto pb-2 xl:grid-cols-8 xl:auto-cols-auto xl:overflow-visible"
+      className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"
       aria-label="Admin features"
     >
       {features.map((feature) => {
@@ -1357,6 +1560,231 @@ function AnnouncementManagementFeature({
             icon={<FiImage className="h-7 w-7" aria-hidden="true" />}
             title="No announcement yet"
             description="Add a cover image and content to publish the dashboard card."
+          />
+        )}
+      </aside>
+    </div>
+  );
+}
+
+/**
+ * Admin editor for the Supported By sponsor block.
+ */
+function SponsorManagementFeature({
+  sponsor,
+  form,
+  logoFile,
+  logoPreview,
+  enabled,
+  loading,
+  saving,
+  visibilitySaving,
+  onRefresh,
+  onFormChange,
+  onSocialLinkChange,
+  onLogoChange,
+  onVisibilityToggle,
+  onSubmit,
+}) {
+  const VisibilityIcon = enabled ? FiEyeOff : FiEye;
+
+  return (
+    <div className="grid gap-8 lg:grid-cols-[1fr_420px]">
+      <form onSubmit={onSubmit} className="surface-card p-5">
+        <SectionHeading
+          kicker="Supported By"
+          title="Sponsor Management"
+          description="Update the sponsor logo, details, contact information, and social links shown on the public site."
+          actions={
+            <>
+              <button
+                type="button"
+                onClick={onVisibilityToggle}
+                className={enabled ? "btn-secondary" : "btn-primary"}
+                disabled={loading || saving || visibilitySaving}
+              >
+                <VisibilityIcon className={visibilitySaving ? "animate-pulse" : ""} aria-hidden="true" />
+                {visibilitySaving ? "Updating..." : enabled ? "Hide sponsor" : "Show sponsor"}
+              </button>
+              <button type="button" onClick={onRefresh} className="btn-secondary" disabled={loading || saving}>
+                <FiRefreshCw className={loading ? "animate-spin" : ""} aria-hidden="true" />
+                Refresh
+              </button>
+            </>
+          }
+        />
+
+        {loading ? (
+          <LoadingState label="Loading sponsor..." />
+        ) : (
+          <div className="mt-6 grid gap-5">
+            <FormField
+              id="sponsor-logo"
+              label="Sponsor Logo"
+              helper={logoFile ? logoFile.name : logoPreview ? "Current logo selected." : "Upload a PNG or transparent logo."}
+            >
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <label htmlFor="sponsor-logo" className="btn-secondary cursor-pointer">
+                  <FiImage aria-hidden="true" />
+                  Choose logo
+                </label>
+                <input
+                  id="sponsor-logo"
+                  type="file"
+                  accept="image/*"
+                  onChange={onLogoChange}
+                  className="sr-only"
+                />
+                <span className="text-sm font-medium text-slate-600 dark:text-slate-300">
+                  {logoFile ? "New logo ready" : logoPreview ? "Logo available" : "No logo selected"}
+                </span>
+              </div>
+            </FormField>
+
+            <FormField id="sponsor-name" label="Sponsor Name">
+              <input
+                id="sponsor-name"
+                type="text"
+                value={form.name}
+                onChange={(event) => onFormChange("name", event.target.value)}
+                className="form-field"
+                maxLength={160}
+                placeholder="Sponsor name"
+                required
+              />
+            </FormField>
+
+            <FormField id="sponsor-description" label="Short Description">
+              <textarea
+                id="sponsor-description"
+                value={form.description}
+                onChange={(event) => onFormChange("description", event.target.value)}
+                className="form-field min-h-36 resize-y"
+                maxLength={1200}
+                placeholder="Describe the sponsor relationship or contribution."
+                required
+              />
+            </FormField>
+
+            <FormField id="sponsor-website" label="Website">
+              <div className="relative">
+                <FiGlobe
+                  className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"
+                  aria-hidden="true"
+                />
+                <input
+                  id="sponsor-website"
+                  type="url"
+                  value={form.websiteUrl}
+                  onChange={(event) => onFormChange("websiteUrl", event.target.value)}
+                  className="form-field pl-12"
+                  maxLength={2048}
+                  placeholder="https://example.com"
+                />
+              </div>
+            </FormField>
+
+            <FormField id="sponsor-contact" label="Contact Information">
+              <textarea
+                id="sponsor-contact"
+                value={form.contactInfo}
+                onChange={(event) => onFormChange("contactInfo", event.target.value)}
+                className="form-field min-h-28 resize-y"
+                maxLength={1200}
+                placeholder="Optional contact details"
+              />
+            </FormField>
+
+            <div>
+              <p className="field-label">Social Links</p>
+              <div className="mt-2 grid gap-3 sm:grid-cols-2">
+                {SPONSOR_SOCIAL_CONFIG.map((item) => {
+                  const Icon = item.icon;
+
+                  return (
+                    <label key={item.key} htmlFor={`sponsor-${item.key}`} className="block">
+                      <span className="sr-only">{item.label}</span>
+                      <span className="relative block">
+                        <Icon
+                          className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+                          aria-hidden="true"
+                        />
+                        <input
+                          id={`sponsor-${item.key}`}
+                          type="url"
+                          value={form.socialLinks?.[item.key] || ""}
+                          onChange={(event) => onSocialLinkChange(item.key, event.target.value)}
+                          className="form-field pl-11"
+                          maxLength={2048}
+                          placeholder={item.placeholder}
+                        />
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+
+            <button type="submit" className="btn-primary w-full sm:w-fit" disabled={saving || loading}>
+              <FiSave className={saving ? "animate-pulse" : ""} aria-hidden="true" />
+              {saving ? "Saving..." : "Save sponsor"}
+            </button>
+          </div>
+        )}
+      </form>
+
+      <aside className="surface-card overflow-hidden shadow-2xl shadow-slate-950/15 ring-1 ring-white/60 dark:shadow-black/40 dark:ring-white/10">
+        <div className="border-b border-slate-200 p-5 dark:border-slate-800">
+          <SectionHeading
+            kicker={enabled ? "Visible site-wide" : sponsor ? "Hidden site-wide" : "Preview"}
+            title={sponsor ? "Saved sponsor" : "Draft sponsor"}
+            description={
+              enabled
+                ? "This sponsor can appear on the home page and footer."
+                : "Sponsor content is saved but hidden from public pages."
+            }
+          />
+        </div>
+
+        {loading ? (
+          <LoadingState label="Loading sponsor preview..." />
+        ) : logoPreview || form.name || form.description ? (
+          <div className="grid gap-5 p-5">
+            <SponsorLogoPlate logo={logoPreview} name={form.name || "Sponsor"} size="preview" />
+            <div>
+              <p className="section-kicker">Supported By</p>
+              <h3 className="safe-text mt-3 text-2xl font-black text-slate-950 dark:text-white">
+                {form.name || "Sponsor name"}
+              </h3>
+              <p className="mt-3 whitespace-pre-line text-sm leading-6 text-slate-600 dark:text-slate-300">
+                {form.description || "Sponsor description will appear here."}
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              {form.websiteUrl && (
+                <a href={form.websiteUrl} target="_blank" rel="noreferrer" className="btn-secondary">
+                  <FiLink aria-hidden="true" />
+                  Website
+                </a>
+              )}
+              <SponsorSocialLinks socialLinks={form.socialLinks} compact />
+            </div>
+            <div
+              className={cx(
+                "rounded-lg border px-4 py-3 text-sm font-semibold",
+                enabled
+                  ? "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-100"
+                  : "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100",
+              )}
+            >
+              {enabled ? "Sponsor display is enabled." : "Sponsor display is disabled."}
+            </div>
+          </div>
+        ) : (
+          <EmptyState
+            icon={<FiAward className="h-7 w-7" aria-hidden="true" />}
+            title="No sponsor yet"
+            description="Add a logo and sponsor details to publish a Supported By section."
           />
         )}
       </aside>
@@ -2333,6 +2761,19 @@ function PaginationControls({ pagination, disabled, onPageChange }) {
       </div>
     </div>
   );
+}
+
+function getSponsorFormFromRow(row) {
+  return {
+    name: row?.name || "",
+    description: row?.description || "",
+    websiteUrl: row?.websiteUrl || "",
+    contactInfo: row?.contactInfo || "",
+    socialLinks: Object.keys(emptySponsorSocialLinks).reduce((links, key) => {
+      links[key] = row?.socialLinks?.[key] || "";
+      return links;
+    }, {}),
+  };
 }
 
 function getPeriodKey(periodItem) {

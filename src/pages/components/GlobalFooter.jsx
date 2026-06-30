@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FiLogIn, FiMessageSquare, FiSend, FiX } from "react-icons/fi";
 import api from "../../api";
+import { fetchFeaturedSponsor } from "../../services/sponsorService";
+import { FooterSponsor } from "./SponsorDisplay";
 import { FormField, Notice, SectionHeading } from "./ui";
 
 const MAX_FEEDBACK_LENGTH = 200;
@@ -14,6 +16,31 @@ function GlobalFooter({ isLoggedIn, authReady = true }) {
   const [feedback, setFeedback] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [notice, setNotice] = useState(null);
+  const [sponsor, setSponsor] = useState(null);
+
+  useEffect(() => {
+    let ignoreResult = false;
+
+    async function loadSponsor() {
+      try {
+        const data = await fetchFeaturedSponsor();
+
+        if (!ignoreResult) {
+          setSponsor(data.sponsorFeatureEnabled ? data.sponsor : null);
+        }
+      } catch {
+        if (!ignoreResult) {
+          setSponsor(null);
+        }
+      }
+    }
+
+    loadSponsor();
+
+    return () => {
+      ignoreResult = true;
+    };
+  }, []);
 
   const closeModal = () => {
     setOpen(false);
@@ -55,22 +82,25 @@ function GlobalFooter({ isLoggedIn, authReady = true }) {
   return (
     <>
       <footer className="border-t border-slate-200/60 bg-gradient-to-b from-white to-slate-50 py-10 dark:border-slate-800/60 dark:from-slate-950 dark:to-slate-950">
-        <div className="page-wrap flex flex-col gap-4 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between dark:text-slate-400">
+        <div className="page-wrap flex flex-col gap-5 text-sm text-slate-600 lg:flex-row lg:items-center lg:justify-between dark:text-slate-400">
           <div>
             <p className="font-semibold text-slate-900 dark:text-white">
               IIUC CSE Resources Management System
             </p>
             <p className="mt-1">Built for clearer academic planning and faster routine access.</p>
           </div>
-          <button
-            type="button"
-            onClick={() => setOpen(true)}
-            disabled={!authReady}
-            className="btn-secondary w-fit"
-          >
-            <FiMessageSquare aria-hidden="true" />
-            Feedback
-          </button>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center lg:justify-end">
+            <FooterSponsor sponsor={sponsor} />
+            <button
+              type="button"
+              onClick={() => setOpen(true)}
+              disabled={!authReady}
+              className="btn-secondary w-fit"
+            >
+              <FiMessageSquare aria-hidden="true" />
+              Feedback
+            </button>
+          </div>
         </div>
       </footer>
 
