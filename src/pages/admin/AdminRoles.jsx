@@ -55,6 +55,7 @@ import {
   listPeriods,
   updatePeriod,
 } from "../../services/periodService";
+import { fetchLatestAiQueryLogs } from "../../services/adminService";
 import Header from "../components/Header";
 import {
   SPONSOR_SOCIAL_CONFIG,
@@ -132,6 +133,8 @@ const AdminRoles = () => {
   const [sessionsLoading, setSessionsLoading] = useState(false);
   const [loginLogs, setLoginLogs] = useState([]);
   const [loginLogsLoading, setLoginLogsLoading] = useState(false);
+  const [aiQueryLogs, setAiQueryLogs] = useState([]);
+  const [aiQueryLogsLoading, setAiQueryLogsLoading] = useState(false);
   const [submissions, setSubmissions] = useState([]);
   const [submissionsLoading, setSubmissionsLoading] = useState(false);
   const [submissionPagination, setSubmissionPagination] = useState(DEFAULT_SUBMISSION_PAGINATION);
@@ -277,6 +280,21 @@ const AdminRoles = () => {
     }
   }, []);
 
+  const fetchAiQueryLogs = useCallback(async () => {
+    setAiQueryLogsLoading(true);
+    try {
+      setAiQueryLogs(await fetchLatestAiQueryLogs());
+    } catch (aiQueryLogError) {
+      setAiQueryLogs([]);
+      setMessage({
+        type: "error",
+        text: aiQueryLogError.response?.data?.msg || "Failed to load AI query logs.",
+      });
+    } finally {
+      setAiQueryLogsLoading(false);
+    }
+  }, []);
+
   const fetchSponsor = useCallback(async () => {
     setSponsorLoading(true);
     try {
@@ -376,13 +394,14 @@ const AdminRoles = () => {
       fetchCrUsers(1),
       fetchSessions(),
       fetchLoginLogs(),
+      fetchAiQueryLogs(),
       fetchPeriods(),
       fetchAnnouncement(),
       fetchSponsor(),
       fetchAiFeature(),
       fetchSubmissionNotifications(),
     ]);
-  }, [fetchAiFeature, fetchAnnouncement, fetchCrUsers, fetchLoginLogs, fetchPeriods, fetchSessions, fetchSponsor, fetchSubmissionNotifications]);
+  }, [fetchAiFeature, fetchAiQueryLogs, fetchAnnouncement, fetchCrUsers, fetchLoginLogs, fetchPeriods, fetchSessions, fetchSponsor, fetchSubmissionNotifications]);
 
   useEffect(() => {
     if (!isLoggedIn) {
@@ -992,6 +1011,13 @@ const AdminRoles = () => {
       description: "See the latest 10 successful student login records.",
     },
     {
+      id: "aiQueryLogs",
+      icon: FiMessageSquare,
+      title: "AI Query Logs",
+      value: aiQueryLogsLoading ? "..." : aiQueryLogs.length,
+      description: "Monitor the ten newest AI requests by record ID.",
+    },
+    {
       id: "submissions",
       icon: FiBell,
       title: `Notifications (${unviewedSubmissionCount})`,
@@ -1074,10 +1100,10 @@ const AdminRoles = () => {
               type="button"
               onClick={refreshAdminData}
               className="btn-secondary border-white/20 bg-white/10 text-white hover:bg-white/20 dark:border-white/20 dark:bg-white/10 dark:text-white"
-              disabled={loading || sessionsLoading || loginLogsLoading || periodsLoading || announcementLoading || sponsorLoading || aiFeatureLoading || submissionsLoading}
+              disabled={loading || sessionsLoading || loginLogsLoading || aiQueryLogsLoading || periodsLoading || announcementLoading || sponsorLoading || aiFeatureLoading || submissionsLoading}
             >
               <FiRefreshCw
-                className={loading || sessionsLoading || loginLogsLoading || periodsLoading || announcementLoading || sponsorLoading || aiFeatureLoading || submissionsLoading ? "animate-spin" : ""}
+                className={loading || sessionsLoading || loginLogsLoading || aiQueryLogsLoading || periodsLoading || announcementLoading || sponsorLoading || aiFeatureLoading || submissionsLoading ? "animate-spin" : ""}
                 aria-hidden="true"
               />
               Refresh
@@ -1153,6 +1179,15 @@ const AdminRoles = () => {
               loginLogs={loginLogs}
               loading={loginLogsLoading}
               onRefresh={fetchLoginLogs}
+              onOpenProfile={openCommunityProfile}
+            />
+          )}
+
+          {activeFeature === "aiQueryLogs" && (
+            <AiQueryLogsFeature
+              logs={aiQueryLogs}
+              loading={aiQueryLogsLoading}
+              onRefresh={fetchAiQueryLogs}
               onOpenProfile={openCommunityProfile}
             />
           )}
@@ -2146,6 +2181,116 @@ function LoginLogsFeature({ loginLogs, loading, onRefresh, onOpenProfile }) {
                   </td>
                 </tr>
               ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
+
+/**
+ * Fixed latest-record monitoring view. List controls stay at the API boundary
+ * so pagination, search, and filters can be added without reshaping this UI.
+ */
+function AiQueryLogsFeature({ logs, loading, onRefresh, onOpenProfile }) {
+  return (
+    <section className="table-shell">
+      <div className="flex flex-col gap-4 border-b border-slate-200 bg-white px-5 py-5 sm:flex-row sm:items-end sm:justify-between dark:border-slate-800 dark:bg-slate-900">
+        <div>
+          <p className="section-kicker">AI monitoring</p>
+          <h2 className="mt-1 text-2xl font-bold text-slate-950 dark:text-white">
+            AI Query Logs
+          </h2>
+          <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-400">
+            Latest 10 requests, ordered by record ID from newest to oldest.
+          </p>
+        </div>
+        <button type="button" onClick={onRefresh} className="btn-secondary" disabled={loading}>
+          <FiRefreshCw className={loading ? "animate-spin" : ""} aria-hidden="true" />
+          Refresh
+        </button>
+      </div>
+
+      {loading ? (
+        <LoadingState label="Loading latest AI queries..." />
+      ) : logs.length === 0 ? (
+        <EmptyState
+          icon={<FiMessageSquare className="h-7 w-7" aria-hidden="true" />}
+          title="No AI queries recorded"
+          description="New AI requests will appear here as they reach the system."
+        />
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[1050px] text-left text-sm">
+            <caption className="sr-only">
+              The latest ten AI queries ordered by descending record ID
+            </caption>
+            <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
+              <tr>
+                <th scope="col" className="px-5 py-4 font-bold">Query ID</th>
+                <th scope="col" className="px-5 py-4 font-bold">Student</th>
+                <th scope="col" className="px-5 py-4 font-bold">Query preview</th>
+                <th scope="col" className="px-5 py-4 font-bold">Source</th>
+                <th scope="col" className="px-5 py-4 font-bold">Received</th>
+                <th scope="col" className="px-5 py-4 font-bold">Record ID</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+              {logs.map((entry) => {
+                const hasStudent = Boolean(entry.studentId);
+
+                return (
+                  <tr
+                    key={entry.id}
+                    className="align-top transition hover:bg-violet-50/60 dark:hover:bg-slate-900"
+                  >
+                    <td className="px-5 py-4">
+                      <span className="inline-flex rounded-lg bg-violet-50 px-2.5 py-1 font-mono text-xs font-bold text-violet-700 ring-1 ring-inset ring-violet-200 dark:bg-violet-500/10 dark:text-violet-200 dark:ring-violet-500/30">
+                        AIQ-{entry.id}
+                      </span>
+                    </td>
+                    <td className="px-5 py-4">
+                      {hasStudent ? (
+                        <button
+                          type="button"
+                          onClick={() => onOpenProfile(entry.studentId)}
+                          className="safe-text font-bold text-slate-950 transition hover:text-violet-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 dark:text-white dark:hover:text-violet-200"
+                        >
+                          {entry.studentId}
+                        </button>
+                      ) : (
+                        <span className="status-pill border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+                          Guest
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-5 py-4">
+                      <div className="max-w-xl">
+                        <p className="whitespace-pre-wrap break-words font-medium leading-6 text-slate-800 dark:text-slate-100">
+                          {entry.query || "No query text recorded"}
+                        </p>
+                        <p className="mt-2 text-xs font-medium text-slate-500 dark:text-slate-400">
+                          {entry.queryLength ?? String(entry.query || "").length} characters
+                        </p>
+                      </div>
+                    </td>
+                    <td className="px-5 py-4">
+                      <span className="status-pill border-sky-200 bg-sky-50 text-sky-800 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-200">
+                        {entry.source || "Unknown"}
+                      </span>
+                    </td>
+                    <td className="safe-text px-5 py-4 font-semibold text-slate-700 dark:text-slate-200">
+                      {formatLoginTime(entry.createdAt)}
+                    </td>
+                    <td className="px-5 py-4">
+                      <span className="font-mono text-xs font-semibold text-slate-600 dark:text-slate-300">
+                        #{entry.id}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
