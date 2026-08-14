@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   FiAlertCircle,
   FiCpu,
@@ -26,6 +26,43 @@ function AI() {
   const [answer, setAnswer] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [welcome, setWelcome] = useState("");
+  const [welcomeError, setWelcomeError] = useState("");
+  const [welcomeLoading, setWelcomeLoading] = useState(false);
+  const [welcomeRequestKey, setWelcomeRequestKey] = useState(0);
+  const requestedWelcomeKey = useRef(null);
+
+  useEffect(() => {
+    if (aiFeatureLoading || !aiFeatureEnabled) return undefined;
+    if (requestedWelcomeKey.current === welcomeRequestKey) return undefined;
+
+    let cancelled = false;
+    requestedWelcomeKey.current = welcomeRequestKey;
+    setWelcomeLoading(true);
+    setWelcomeError("");
+
+    api
+      .post("/api/agent/welcome")
+      .then((response) => {
+        if (!cancelled) {
+          setWelcome(getWelcomeResponse(response.data));
+        }
+      })
+      .catch((welcomeRequestError) => {
+        if (!cancelled) {
+          setWelcomeError(getAgentErrorMessage(welcomeRequestError));
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setWelcomeLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [aiFeatureEnabled, aiFeatureLoading, welcomeRequestKey]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -112,6 +149,50 @@ function AI() {
               Enabled
             </div>
           </div>
+
+          <section
+            className="surface-card mt-6 overflow-hidden"
+            aria-live="polite"
+            aria-busy={welcomeLoading}
+          >
+            <div className="flex items-center gap-3 border-b border-slate-200 px-5 py-4 dark:border-slate-800">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-200">
+                <FiZap className="h-5 w-5" aria-hidden="true" />
+              </span>
+              <div>
+                <p className="section-kicker">Welcome</p>
+                <h2 className="mt-1 text-base font-black text-slate-950 dark:text-white">
+                  Your RMS hello
+                </h2>
+              </div>
+            </div>
+
+            <div className="min-h-28 p-5">
+              {welcomeLoading ? (
+                <div className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-300">
+                  <FiLoader className="animate-spin text-violet-600 dark:text-violet-300" aria-hidden="true" />
+                  Preparing your welcome...
+                </div>
+              ) : welcomeError ? (
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="safe-text text-sm text-rose-700 dark:text-rose-200">
+                    {welcomeError}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setWelcomeRequestKey((key) => key + 1)}
+                    className="btn-secondary w-fit px-3 py-2 text-sm"
+                  >
+                    Try again
+                  </button>
+                </div>
+              ) : welcome ? (
+                <p className="whitespace-pre-line text-sm font-semibold leading-7 text-slate-700 dark:text-slate-200">
+                  {welcome}
+                </p>
+              ) : null}
+            </div>
+          </section>
 
           <form onSubmit={handleSubmit} className="surface-card mt-6 overflow-hidden p-4 sm:p-5">
             <label htmlFor="ai-query" className="sr-only">
@@ -276,6 +357,16 @@ function formatAgentResponse(data) {
   if (typeof knownValue === "string") return knownValue.trim() || "No response received.";
 
   return `\`\`\`json\n${JSON.stringify(data, null, 2)}\n\`\`\``;
+}
+
+function getWelcomeResponse(data) {
+  const welcome = data?.welcome;
+
+  if (typeof welcome === "string" && welcome.trim()) {
+    return welcome.trim();
+  }
+
+  throw new Error("No welcome message was received.");
 }
 
 function getAgentErrorMessage(error) {
