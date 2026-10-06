@@ -155,7 +155,22 @@ function EditDetails() {
   const [submissions, setSubmissions] = useState([]);
   const [submissionsLoading, setSubmissionsLoading] = useState(false);
   const [submissionPagination, setSubmissionPagination] = useState(DEFAULT_SUBMISSION_PAGINATION);
+  const [extractedInfo, setExtractedInfo] = useState(null);
+  const [extractedInfoLoading, setExtractedInfoLoading] = useState(false);
   const { setUser } = useAuth();
+
+  const fetchExtractedInfo = useCallback(async () => {
+    setExtractedInfoLoading(true);
+    try {
+      const response = await api.post("/api/externalagent/getinfo");
+      // Use response.data.information if present, or fallback to response.data directly
+      setExtractedInfo(response.data?.information || response.data || null);
+    } catch {
+      setExtractedInfo(null);
+    } finally {
+      setExtractedInfoLoading(false);
+    }
+  }, []);
 
   const fetchMySubmissions = useCallback(async (page = 1) => {
     setSubmissionsLoading(true);
@@ -207,7 +222,8 @@ function EditDetails() {
   useEffect(() => {
     fetchProfile();
     fetchProfileStats();
-  }, [fetchProfileStats]);
+    fetchExtractedInfo();
+  }, [fetchProfileStats, fetchExtractedInfo]);
 
   useEffect(() => {
     if (profileSectionKeys.has(requestedSection)) {
@@ -905,74 +921,77 @@ function EditDetails() {
             <section className="mt-8">
             <div className="space-y-8">
               {activeProfileSection === "details" && (
-                <section className="surface-card p-5">
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                      <SectionHeading kicker="Details" title="Personal information" />
-                      {!isEditing && (
-                        <button type="button" onClick={() => setIsEditing(true)} className="btn-primary">
-                          <FiEdit3 aria-hidden="true" />
-                          Edit profile
-                        </button>
-                      )}
-                    </div>
-
-                    {!isEditing ? (
-                      <div className="mt-6 grid gap-4 md:grid-cols-2">
-                        <ReadOnlyField label="ID" value={currentProfile?.id} />
-                        <ReadOnlyField label="Name" value={currentProfile?.name} />
-                        <ReadOnlyField label="Section" value={currentProfile?.sec} />
-                        <ReadOnlyField label="Phone" value={currentProfile?.phone} />
-                        <ReadOnlyField label="Email" value={currentProfile?.email} className="md:col-span-2" />
+                <>
+                  <section className="surface-card p-5">
+                      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                        <SectionHeading kicker="Details" title="Personal information" />
+                        {!isEditing && (
+                          <button type="button" onClick={() => setIsEditing(true)} className="btn-primary">
+                            <FiEdit3 aria-hidden="true" />
+                            Edit profile
+                          </button>
+                        )}
                       </div>
-                    ) : (
-                      <form onSubmit={handleSubmit} className="mt-6 grid gap-5">
-                        <div className="grid gap-5 md:grid-cols-2">
-                          <FormField id="profile-id" label="ID" helper="ID cannot be changed.">
-                            <input id="profile-id" type="text" value={currentProfile?.id || ""} disabled className="form-field opacity-70" />
-                          </FormField>
-                          <FormField id="name" label="Name">
-                            <input id="name" type="text" name="name" value={editData.name} onChange={handleInputChange} className="form-field" />
-                          </FormField>
-                          <FormField
-                            id="sec"
-                            label="Section"
-                            helper={sectionLoading ? "Searching sections..." : "Start typing to see matching sections."}
-                          >
-                            <div className="relative">
-                              <input
-                                id="sec"
-                                type="text"
-                                name="sec"
-                                value={editData.sec}
-                                onChange={handleSectionChange}
-                                className="form-field uppercase"
-                                autoComplete="off"
-                              />
-                              <SuggestionList
-                                suggestions={sectionSuggestions}
-                                onSelect={chooseSectionSuggestion}
-                              />
-                            </div>
-                          </FormField>
-                          <FormField id="phone" label="Phone">
-                            <input id="phone" type="text" name="phone" value={editData.phone} onChange={handleInputChange} className="form-field" />
-                          </FormField>
-                          <FormField id="email" label="Email" className="md:col-span-2">
-                            <input id="email" type="email" name="email" value={editData.email} onChange={handleInputChange} className="form-field" />
-                          </FormField>
+
+                      {!isEditing ? (
+                        <div className="mt-6 grid gap-4 md:grid-cols-2">
+                          <ReadOnlyField label="ID" value={currentProfile?.id} />
+                          <ReadOnlyField label="Name" value={currentProfile?.name} />
+                          <ReadOnlyField label="Section" value={currentProfile?.sec} />
+                          <ReadOnlyField label="Phone" value={currentProfile?.phone} />
+                          <ReadOnlyField label="Email" value={currentProfile?.email} className="md:col-span-2" />
                         </div>
-                        <div className="flex flex-wrap justify-end gap-3">
-                          <button type="button" onClick={handleCancel} className="btn-secondary">
-                            Cancel
-                          </button>
-                          <button type="submit" disabled={updating} className="btn-primary">
-                            <FiSave aria-hidden="true" />
-                            {updating ? "Saving..." : "Save changes"}
-                          </button>
-                        </div>
-                      </form>
-                    )}
-                </section>
+                      ) : (
+                        <form onSubmit={handleSubmit} className="mt-6 grid gap-5">
+                          <div className="grid gap-5 md:grid-cols-2">
+                            <FormField id="profile-id" label="ID" helper="ID cannot be changed.">
+                              <input id="profile-id" type="text" value={currentProfile?.id || ""} disabled className="form-field opacity-70" />
+                            </FormField>
+                            <FormField id="name" label="Name">
+                              <input id="name" type="text" name="name" value={editData.name} onChange={handleInputChange} className="form-field" />
+                            </FormField>
+                            <FormField
+                              id="sec"
+                              label="Section"
+                              helper={sectionLoading ? "Searching sections..." : "Start typing to see matching sections."}
+                            >
+                              <div className="relative">
+                                <input
+                                  id="sec"
+                                  type="text"
+                                  name="sec"
+                                  value={editData.sec}
+                                  onChange={handleSectionChange}
+                                  className="form-field uppercase"
+                                  autoComplete="off"
+                                />
+                                <SuggestionList
+                                  suggestions={sectionSuggestions}
+                                  onSelect={chooseSectionSuggestion}
+                                />
+                              </div>
+                            </FormField>
+                            <FormField id="phone" label="Phone">
+                              <input id="phone" type="text" name="phone" value={editData.phone} onChange={handleInputChange} className="form-field" />
+                            </FormField>
+                            <FormField id="email" label="Email" className="md:col-span-2">
+                              <input id="email" type="email" name="email" value={editData.email} onChange={handleInputChange} className="form-field" />
+                            </FormField>
+                          </div>
+                          <div className="flex flex-wrap justify-end gap-3">
+                            <button type="button" onClick={handleCancel} className="btn-secondary">
+                              Cancel
+                            </button>
+                            <button type="submit" disabled={updating} className="btn-primary">
+                              <FiSave aria-hidden="true" />
+                              {updating ? "Saving..." : "Save changes"}
+                            </button>
+                          </div>
+                        </form>
+                      )}
+                  </section>
+                  <ExtractedInfoSection info={extractedInfo} loading={extractedInfoLoading} />
+                </>
               )}
 
               {activeProfileSection === "resources" && (
@@ -1923,6 +1942,99 @@ function getSubmissionError(error) {
   if (status === 500) return "Internal server error. Please try again later.";
   if (error.request) return "Network error: unable to connect to the server.";
   return error.response?.data?.message || error.message || "Could not process submission.";
+}
+
+function ExtractedInfoSection({ info, loading }) {
+  if (loading) {
+    return (
+      <section className="surface-card p-5 mt-8">
+        <SectionHeading kicker="Information" title="Extracted Information" />
+        <div className="mt-6 flex items-center gap-3 text-sm text-slate-500">
+          Loading extracted information...
+        </div>
+      </section>
+    );
+  }
+
+  if (!info) return null;
+
+  const displayFields = [
+    { key: "email", label: "Email" },
+    { key: "phone", label: "Phone" },
+    { key: "designation", label: "Designation" },
+    { key: "research_highlights", label: "Research Highlights", type: "array" },
+    { key: "address", label: "Address" },
+    { key: "linkedin", label: "LinkedIn", type: "link" },
+    { key: "github", label: "GitHub", type: "link" },
+    { key: "website", label: "Website", type: "link" },
+    { key: "about", label: "About", type: "text" },
+    { key: "google_scholar", label: "Google Scholar", type: "link" },
+    { key: "cgpa", label: "CGPA" },
+    { key: "publications", label: "Publications", type: "array" },
+    { key: "eca", label: "ECA", type: "array" },
+  ];
+
+  const hasContent = displayFields.some((field) => {
+    const val = info[field.key];
+    if (field.type === "array") {
+      return Array.isArray(val) && val.length > 0;
+    }
+    return val !== null && val !== undefined && val !== "";
+  });
+
+  if (!hasContent) return null;
+
+  const renderField = (field, value) => {
+    if (field.type === "array") {
+      return (
+        <ul className="list-disc pl-4 space-y-1 text-sm text-slate-800 dark:text-slate-200">
+          {value.map((item, idx) => (
+            <li key={idx}>{item}</li>
+          ))}
+        </ul>
+      );
+    }
+    if (field.type === "link") {
+      const url = String(value).startsWith("http") ? value : `https://${value}`;
+      return (
+        <a href={url} target="_blank" rel="noopener noreferrer" className="text-violet-600 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300 break-all text-sm font-medium">
+          {value}
+        </a>
+      );
+    }
+    if (field.type === "text") {
+      return <div className="text-sm whitespace-pre-wrap text-slate-800 dark:text-slate-200 leading-relaxed">{value}</div>;
+    }
+    return <div className="text-sm text-slate-800 dark:text-slate-200 font-medium">{value}</div>;
+  };
+
+  return (
+    <section className="surface-card p-5 mt-8">
+      <SectionHeading kicker="Information" title="Extracted Information" description="Information extracted from your personalized profile upload." />
+      <div className="mt-6 space-y-0">
+        {displayFields.map((field) => {
+          const value = info[field.key];
+          let isValid = false;
+          if (field.type === "array") {
+            isValid = Array.isArray(value) && value.length > 0;
+          } else {
+            isValid = value !== null && value !== undefined && value !== "";
+          }
+
+          if (!isValid) return null;
+
+          return (
+            <div key={field.key} className="border-b border-slate-100 dark:border-slate-800/50 py-4 first:pt-0 last:border-0 last:pb-0">
+              <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-2">
+                {field.label}
+              </span>
+              {renderField(field, value)}
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
 }
 
 export default EditDetails;
