@@ -114,11 +114,21 @@ function ExternalAgent() {
         <div className="flex items-start gap-2 mt-1 text-slate-800 dark:text-slate-200 text-sm">
           {Icon && <Icon className="w-4 h-4 mt-0.5 shrink-0 text-violet-500" />}
           {Array.isArray(value) ? (
-            <ul className="list-disc pl-4 space-y-1">
-              {value.map((item, idx) => (
-                <li key={idx}>{item}</li>
-              ))}
-            </ul>
+            label === "Skills" ? (
+              <div className="flex flex-wrap gap-2">
+                {value.map((item, idx) => (
+                  <span key={idx} className="inline-flex items-center rounded-full bg-violet-50 px-2.5 py-0.5 text-xs font-semibold text-violet-700 ring-1 ring-inset ring-violet-700/10 dark:bg-violet-500/10 dark:text-violet-300 dark:ring-violet-500/20">
+                    {item}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <ul className="list-disc pl-4 space-y-1">
+                {value.map((item, idx) => (
+                  <li key={idx}>{item}</li>
+                ))}
+              </ul>
+            )
           ) : (
              <span className="break-words whitespace-pre-wrap">{value}</span>
           )}
@@ -282,6 +292,7 @@ function ExternalAgent() {
                 
                 <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800">
                   <InfoItem label="About" value={information.about} />
+                  <InfoItem label="Skills" value={information.skills} />
                   <InfoItem label="Research Highlights" value={information.research_highlights} />
                   <InfoItem label="Publications" value={information.publications} />
                 </div>

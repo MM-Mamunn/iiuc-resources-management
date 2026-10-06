@@ -1970,6 +1970,7 @@ function ExtractedInfoSection({ info, loading }) {
     { key: "about", label: "About", type: "text" },
     { key: "google_scholar", label: "Google Scholar", type: "link" },
     { key: "cgpa", label: "CGPA" },
+    { key: "skills", label: "Skills", type: "array" },
     { key: "publications", label: "Publications", type: "array" },
     { key: "eca", label: "ECA", type: "array" },
   ];
@@ -1985,6 +1986,17 @@ function ExtractedInfoSection({ info, loading }) {
   if (!hasContent) return null;
 
   const renderField = (field, value) => {
+    if (field.key === "skills") {
+      return (
+        <div className="flex flex-wrap gap-2 mt-1">
+          {value.map((item, idx) => (
+            <span key={idx} className="inline-flex items-center rounded-full bg-violet-50 px-2.5 py-0.5 text-xs font-semibold text-violet-700 ring-1 ring-inset ring-violet-700/10 dark:bg-violet-500/10 dark:text-violet-300 dark:ring-violet-500/20">
+              {item}
+            </span>
+          ))}
+        </div>
+      );
+    }
     if (field.type === "array") {
       return (
         <ul className="list-disc pl-4 space-y-1 text-sm text-slate-800 dark:text-slate-200">
