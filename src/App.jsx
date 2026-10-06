@@ -42,6 +42,7 @@ const Semester = lazy(() => import("./pages/info/StudyMaterials"));
 const ClassroomRoutine = lazy(() => import("./pages/room/ClassroomRoutine"));
 const Resources = lazy(() => import("./pages/Resources"));
 const AI = lazy(() => import("./pages/AI"));
+const ExternalAgent = lazy(() => import("./pages/ExternalAgent"));
 
 const AuthContext = createContext(null);
 const ThemeContext = createContext(null);
@@ -321,6 +322,10 @@ function AppRoutes() {
         <Route
           path="/ai"
           element={isLoggedIn ? <AI /> : <Navigate to="/auth/login" replace />}
+        />
+        <Route
+          path="/externalagent"
+          element={isLoggedIn ? <ExternalAgent /> : <Navigate to="/auth/login" replace />}
         />
         <Route path="/info/teacher" element={<TeacherInfo />} />
         <Route
