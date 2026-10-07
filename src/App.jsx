@@ -43,6 +43,7 @@ const ClassroomRoutine = lazy(() => import("./pages/room/ClassroomRoutine"));
 const Resources = lazy(() => import("./pages/Resources"));
 const AI = lazy(() => import("./pages/AI"));
 const ExternalAgent = lazy(() => import("./pages/ExternalAgent"));
+const TeacherInfoExtract = lazy(() => import("./pages/TeacherInfoExtract"));
 
 const AuthContext = createContext(null);
 const ThemeContext = createContext(null);
@@ -326,6 +327,10 @@ function AppRoutes() {
         <Route
           path="/externalagent"
           element={isLoggedIn ? <ExternalAgent /> : <Navigate to="/auth/login" replace />}
+        />
+        <Route
+          path="/externalagent/teacherinfoextract"
+          element={isLoggedIn ? <TeacherInfoExtract /> : <Navigate to="/auth/login" replace />}
         />
         <Route path="/info/teacher" element={<TeacherInfo />} />
         <Route
