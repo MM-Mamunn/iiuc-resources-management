@@ -3,14 +3,26 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Cookies from "js-cookie";
-import { FiEye, FiEyeOff, FiKey, FiLock, FiLogIn, FiSend, FiUser } from "react-icons/fi";
+import {
+  FiClock,
+  FiEye,
+  FiEyeOff,
+  FiGrid,
+  FiKey,
+  FiLock,
+  FiLogIn,
+  FiSend,
+  FiShield,
+  FiUser,
+} from "react-icons/fi";
 import api from "../../api";
 import { useAuth } from "../../App";
 import Header from "../components/Header";
 import { FormField, Notice } from "../components/ui";
+import campusImage from "../../assets/iiuc.webp";
 
 /**
- * Sign-in page with accessible labels, inline errors, and session refresh.
+ * Modern, elevated student and faculty sign-in & password recovery portal.
  */
 const LoginPage = () => {
   const [mode, setMode] = useState("login");
@@ -30,21 +42,20 @@ const LoginPage = () => {
   const [forgotSubmitting, setForgotSubmitting] = useState(false);
   const navigate = useNavigate();
   const { refreshLoginStatus } = useAuth();
-  const HeadingIcon = mode === "login" ? FiKey : FiSend;
 
   const handleLogin = async (event) => {
     event.preventDefault();
     setError("");
 
     if (!id.trim() || !password.trim()) {
-      setError("Please enter both your ID and password.");
+      setError("Please enter both your Metric ID and password.");
       return;
     }
 
     setIsLoading(true);
     try {
       const response = await api.post("/api/login", {
-        id: id.trim(),
+        id: id.trim().toUpperCase(),
         password,
       });
       const { jwtToken } = response.data;
@@ -56,7 +67,7 @@ const LoginPage = () => {
       const message =
         loginError.response?.data ||
         loginError.message ||
-        "Invalid credentials. Please try again.";
+        "Invalid credentials. Please verify your ID and password.";
       setError(String(message));
     } finally {
       setIsLoading(false);
@@ -66,7 +77,9 @@ const LoginPage = () => {
   const handleForgotChange = (field, value) => {
     setForgotForm((current) => ({
       ...current,
-      [field]: field.toLowerCase().includes("studentid") ? value.toUpperCase() : value,
+      [field]: field.toLowerCase().includes("studentid")
+        ? value.toUpperCase()
+        : value,
     }));
     setError("");
     setSuccess("");
@@ -95,17 +108,17 @@ const LoginPage = () => {
       !forgotForm.newPassword ||
       !forgotForm.confirmNewPassword
     ) {
-      setError("Please fill in all password request fields.");
+      setError("Please complete all password recovery fields.");
       return;
     }
 
     if (forgotForm.studentId.trim() !== forgotForm.confirmStudentId.trim()) {
-      setError("Student ID and confirmation ID must match.");
+      setError("Student ID and Confirmation ID do not match.");
       return;
     }
 
     if (forgotForm.newPassword !== forgotForm.confirmNewPassword) {
-      setError("New password and confirmation password must match.");
+      setError("New password and confirmation password do not match.");
       return;
     }
 
@@ -126,7 +139,7 @@ const LoginPage = () => {
       });
       setSuccess(
         response.data?.message ||
-          "Message sent successfully. Please wait for admin approval or contact admin.",
+          "Password change request submitted successfully. Please await admin review.",
       );
     } catch (forgotError) {
       setError(getForgotPasswordError(forgotError));
@@ -138,223 +151,295 @@ const LoginPage = () => {
   return (
     <div className="min-h-screen">
       <Header />
-      <main className="page-wrap grid min-h-[calc(100vh-112px)] items-center py-12">
-        <section className="mx-auto grid w-full max-w-5xl overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-2xl shadow-violet-500/5 lg:grid-cols-[1fr_420px] dark:border-slate-800 dark:bg-slate-950 dark:shadow-violet-500/5">
-          <div className="relative hidden overflow-hidden bg-slate-950 p-10 text-white lg:flex lg:flex-col lg:justify-between">
-            <div className="absolute inset-0 bg-gradient-to-br from-violet-950/50 via-transparent to-green-950/30" />
-            <div className="absolute -right-16 -top-16 h-64 w-64 rounded-full bg-violet-600/10 blur-3xl" />
-            <div className="absolute -bottom-8 -left-8 h-48 w-48 rounded-full bg-green-600/10 blur-3xl" />
-            <div className="relative">
-              <span className="inline-flex rounded-xl bg-gradient-to-r from-violet-500 to-violet-600 px-4 py-2 text-sm font-black text-white shadow-lg shadow-violet-600/30">
-                RMS
-              </span>
-              <h1 className="mt-8 text-4xl font-bold leading-tight">
-                Your routine, resources, and courses in one place.
-              </h1>
-              <p className="mt-4 text-base leading-7 text-slate-300">
-                Sign in to view your personal dashboard, manage courses, and keep your academic day organized.
-              </p>
-            </div>
-            <div className="relative grid grid-cols-3 gap-3 text-sm text-slate-300">
-              <div className="rounded-xl border border-white/10 bg-white/5 p-3 backdrop-blur-sm">
-                <p className="font-bold text-white">Fast</p>
-                <p className="mt-1">Quick schedule lookup</p>
-              </div>
-              <div className="rounded-xl border border-white/10 bg-white/5 p-3 backdrop-blur-sm">
-                <p className="font-bold text-white">Clear</p>
-                <p className="mt-1">Readable class slots</p>
-              </div>
-              <div className="rounded-xl border border-white/10 bg-white/5 p-3 backdrop-blur-sm">
-                <p className="font-bold text-white">Live</p>
-                <p className="mt-1">Session-aware data</p>
-              </div>
-            </div>
-          </div>
 
-          <div className="p-6 sm:p-8">
-            <div className="mb-8 flex items-start gap-4">
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-700 ring-1 ring-violet-100 transition-colors dark:bg-violet-500/10 dark:text-violet-200 dark:ring-violet-500/20">
-                <HeadingIcon className="h-5 w-5" aria-hidden="true" />
-              </span>
-              <div className="min-w-0">
-                <p className="section-kicker">{mode === "login" ? "Welcome back" : "Account recovery"}</p>
-                <h2 className="mt-2 text-3xl font-bold text-slate-950 dark:text-white">
-                  {mode === "login" ? "Sign in" : "Forget password"}
-                </h2>
-                <p className="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-400">
-                  {mode === "login"
-                    ? "Use your metric ID and password to continue."
-                    : "Submit a password change request for admin approval."}
+      <main className="page-wrap flex min-h-[calc(100vh-140px)] items-center justify-center py-10 sm:py-16">
+        <div className="surface-card w-full max-w-5xl overflow-hidden shadow-2xl shadow-slate-950/15 ring-1 ring-slate-200/80 transition-all duration-300 dark:ring-slate-800">
+          <div className="grid lg:grid-cols-[1.15fr_1fr]">
+            {/* ─── LEFT HERO BRANDING PANEL ─── */}
+            <div className="relative hidden overflow-hidden bg-slate-950 p-10 text-white lg:flex lg:flex-col lg:justify-between">
+              <img
+                src={campusImage}
+                alt="IIUC Campus"
+                className="absolute inset-0 h-full w-full object-cover opacity-30"
+              />
+              <div className="absolute inset-0 bg-gradient-to-br from-slate-950/95 via-violet-950/70 to-slate-950" />
+              <div className="absolute -left-20 -top-20 h-64 w-64 rounded-full bg-violet-600/25 blur-3xl" />
+              <div className="absolute -bottom-20 -right-20 h-64 w-64 rounded-full bg-emerald-600/20 blur-3xl" />
+
+              <div className="relative z-10">
+                <div className="inline-flex items-center gap-2 rounded-full border border-violet-400/30 bg-violet-500/15 px-3.5 py-1 text-xs font-bold text-violet-200 backdrop-blur-md">
+                  <span className="flex h-2 w-2 rounded-full bg-emerald-400 animate-soft-pulse" />
+                  <span>IIUC CSE Student & Faculty Portal</span>
+                </div>
+
+                <h1 className="display-heading hero-heading-glow mt-6 text-3xl font-black text-white sm:text-4xl">
+                  Your academic routine & course materials, all in one place.
+                </h1>
+
+                <p className="mt-4 text-sm leading-relaxed text-slate-300">
+                  Sign in to access your personal timetable, manage course add/drops, rate study materials, and access Class Representative tools.
                 </p>
               </div>
+
+              {/* Value Highlight Cards */}
+              <div className="relative z-10 mt-8 space-y-3">
+                <div className="flex items-center gap-3.5 rounded-xl border border-white/10 bg-white/5 p-3.5 backdrop-blur-md transition hover:bg-white/10">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-violet-500/20 text-violet-300 ring-1 ring-violet-400/30">
+                    <FiClock className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-white">Live Class Schedules</p>
+                    <p className="text-xs text-slate-400">Timetable slots, rooms, and teacher assignments.</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3.5 rounded-xl border border-white/10 bg-white/5 p-3.5 backdrop-blur-md transition hover:bg-white/10">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-400/30">
+                    <FiGrid className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-white">Course Add & Drop</p>
+                    <p className="text-xs text-slate-400">Build and customize your own semester routine.</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3.5 rounded-xl border border-white/10 bg-white/5 p-3.5 backdrop-blur-md transition hover:bg-white/10">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-sky-500/20 text-sky-300 ring-1 ring-sky-400/30">
+                    <FiShield className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-white">Verified University Access</p>
+                    <p className="text-xs text-slate-400">Role-aware access for students, CRs, and faculty.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="relative z-10 mt-8 border-t border-white/10 pt-4 text-xs text-slate-400">
+                Department of Computer Science & Engineering • IIUC
+              </div>
             </div>
 
-            {success && (
-              <div className="mb-5">
-                <Notice type="success" onDismiss={() => setSuccess("")}>
-                  {success}
-                </Notice>
-              </div>
-            )}
-
-            {error && (
-              <div className="mb-5">
-                <Notice type="error" onDismiss={() => setError("")}>
-                  {error}
-                </Notice>
-              </div>
-            )}
-
-            {mode === "login" ? (
-              <form onSubmit={handleLogin} className="space-y-5">
-                <FormField id="id" label="Metric ID">
-                  <div className="relative">
-                    <FiUser
-                      className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"
-                      aria-hidden="true"
-                    />
-                    <input
-                      id="id"
-                      type="text"
-                      placeholder="C221046"
-                      value={id}
-                      onChange={(event) => setId(event.target.value)}
-                      className="form-field pl-12"
-                      autoComplete="username"
-                      disabled={isLoading}
-                    />
+            {/* ─── RIGHT INTERACTIVE AUTH FORM ─── */}
+            <div className="flex flex-col justify-between p-6 sm:p-10">
+              <div>
+                {/* Header status kicker and title */}
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <span className="section-kicker">
+                      {mode === "login" ? "Account Access" : "Account Recovery"}
+                    </span>
+                    <h2 className="display-heading heading-gradient-text mt-2 text-2xl font-black sm:text-3xl">
+                      {mode === "login" ? "Sign in to RMS" : "Reset Password"}
+                    </h2>
+                    <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+                      {mode === "login"
+                        ? "Enter your university metric ID and password."
+                        : "Submit a verified change request for administrative review."}
+                    </p>
                   </div>
-                </FormField>
 
-                <FormField id="password" label="Password">
-                  <PasswordInput
-                    id="password"
-                    value={password}
-                    onChange={setPassword}
-                    show={showPassword}
-                    onToggleShow={() => setShowPassword((current) => !current)}
-                    placeholder="Enter your password"
-                    autoComplete="current-password"
-                    disabled={isLoading}
-                  />
-                </FormField>
-
-                <button
-                  type="button"
-                  onClick={showForgotFlow}
-                  className="text-sm font-semibold text-violet-700 hover:text-violet-800 dark:text-violet-300 dark:hover:text-violet-200"
-                >
-                  Forget password?
-                </button>
-
-                <button type="submit" disabled={isLoading} className="btn-primary w-full">
-                  {isLoading ? (
-                    <>
-                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
-                      Signing in...
-                    </>
-                  ) : (
-                    <>
-                      <FiLogIn aria-hidden="true" />
-                      Sign in
-                    </>
-                  )}
-                </button>
-              </form>
-            ) : (
-              <form onSubmit={handleForgotSubmit} className="space-y-5">
-                <FormField id="forgot-student-id" label="Student ID">
-                  <div className="relative">
-                    <FiUser
-                      className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"
-                      aria-hidden="true"
-                    />
-                    <input
-                      id="forgot-student-id"
-                      type="text"
-                      placeholder="C221046"
-                      value={forgotForm.studentId}
-                      onChange={(event) => handleForgotChange("studentId", event.target.value)}
-                      className="form-field pl-12 uppercase"
-                      autoComplete="username"
-                      disabled={forgotSubmitting}
-                    />
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-violet-50 text-violet-600 ring-1 ring-violet-200 dark:bg-violet-500/10 dark:text-violet-300 dark:ring-violet-500/20">
+                    {mode === "login" ? <FiKey className="h-6 w-6" /> : <FiSend className="h-6 w-6" />}
                   </div>
-                </FormField>
-
-                <FormField id="confirm-student-id" label="Confirm Student ID">
-                  <input
-                    id="confirm-student-id"
-                    type="text"
-                    placeholder="Re-enter student ID"
-                    value={forgotForm.confirmStudentId}
-                    onChange={(event) => handleForgotChange("confirmStudentId", event.target.value)}
-                    className="form-field uppercase"
-                    autoComplete="off"
-                    disabled={forgotSubmitting}
-                  />
-                </FormField>
-
-                <FormField id="forgot-new-password" label="New password">
-                  <PasswordInput
-                    id="forgot-new-password"
-                    value={forgotForm.newPassword}
-                    onChange={(value) => handleForgotChange("newPassword", value)}
-                    show={showForgotPassword}
-                    onToggleShow={() => setShowForgotPassword((current) => !current)}
-                    placeholder="Enter new password"
-                    autoComplete="new-password"
-                    disabled={forgotSubmitting}
-                  />
-                </FormField>
-
-                <FormField id="confirm-new-password" label="Confirm new password">
-                  <input
-                    id="confirm-new-password"
-                    type={showForgotPassword ? "text" : "password"}
-                    placeholder="Re-enter new password"
-                    value={forgotForm.confirmNewPassword}
-                    onChange={(event) => handleForgotChange("confirmNewPassword", event.target.value)}
-                    className="form-field"
-                    autoComplete="new-password"
-                    disabled={forgotSubmitting}
-                  />
-                </FormField>
-
-                <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
-                  <button type="button" onClick={showLoginFlow} className="btn-secondary" disabled={forgotSubmitting}>
-                    Back to sign in
-                  </button>
-                  <button type="submit" disabled={forgotSubmitting} className="btn-primary">
-                    {forgotSubmitting ? (
-                      <>
-                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
-                        Sending...
-                      </>
-                    ) : (
-                      <>
-                        <FiSend aria-hidden="true" />
-                        Send request
-                      </>
-                    )}
-                  </button>
                 </div>
-              </form>
-            )}
 
-            {mode === "login" && (
-              <p className="mt-6 text-center text-sm text-slate-600 dark:text-slate-400">
-                Need an account?{" "}
-                <Link
-                  to="/auth/reg"
-                  className="font-semibold text-violet-700 hover:text-violet-800 dark:text-violet-300 dark:hover:text-violet-200"
-                >
-                  Create one
-                </Link>
-              </p>
-            )}
+                {/* Notifications */}
+                {success && (
+                  <div className="mt-5">
+                    <Notice type="success" onDismiss={() => setSuccess("")}>
+                      {success}
+                    </Notice>
+                  </div>
+                )}
+
+                {error && (
+                  <div className="mt-5">
+                    <Notice type="error" onDismiss={() => setError("")}>
+                      {error}
+                    </Notice>
+                  </div>
+                )}
+
+                {/* ─── LOGIN FORM ─── */}
+                {mode === "login" ? (
+                  <form onSubmit={handleLogin} className="mt-8 space-y-5">
+                    <FormField id="student-id" label="Metric ID">
+                      <div className="relative">
+                        <FiUser
+                          className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"
+                          aria-hidden="true"
+                        />
+                        <input
+                          id="student-id"
+                          type="text"
+                          placeholder="e.g. C221046"
+                          value={id}
+                          onChange={(e) => setId(e.target.value)}
+                          className="form-field pl-12 uppercase"
+                          autoComplete="username"
+                          disabled={isLoading}
+                        />
+                      </div>
+                    </FormField>
+
+                    <FormField id="student-password" label="Password">
+                      <PasswordInput
+                        id="student-password"
+                        value={password}
+                        onChange={setPassword}
+                        show={showPassword}
+                        onToggleShow={() => setShowPassword((current) => !current)}
+                        placeholder="Enter your password"
+                        autoComplete="current-password"
+                        disabled={isLoading}
+                      />
+                    </FormField>
+
+                    <div className="flex items-center justify-end">
+                      <button
+                        type="button"
+                        onClick={showForgotFlow}
+                        className="text-xs font-semibold text-violet-600 transition hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300"
+                      >
+                        Forgot password?
+                      </button>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={isLoading}
+                      className="btn-primary w-full shadow-lg shadow-violet-600/25"
+                    >
+                      {isLoading ? (
+                        <>
+                          <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                          <span>Verifying session...</span>
+                        </>
+                      ) : (
+                        <>
+                          <FiLogIn className="h-4 w-4" aria-hidden="true" />
+                          <span>Sign In</span>
+                        </>
+                      )}
+                    </button>
+                  </form>
+                ) : (
+                  /* ─── FORGOT PASSWORD FORM ─── */
+                  <form onSubmit={handleForgotSubmit} className="mt-8 space-y-4">
+                    <FormField id="forgot-student-id" label="Student ID">
+                      <div className="relative">
+                        <FiUser
+                          className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"
+                          aria-hidden="true"
+                        />
+                        <input
+                          id="forgot-student-id"
+                          type="text"
+                          placeholder="e.g. C221046"
+                          value={forgotForm.studentId}
+                          onChange={(e) => handleForgotChange("studentId", e.target.value)}
+                          className="form-field pl-12 uppercase"
+                          autoComplete="username"
+                          disabled={forgotSubmitting}
+                        />
+                      </div>
+                    </FormField>
+
+                    <FormField id="confirm-student-id" label="Confirm Student ID">
+                      <input
+                        id="confirm-student-id"
+                        type="text"
+                        placeholder="Re-enter student ID"
+                        value={forgotForm.confirmStudentId}
+                        onChange={(e) => handleForgotChange("confirmStudentId", e.target.value)}
+                        className="form-field uppercase"
+                        autoComplete="off"
+                        disabled={forgotSubmitting}
+                      />
+                    </FormField>
+
+                    <FormField id="forgot-new-password" label="Desired New Password">
+                      <PasswordInput
+                        id="forgot-new-password"
+                        value={forgotForm.newPassword}
+                        onChange={(value) => handleForgotChange("newPassword", value)}
+                        show={showForgotPassword}
+                        onToggleShow={() => setShowForgotPassword((current) => !current)}
+                        placeholder="Create new password"
+                        autoComplete="new-password"
+                        disabled={forgotSubmitting}
+                      />
+                    </FormField>
+
+                    <FormField id="confirm-new-password" label="Confirm New Password">
+                      <input
+                        id="confirm-new-password"
+                        type={showForgotPassword ? "text" : "password"}
+                        placeholder="Re-enter new password"
+                        value={forgotForm.confirmNewPassword}
+                        onChange={(e) => handleForgotChange("confirmNewPassword", e.target.value)}
+                        className="form-field"
+                        autoComplete="new-password"
+                        disabled={forgotSubmitting}
+                      />
+                    </FormField>
+
+                    <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-between">
+                      <button
+                        type="button"
+                        onClick={showLoginFlow}
+                        className="btn-secondary"
+                        disabled={forgotSubmitting}
+                      >
+                        Back to sign in
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={forgotSubmitting}
+                        className="btn-primary"
+                      >
+                        {forgotSubmitting ? (
+                          <>
+                            <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                            <span>Submitting...</span>
+                          </>
+                        ) : (
+                          <>
+                            <FiSend className="h-4 w-4" aria-hidden="true" />
+                            <span>Submit Request</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
+
+              {/* Footer Switcher */}
+              <div className="mt-8 border-t border-slate-100 pt-6 text-center text-sm text-slate-600 dark:border-slate-800 dark:text-slate-400">
+                {mode === "login" ? (
+                  <p>
+                    Don't have an account?{" "}
+                    <Link
+                      to="/auth/reg"
+                      className="font-bold text-violet-600 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300"
+                    >
+                      Create one here
+                    </Link>
+                  </p>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={showLoginFlow}
+                    className="font-bold text-violet-600 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300"
+                  >
+                    Return to sign in
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
-        </section>
+        </div>
       </main>
     </div>
   );
@@ -389,11 +474,11 @@ function PasswordInput({
       <button
         type="button"
         onClick={onToggleShow}
-        className="absolute right-3 top-1/2 rounded-md p-2 -translate-y-1/2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 dark:hover:bg-slate-800 dark:hover:text-white"
+        className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-2 text-slate-400 transition hover:text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 dark:hover:text-slate-200"
         aria-label={show ? "Hide password" : "Show password"}
         disabled={disabled}
       >
-        {show ? <FiEyeOff aria-hidden="true" /> : <FiEye aria-hidden="true" />}
+        {show ? <FiEyeOff className="h-4 w-4" aria-hidden="true" /> : <FiEye className="h-4 w-4" aria-hidden="true" />}
       </button>
     </div>
   );
@@ -402,8 +487,8 @@ function PasswordInput({
 function getForgotPasswordError(error) {
   if (error.response?.data?.message) return error.response.data.message;
   if (error.response?.status === 404) return "Student ID was not found.";
-  if (error.request) return "Network error: unable to connect to the server.";
-  return error.message || "Could not send password change request.";
+  if (error.request) return "Network error: unable to connect to server.";
+  return error.message || "Could not submit password change request.";
 }
 
 export default LoginPage;
