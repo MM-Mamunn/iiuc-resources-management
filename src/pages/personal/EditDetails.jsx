@@ -28,6 +28,7 @@ import {
 } from "react-icons/fi";
 import api from "../../api";
 import { useAuth } from "../../App";
+import campusImage from "../../assets/iiuc.webp";
 import { clearCacheByPrefix } from "../../services/cacheService";
 import Header from "../components/Header";
 import {
@@ -337,26 +338,26 @@ function EditDetails() {
   const profileNavigation = [
     {
       key: "details",
-      title: "Profile details",
-      description: "Update your student information and contact details.",
+      title: "Profile Details",
+      description: "Manage personal data, contact information, and verification.",
       icon: FiUser,
     },
     {
       key: "resources",
-      title: "Resources",
-      description: "Share course links and review your submissions.",
+      title: "Resource Vault",
+      description: "Contribute course links and monitor star analytics.",
       icon: FiBookOpen,
     },
     {
       key: "applications",
-      title: "Applications & Feedback",
-      description: "Send requests, feedback, complaints, and CR applications.",
+      title: "Submissions & Feedback",
+      description: "Submit CR applications, feedback, or administrative requests.",
       icon: FiMessageSquare,
     },
     {
       key: "settings",
-      title: "Settings",
-      description: "Change your password from the secure form.",
+      title: "Security & Privacy",
+      description: "Manage password security and public profile visibility.",
       icon: FiLock,
     },
   ];
@@ -897,16 +898,19 @@ function EditDetails() {
               onPhotoSelection={handlePhotoSelection}
               onPhotoUpload={handlePhotoUpload}
               onPhotoRemove={handlePhotoRemove}
+              onEditClick={() => {
+                setActiveProfileSection("details");
+                setIsEditing(true);
+              }}
+              onUploadClick={() => {
+                setActiveProfileSection("resources");
+                setSearchParams({ tab: "resources" }, { replace: true });
+              }}
             />
 
-            <ProfileResourceStats stats={profileStats} loading={profileStatsLoading} />
-
             <section
-              className="mt-6 grid gap-4"
-              style={{
-                gridTemplateColumns:
-                  "repeat(auto-fit, minmax(max(180px, calc((100% - 5rem) / 6)), 1fr))",
-              }}
+              className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
+              aria-label="Profile navigation sections"
             >
               {profileNavigation.map((item) => (
                 <ProfileNavCard
@@ -922,24 +926,24 @@ function EditDetails() {
             <div className="space-y-8">
               {activeProfileSection === "details" && (
                 <>
-                  <section className="surface-card p-5">
-                      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                        <SectionHeading kicker="Details" title="Personal information" />
+                  <section className="surface-card p-6 sm:p-8">
+                      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-slate-100 pb-5 dark:border-slate-800">
+                        <SectionHeading kicker="Personal Details" title="Student Record" description="Your official university academic identification and verified contact profile." />
                         {!isEditing && (
-                          <button type="button" onClick={() => setIsEditing(true)} className="btn-primary">
+                          <button type="button" onClick={() => setIsEditing(true)} className="btn-primary py-2 px-4 text-xs font-semibold shrink-0">
                             <FiEdit3 aria-hidden="true" />
-                            Edit profile
+                            Edit Profile
                           </button>
                         )}
                       </div>
 
                       {!isEditing ? (
-                        <div className="mt-6 grid gap-4 md:grid-cols-2">
-                          <ReadOnlyField label="ID" value={currentProfile?.id} />
-                          <ReadOnlyField label="Name" value={currentProfile?.name} />
-                          <ReadOnlyField label="Section" value={currentProfile?.sec} />
-                          <ReadOnlyField label="Phone" value={currentProfile?.phone} />
-                          <ReadOnlyField label="Email" value={currentProfile?.email} className="md:col-span-2" />
+                        <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                          <ReadOnlyField label="Student ID" value={currentProfile?.id} icon={<FiHash className="h-5 w-5 text-indigo-500" />} />
+                          <ReadOnlyField label="Full Name" value={currentProfile?.name} icon={<FiUser className="h-5 w-5 text-violet-500" />} />
+                          <ReadOnlyField label="Section" value={currentProfile?.sec} icon={<FiMapPin className="h-5 w-5 text-emerald-500" />} />
+                          <ReadOnlyField label="Contact Phone" value={currentProfile?.phone} icon={<FiPhone className="h-5 w-5 text-amber-500" />} />
+                          <ReadOnlyField label="Email Address" value={currentProfile?.email} icon={<FiMail className="h-5 w-5 text-sky-500" />} className="sm:col-span-2" />
                         </div>
                       ) : (
                         <form onSubmit={handleSubmit} className="mt-6 grid gap-5">
@@ -996,15 +1000,17 @@ function EditDetails() {
 
               {activeProfileSection === "resources" && (
               <>
-              <section className="surface-card p-5">
+              <ProfileResourceStats stats={profileStats} loading={profileStatsLoading} className="mt-0" />
+
+              <section className="surface-card p-6 sm:p-8">
                 <SectionHeading
-                  kicker="Resources"
-                  title="Add resources"
+                  kicker="Contribution Studio"
+                  title="Share Academic Material"
                   description="Choose whether this link belongs to one course or multiple courses in a semester."
                 />
 
                 <div
-                  className="mt-6 grid rounded-lg border border-slate-200 bg-slate-50 p-1 dark:border-slate-800 dark:bg-slate-900 sm:grid-cols-2"
+                  className="mt-6 grid rounded-2xl border border-slate-200 bg-slate-50/80 p-1.5 dark:border-slate-800 dark:bg-slate-900/80 sm:grid-cols-2"
                   role="tablist"
                   aria-label="Resource entry mode"
                 >
@@ -1015,16 +1021,16 @@ function EditDetails() {
                         key={mode.key}
                         type="button"
                         onClick={() => handleResourceEntryModeChange(mode.key)}
-                        className={`rounded-md px-4 py-3 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 ${
+                        className={`rounded-xl px-4 py-3 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 ${
                           active
-                            ? "bg-white text-violet-700 shadow-sm dark:bg-slate-950 dark:text-violet-200"
-                            : "text-slate-600 hover:bg-white/70 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
+                            ? "bg-white text-violet-700 shadow-sm dark:bg-slate-950 dark:text-violet-200 ring-1 ring-slate-200/50 dark:ring-slate-800"
+                            : "text-slate-600 hover:bg-white/70 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-slate-800/60 dark:hover:text-white"
                         }`}
                         role="tab"
                         aria-selected={active}
                       >
-                        <span className="block text-sm font-black">{mode.label}</span>
-                        <span className="mt-1 block text-xs font-medium leading-5">
+                        <span className="block text-sm font-bold">{mode.label}</span>
+                        <span className="mt-0.5 block text-xs leading-5 opacity-80">
                           {mode.description}
                         </span>
                       </button>
@@ -1485,124 +1491,184 @@ function ProfileSummaryCard({
   onPhotoSelection,
   onPhotoUpload,
   onPhotoRemove,
+  onEditClick,
+  onUploadClick,
 }) {
-  return (
-    <section className="surface-card overflow-hidden">
-      <div className="grid gap-6 p-5 sm:p-6 lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:items-center">
-        <span className="flex h-36 w-36 items-center justify-center overflow-hidden rounded-full bg-slate-950 text-4xl font-black text-white ring-4 ring-white shadow-sm dark:bg-white dark:text-slate-950 dark:ring-slate-900">
-          {currentProfile?.profilePic ? (
-            <img
-              src={currentProfile.profilePic}
-              alt=""
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            avatarInitials
-          )}
-        </span>
+  const role = String(currentProfile?.type || "student").toUpperCase();
+  const isCr = role === "CR";
+  const isAdmin = role === "ADMIN";
 
-        <div className="min-w-0">
-          <p className="section-kicker">Student profile</p>
-          <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <h1 className="safe-text text-3xl font-black text-slate-950 dark:text-white">
+  return (
+    <section className="relative isolate overflow-hidden rounded-3xl border border-slate-800/80 bg-slate-950 p-6 text-white shadow-2xl sm:p-8 lg:p-10">
+      {/* Background campus image & gradient overlays */}
+      <img
+        src={campusImage}
+        alt="IIUC Campus"
+        className="absolute inset-0 -z-30 h-full w-full object-cover opacity-20 filter blur-[0.5px]"
+      />
+      <div className="absolute inset-0 -z-20 bg-gradient-to-b from-slate-950/80 via-slate-950/95 to-slate-950" />
+      <div
+        className="pointer-events-none absolute -left-20 -top-20 -z-10 h-72 w-72 rounded-full bg-violet-600/20 blur-3xl sm:h-96 sm:w-96"
+        aria-hidden="true"
+      />
+      <div
+        className="pointer-events-none absolute -bottom-20 -right-20 -z-10 h-72 w-72 rounded-full bg-emerald-600/15 blur-3xl sm:h-96 sm:w-96"
+        aria-hidden="true"
+      />
+
+      <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
+        {/* Left: Avatar & Identity */}
+        <div className="flex flex-col items-center gap-6 text-center sm:flex-row sm:items-center sm:text-left">
+          <div className="relative group">
+            <div className="relative flex h-32 w-32 sm:h-36 sm:w-36 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-indigo-900 to-slate-900 text-4xl font-black text-white ring-4 ring-white/20 shadow-2xl backdrop-blur-md">
+              {currentProfile?.profilePic ? (
+                <img
+                  src={currentProfile.profilePic}
+                  alt={currentProfile?.name || "Student"}
+                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                />
+              ) : (
+                <span className="font-extrabold tracking-tight text-white">{avatarInitials}</span>
+              )}
+            </div>
+
+            {/* Quick camera badge button */}
+            <label
+              className="absolute bottom-1 right-1 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-violet-600 text-white shadow-lg transition-transform hover:scale-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
+              title="Change Profile Photo"
+            >
+              <FiCamera className="h-4 w-4" aria-hidden="true" />
+              <input
+                type="file"
+                accept="image/*"
+                onChange={onPhotoSelection}
+                className="sr-only"
+              />
+            </label>
+          </div>
+
+          <div className="min-w-0">
+            {/* Badges Row */}
+            <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-sky-400/30 bg-sky-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-sky-300 shadow-sm backdrop-blur-md">
+                <FiUser className="h-3.5 w-3.5 text-sky-400" aria-hidden="true" />
+                <span>{isAdmin ? "Administrator" : isCr ? "Class Representative" : "IIUC Student"}</span>
+              </span>
+
+              {currentProfile?.sec && (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-emerald-300 backdrop-blur-md">
+                  <FiMapPin className="h-3.5 w-3.5 text-emerald-400" aria-hidden="true" />
+                  <span>Section {currentProfile.sec}</span>
+                </span>
+              )}
+
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-violet-400/30 bg-violet-500/10 px-3 py-1 text-xs font-semibold text-violet-200 backdrop-blur-md">
+                <FiEye className="h-3.5 w-3.5 text-violet-300" aria-hidden="true" />
+                <span>{formatProfileViews(currentProfile?.view)} Views</span>
+              </span>
+            </div>
+
+            {/* Name */}
+            <h1 className="display-heading hero-heading-glow mt-3 text-2xl font-black tracking-tight text-white sm:text-4xl">
               {currentProfile?.name || "Student"}
             </h1>
-            <span className="inline-flex w-fit items-center gap-2 rounded-full border border-violet-200 bg-violet-50 px-3 py-1.5 text-sm font-bold text-violet-800 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-200">
-              <FiEye className="h-4 w-4" aria-hidden="true" />
-              {formatProfileViews(currentProfile?.view)} views
-            </span>
-          </div>
-          <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-400">
-            Update your contact details, profile picture, resources, privacy, and password from one secure settings page.
-          </p>
-          <div className="mt-5 grid gap-3 text-sm sm:grid-cols-2">
-            <ProfileMetaItem
-              icon={<FiHash className="h-5 w-5" aria-hidden="true" />}
-              label="ID"
-              value={currentProfile?.id}
-            />
-            <ProfileMetaItem
-              icon={<FiMapPin className="h-5 w-5" aria-hidden="true" />}
-              label="Section"
-              value={currentProfile?.sec}
-            />
-            <ProfileMetaItem
-              icon={<FiMail className="h-5 w-5" aria-hidden="true" />}
-              label="Email"
-              value={currentProfile?.email}
-            />
-            <ProfileMetaItem
-              icon={<FiPhone className="h-5 w-5" aria-hidden="true" />}
-              label="Phone"
-              value={currentProfile?.phone}
-            />
+
+            {/* Meta row */}
+            <div className="mt-3 flex flex-wrap items-center justify-center gap-4 text-xs text-slate-300 sm:justify-start">
+              <span className="inline-flex items-center gap-1.5 font-mono">
+                <FiHash className="h-3.5 w-3.5 text-slate-400" />
+                <span className="font-bold text-white">{currentProfile?.id || "N/A"}</span>
+              </span>
+              {currentProfile?.email && (
+                <span className="inline-flex items-center gap-1.5 truncate">
+                  <FiMail className="h-3.5 w-3.5 text-slate-400" />
+                  <span>{currentProfile.email}</span>
+                </span>
+              )}
+              {currentProfile?.phone && (
+                <span className="inline-flex items-center gap-1.5">
+                  <FiPhone className="h-3.5 w-3.5 text-slate-400" />
+                  <span>{currentProfile.phone}</span>
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2 lg:w-56 lg:grid-cols-1">
-          <label className="btn-secondary cursor-pointer">
-            <FiCamera aria-hidden="true" />
-            Choose image
-            <input
-              type="file"
-              accept="image/*"
-              onChange={onPhotoSelection}
-              className="sr-only"
+        {/* Right: Quick Action Controls */}
+        <div className="flex flex-col gap-2.5 sm:flex-row lg:flex-col shrink-0">
+          {selectedPhoto ? (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={onPhotoUpload}
+                disabled={photoLoading}
+                className="btn-primary text-xs font-semibold py-2 px-4 shadow-sm"
+              >
+                {photoLoading ? "Uploading..." : "Save Image"}
+              </button>
+              {currentProfile?.profilePic && (
+                <button
+                  type="button"
+                  onClick={onPhotoRemove}
+                  disabled={photoRemoving}
+                  className="btn-danger text-xs font-semibold py-2 px-3"
+                >
+                  <FiTrash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={onEditClick}
+                className="btn-secondary border-white/20 bg-white/10 text-white hover:bg-white/20 dark:border-white/20 dark:bg-white/10 dark:text-white px-4 py-2 text-xs font-semibold"
+              >
+                <FiEdit3 className="h-3.5 w-3.5" aria-hidden="true" />
+                <span>Edit Info</span>
+              </button>
+              <button
+                type="button"
+                onClick={onUploadClick}
+                className="btn-primary px-4 py-2 text-xs font-semibold shadow-md shadow-violet-500/20"
+              >
+                <FiPlus className="h-3.5 w-3.5" aria-hidden="true" />
+                <span>Upload Material</span>
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Selected photo preview strip */}
+      {previewUrl && (
+        <div className="mt-6 border-t border-white/10 pt-4 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <img
+              src={previewUrl}
+              alt="Selected preview"
+              className="aspect-square h-12 w-12 rounded-xl object-cover ring-2 ring-violet-400"
             />
-          </label>
+            <p className="text-xs text-slate-300">
+              New image selected. Click <strong>&ldquo;Save Image&rdquo;</strong> to upload.
+            </p>
+          </div>
           <button
             type="button"
             onClick={onPhotoUpload}
-            disabled={photoLoading || !selectedPhoto}
-            className="btn-primary"
+            disabled={photoLoading}
+            className="btn-primary py-1.5 px-4 text-xs font-semibold shadow-sm"
           >
-            {photoLoading ? "Uploading..." : "Upload image"}
-          </button>
-          <button
-            type="button"
-            onClick={onPhotoRemove}
-            disabled={photoRemoving || !currentProfile?.profilePic}
-            className="btn-danger"
-          >
-            <FiTrash2 aria-hidden="true" />
-            {photoRemoving ? "Removing..." : "Remove image"}
+            {photoLoading ? "Uploading..." : "Confirm & Save"}
           </button>
         </div>
-
-        {previewUrl && (
-          <div className="lg:col-start-2 lg:col-span-2">
-            <p className="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
-              Preview
-            </p>
-            <img
-              src={previewUrl}
-              alt="Selected profile preview"
-              className="aspect-square w-32 rounded-lg object-cover ring-1 ring-slate-200 dark:ring-slate-800"
-            />
-          </div>
-        )}
-      </div>
+      )}
     </section>
   );
 }
 
-function ProfileMetaItem({ icon, label, value }) {
-  return (
-    <div className="flex min-w-0 items-center gap-3">
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600 dark:bg-slate-900 dark:text-slate-300">
-        {icon}
-      </span>
-      <div className="min-w-0">
-        <p className="text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400">
-          {label}
-        </p>
-        <p className="safe-text mt-0.5 text-sm font-bold text-slate-950 dark:text-white">
-          {value || "N/A"}
-        </p>
-      </div>
-    </div>
-  );
-}
+
 
 function ProfileNavCard({ item, active, onSelect }) {
   const Icon = item.icon;
@@ -1611,23 +1677,44 @@ function ProfileNavCard({ item, active, onSelect }) {
     <button
       type="button"
       onClick={onSelect}
-      className={`interactive-card group p-5 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 ${
-        active ? "border-violet-400 bg-violet-50/80 ring-2 ring-violet-500/20 dark:border-violet-500 dark:bg-violet-500/10" : ""
+      className={`group relative flex flex-col justify-between overflow-hidden rounded-2xl border p-4 text-left transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 ${
+        active
+          ? "border-violet-500 bg-violet-50/90 shadow-md ring-2 ring-violet-500/20 dark:border-violet-400 dark:bg-violet-950/40"
+          : "border-slate-200/90 bg-white hover:border-slate-300 hover:shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:hover:border-slate-700"
       }`}
     >
-      <div className="flex items-start justify-between gap-4">
-        <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-200">
-          <Icon className="h-5 w-5" aria-hidden="true" />
-        </span>
-        <FiChevronRight
-          className="h-5 w-5 text-slate-400 transition group-hover:text-violet-600 dark:group-hover:text-violet-300"
+      <div>
+        <div className="flex items-start justify-between gap-3">
+          <span
+            className={`flex h-10 w-10 items-center justify-center rounded-xl transition-colors ${
+              active
+                ? "bg-violet-600 text-white shadow-sm dark:bg-violet-500"
+                : "bg-slate-100 text-slate-700 group-hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:group-hover:bg-slate-700"
+            }`}
+          >
+            <Icon className="h-5 w-5" aria-hidden="true" />
+          </span>
+          <FiChevronRight
+            className={`h-4 w-4 transition-transform group-hover:translate-x-0.5 ${
+              active ? "text-violet-600 dark:text-violet-300" : "text-slate-400"
+            }`}
+            aria-hidden="true"
+          />
+        </div>
+        <h2 className="mt-3.5 text-sm font-bold text-slate-950 dark:text-white">
+          {item.title}
+        </h2>
+        <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
+          {item.description}
+        </p>
+      </div>
+
+      {active && (
+        <span
+          className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-violet-600 to-indigo-600"
           aria-hidden="true"
         />
-      </div>
-      <h2 className="mt-4 text-lg font-bold text-slate-950 dark:text-white">{item.title}</h2>
-      <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-400">
-        {item.description}
-      </p>
+      )}
     </button>
   );
 }
@@ -1814,15 +1901,22 @@ function SubmissionPagination({ pagination, disabled, onPageChange }) {
   );
 }
 
-function ReadOnlyField({ label, value, className = "" }) {
+function ReadOnlyField({ label, value, icon, className = "" }) {
   return (
-    <div className={`rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900 ${className}`}>
-      <p className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
-        {label}
-      </p>
-      <p className="safe-text mt-2 font-semibold text-slate-950 dark:text-white">
-        {value || "N/A"}
-      </p>
+    <div className={`flex items-start gap-3.5 rounded-2xl border border-slate-200/90 bg-slate-50/70 p-4 transition-all hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900/60 dark:hover:border-slate-700 ${className}`}>
+      {icon && (
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-slate-700 shadow-sm ring-1 ring-slate-200/80 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700">
+          {icon}
+        </span>
+      )}
+      <div className="min-w-0">
+        <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+          {label}
+        </p>
+        <p className="safe-text mt-1 text-sm font-bold text-slate-950 dark:text-white">
+          {value || "Not provided"}
+        </p>
+      </div>
     </div>
   );
 }

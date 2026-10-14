@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
+  FiActivity,
   FiAward,
   FiBell,
   FiCalendar,
@@ -10,19 +11,19 @@ import {
   FiClock,
   FiCpu,
   FiEdit3,
+  FiExternalLink,
   FiEye,
   FiEyeOff,
   FiGlobe,
   FiImage,
   FiLink,
   FiMessageSquare,
-  FiMoon,
   FiPlus,
   FiRefreshCw,
   FiSave,
   FiSearch,
   FiShield,
-  FiSun,
+  FiUploadCloud,
   FiUserCheck,
   FiUsers,
   FiX,
@@ -1079,34 +1080,48 @@ const AdminRoles = () => {
     <div className="min-h-screen">
       <Header />
       <PageShell className="py-10">
-        <section className="relative isolate overflow-hidden rounded-lg bg-slate-950 px-6 py-8 text-white shadow-2xl sm:px-8">
+        <section className="relative isolate overflow-hidden rounded-3xl border border-slate-800/80 bg-slate-950 p-6 text-white shadow-2xl sm:p-10 lg:p-12">
           <img
             src={campusImage}
-            alt=""
-            className="absolute inset-0 -z-20 h-full w-full object-cover opacity-45"
+            alt="IIUC Campus"
+            className="absolute inset-0 -z-30 h-full w-full object-cover opacity-25 filter blur-[0.5px]"
           />
-          <div className="absolute inset-0 -z-10 bg-slate-950/72" />
+          <div className="absolute inset-0 -z-20 bg-gradient-to-b from-slate-950/80 via-slate-950/95 to-slate-950" />
+          <div
+            className="pointer-events-none absolute -left-20 -top-20 -z-10 h-72 w-72 rounded-full bg-emerald-600/15 blur-3xl sm:h-96 sm:w-96"
+            aria-hidden="true"
+          />
+          <div
+            className="pointer-events-none absolute -bottom-20 -right-20 -z-10 h-72 w-72 rounded-full bg-violet-600/15 blur-3xl sm:h-96 sm:w-96"
+            aria-hidden="true"
+          />
+
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-3xl">
-              <p className="text-sm font-bold text-green-200">Admin dashboard</p>
-              <h1 className="mt-3 text-3xl font-black sm:text-5xl">
-                Manage sessions and roles from one focused workspace.
+              <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3.5 py-1 text-xs font-semibold uppercase tracking-wider text-emerald-300 shadow-sm backdrop-blur-md">
+                <FiShield className="h-3.5 w-3.5 text-emerald-400" aria-hidden="true" />
+                <span>IIUC CSE System Governance</span>
+              </div>
+              <h1 className="display-heading hero-heading-glow mt-4 text-3xl font-black tracking-tight text-white sm:text-5xl">
+                Administrative Command Center
               </h1>
-              <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-200 sm:text-base">
-                Use the feature cards below to move between session setup, CR review, and direct role updates.
+              <div className="heading-accent-line mt-3 h-0.5 w-20" aria-hidden="true" />
+              <p className="mt-4 max-w-2xl text-sm leading-relaxed text-slate-300 sm:text-base">
+                Manage academic sessions, class representatives, student submissions, AI query audits,
+                featured announcements, and system roles from one consolidated operations dashboard.
               </p>
             </div>
             <button
               type="button"
               onClick={refreshAdminData}
-              className="btn-secondary border-white/20 bg-white/10 text-white hover:bg-white/20 dark:border-white/20 dark:bg-white/10 dark:text-white"
+              className="btn-secondary border-white/20 bg-white/10 text-white hover:bg-white/20 dark:border-white/20 dark:bg-white/10 dark:text-white px-5 py-2.5 text-sm font-semibold shrink-0"
               disabled={loading || sessionsLoading || loginLogsLoading || aiQueryLogsLoading || periodsLoading || announcementLoading || sponsorLoading || aiFeatureLoading || submissionsLoading}
             >
               <FiRefreshCw
                 className={loading || sessionsLoading || loginLogsLoading || aiQueryLogsLoading || periodsLoading || announcementLoading || sponsorLoading || aiFeatureLoading || submissionsLoading ? "animate-spin" : ""}
                 aria-hidden="true"
               />
-              Refresh
+              Refresh System Data
             </button>
           </div>
         </section>
@@ -1119,7 +1134,7 @@ const AdminRoles = () => {
           </div>
         )}
 
-        <section className="mt-6 grid gap-4 md:grid-cols-3">
+        <section className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
           <MetricCard
             icon={<FiUsers className="h-5 w-5" aria-hidden="true" />}
             label="CR users"
@@ -1127,10 +1142,16 @@ const AdminRoles = () => {
             tone="violet"
           />
           <MetricCard
-            icon={<FiShield className="h-5 w-5" aria-hidden="true" />}
-            label="Valid roles"
-            value={VALID_ROLES.length}
-            tone="amber"
+            icon={<FiBell className="h-5 w-5" aria-hidden="true" />}
+            label="Pending Submissions"
+            value={unviewedSubmissionCount}
+            tone={unviewedSubmissionCount > 0 ? "rose" : "amber"}
+          />
+          <MetricCard
+            icon={<FiCalendar className="h-5 w-5" aria-hidden="true" />}
+            label="Total Sessions"
+            value={sessions.length}
+            tone="violet"
           />
           <MetricCard
             icon={<FiUserCheck className="h-5 w-5" aria-hidden="true" />}
@@ -1298,7 +1319,7 @@ const AdminRoles = () => {
 function FeatureNavigation({ features, activeFeature, onSelect }) {
   return (
     <section
-      className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"
+      className="mt-8 grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"
       aria-label="Admin features"
     >
       {features.map((feature) => {
@@ -1311,24 +1332,49 @@ function FeatureNavigation({ features, activeFeature, onSelect }) {
             type="button"
             onClick={() => onSelect(feature.id)}
             className={cx(
-              "interactive-card min-h-32 p-4 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500",
-              isActive && "border-violet-400 bg-violet-50/80 dark:border-violet-500 dark:bg-violet-500/10",
+              "group relative flex flex-col justify-between overflow-hidden rounded-2xl border p-4 text-left transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500",
+              isActive
+                ? "border-violet-500 bg-violet-50/90 shadow-md ring-2 ring-violet-500/20 dark:border-violet-400 dark:bg-violet-950/40"
+                : "border-slate-200/90 bg-white hover:border-slate-300 hover:shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:hover:border-slate-700",
             )}
           >
-            <span className="flex items-start justify-between gap-4">
-              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-950 text-white dark:bg-white dark:text-slate-950">
-                <Icon className="h-5 w-5" aria-hidden="true" />
+            <div>
+              <div className="flex items-start justify-between gap-2">
+                <span
+                  className={cx(
+                    "flex h-10 w-10 items-center justify-center rounded-xl transition-colors",
+                    isActive
+                      ? "bg-violet-600 text-white shadow-sm dark:bg-violet-500"
+                      : "bg-slate-100 text-slate-700 group-hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:group-hover:bg-slate-700",
+                  )}
+                >
+                  <Icon className="h-5 w-5" aria-hidden="true" />
+                </span>
+                <span
+                  className={cx(
+                    "rounded-full px-2.5 py-0.5 text-xs font-bold tracking-tight",
+                    isActive
+                      ? "bg-violet-200/60 text-violet-900 dark:bg-violet-500/20 dark:text-violet-200"
+                      : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
+                  )}
+                >
+                  {feature.value}
+                </span>
+              </div>
+              <span className="safe-text mt-3.5 block text-sm font-bold text-slate-950 dark:text-white">
+                {feature.title}
               </span>
-              <span className="text-xl font-black text-slate-950 dark:text-white">
-                {feature.value}
+              <span className="mt-1 block text-xs leading-5 text-slate-500 dark:text-slate-400">
+                {feature.description}
               </span>
-            </span>
-            <span className="safe-text mt-4 block text-base font-bold text-slate-950 dark:text-white">
-              {feature.title}
-            </span>
-            <span className="mt-2 block text-xs leading-5 text-slate-600 dark:text-slate-400">
-              {feature.description}
-            </span>
+            </div>
+
+            {isActive && (
+              <span
+                className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-violet-600 to-indigo-600"
+                aria-hidden="true"
+              />
+            )}
           </button>
         );
       })}
@@ -1346,19 +1392,20 @@ function AiFeatureManagementFeature({
   onRefresh,
   onToggle,
 }) {
-  const statusClass = enabled
-    ? "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200"
-    : "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200";
-
   return (
     <section className="grid gap-8 lg:grid-cols-[1fr_360px]">
-      <div className="surface-card p-5 sm:p-6">
+      <div className="surface-card p-6 sm:p-8">
         <SectionHeading
-          kicker="Feature toggle"
-          title="AI Assistant Availability"
-          description="Enable or disable the AI assistant globally. When disabled, the AI navbar item is hidden and direct AI page visits show a disabled state."
+          kicker="GLOBAL FEATURE TOGGLE"
+          title="AI Assistant System Control"
+          description="Manage platform-wide availability of the RMS AI Assistant and Neural Co-Pilot. When deactivated, navigation is concealed and API query dispatch is restricted."
           actions={
-            <button type="button" onClick={onRefresh} className="btn-secondary" disabled={loading || saving}>
+            <button
+              type="button"
+              onClick={onRefresh}
+              className="btn-secondary"
+              disabled={loading || saving}
+            >
               <FiRefreshCw className={loading ? "animate-spin" : ""} aria-hidden="true" />
               Refresh
             </button>
@@ -1366,63 +1413,180 @@ function AiFeatureManagementFeature({
         />
 
         {loading ? (
-          <LoadingState label="Loading AI feature setting..." />
+          <div className="mt-8">
+            <LoadingState label="Loading AI feature setting..." />
+          </div>
         ) : (
-          <div className="mt-6 rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-950">
-            <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-4">
-                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-slate-950 text-white shadow-lg shadow-violet-600/20 dark:bg-white dark:text-slate-950">
-                  <FiCpu className="h-6 w-6" aria-hidden="true" />
-                </span>
-                <div>
-                  <p className="text-lg font-black text-slate-950 dark:text-white">
-                    AI Feature: {enabled ? "Enabled" : "Disabled"}
-                  </p>
-                  <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                    This setting controls the frontend AI workspace for all users.
+          <div className="mt-8 space-y-6">
+            <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-slate-50/70 p-6 sm:p-7 dark:border-slate-800/80 dark:bg-slate-900/60">
+              <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-start gap-4 sm:items-center">
+                  <span
+                    className={cx(
+                      "flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl shadow-xl transition-transform duration-300",
+                      enabled
+                        ? "bg-gradient-to-br from-violet-600 to-indigo-600 text-white shadow-violet-600/25"
+                        : "bg-slate-200 text-slate-500 shadow-slate-300/30 dark:bg-slate-800 dark:text-slate-400 dark:shadow-black/40",
+                    )}
+                  >
+                    <FiCpu className="h-7 w-7" aria-hidden="true" />
+                  </span>
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      <h3 className="text-xl font-black tracking-tight text-slate-950 dark:text-white">
+                        RMS Neural Co-Pilot Engine
+                      </h3>
+                      <span
+                        className={cx(
+                          "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider",
+                          enabled
+                            ? "bg-emerald-500/10 text-emerald-700 ring-1 ring-inset ring-emerald-500/30 dark:bg-emerald-500/15 dark:text-emerald-300"
+                            : "bg-amber-500/10 text-amber-700 ring-1 ring-inset ring-amber-500/30 dark:bg-amber-500/15 dark:text-amber-300",
+                        )}
+                      >
+                        <span
+                          className={cx(
+                            "h-2 w-2 rounded-full",
+                            enabled ? "bg-emerald-500 animate-pulse" : "bg-amber-500",
+                          )}
+                          aria-hidden="true"
+                        />
+                        {enabled ? "Active & Serving" : "Standby / Deactivated"}
+                      </span>
+                    </div>
+                    <p className="mt-1.5 text-sm leading-6 text-slate-600 dark:text-slate-400">
+                      Controls student query processing, contextual timetable reasoning, and the AI link in the primary navigation header.
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={onToggle}
+                  disabled={saving}
+                  className={cx(
+                    "inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-bold shadow-sm transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 active:scale-[0.98]",
+                    enabled
+                      ? "border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300 dark:hover:bg-rose-500/20"
+                      : "bg-violet-600 text-white shadow-lg shadow-violet-600/25 hover:bg-violet-700 dark:bg-violet-500 dark:hover:bg-violet-600",
+                  )}
+                >
+                  {saving ? (
+                    <FiRefreshCw className="h-4 w-4 animate-spin" aria-hidden="true" />
+                  ) : enabled ? (
+                    <FiEyeOff className="h-4 w-4" aria-hidden="true" />
+                  ) : (
+                    <FiEye className="h-4 w-4" aria-hidden="true" />
+                  )}
+                  {saving ? "Updating State..." : enabled ? "Disable AI Service" : "Enable AI Service"}
+                </button>
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="rounded-xl border border-slate-200/80 bg-white p-4 dark:border-slate-800 dark:bg-slate-950/60">
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                  Public Navigation
+                </p>
+                <div className="mt-2 flex items-center gap-2">
+                  <span
+                    className={cx(
+                      "h-2 w-2 rounded-full",
+                      enabled ? "bg-emerald-500" : "bg-slate-400",
+                    )}
+                  />
+                  <p className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                    {enabled ? "Visible in Header" : "Concealed from Students"}
                   </p>
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={onToggle}
-                disabled={saving}
-                className={enabled ? "btn-secondary" : "btn-primary"}
-              >
-                {saving ? (
-                  <FiRefreshCw className="animate-spin" aria-hidden="true" />
-                ) : enabled ? (
-                  <FiEyeOff aria-hidden="true" />
-                ) : (
-                  <FiEye aria-hidden="true" />
-                )}
-                {saving ? "Updating..." : enabled ? "Disable AI" : "Enable AI"}
-              </button>
+              <div className="rounded-xl border border-slate-200/80 bg-white p-4 dark:border-slate-800 dark:bg-slate-950/60">
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                  Agent Endpoint
+                </p>
+                <div className="mt-2 flex items-center gap-2">
+                  <span
+                    className={cx(
+                      "h-2 w-2 rounded-full",
+                      enabled ? "bg-emerald-500" : "bg-slate-400",
+                    )}
+                  />
+                  <p className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                    {enabled ? "/api/agentcall Active" : "Blocked (403 Hold)"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-slate-200/80 bg-white p-4 dark:border-slate-800 dark:bg-slate-950/60">
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                  Query Audit Log
+                </p>
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                  <p className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                    History Preserved
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         )}
       </div>
 
-      <aside className="surface-card p-5">
-        <p className="section-kicker">Current state</p>
-        <div className="mt-4 flex items-center gap-3">
-          <span
-            className={cx(
-              "flex h-11 w-11 items-center justify-center rounded-lg border",
-              statusClass,
-            )}
-          >
-            <span className="h-3 w-3 rounded-full bg-current" aria-hidden="true" />
-          </span>
-          <div>
-            <p className="text-xl font-black text-slate-950 dark:text-white">
-              {enabled ? "Enabled" : "Disabled"}
-            </p>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              {enabled ? "AI navigation and requests are available." : "AI navigation and requests are blocked."}
-            </p>
+      <aside className="surface-card flex flex-col justify-between p-6">
+        <div>
+          <div className="flex items-center justify-between border-b border-slate-200 pb-4 dark:border-slate-800">
+            <span className="text-xs font-black uppercase tracking-wider text-violet-600 dark:text-violet-400">
+              System Telemetry
+            </span>
+            <span
+              className={cx(
+                "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold",
+                enabled
+                  ? "bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400"
+                  : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400",
+              )}
+            >
+              {enabled ? "Online" : "Standby"}
+            </span>
           </div>
+
+          <div className="mt-5 space-y-4">
+            <div className="flex items-center gap-3">
+              <span
+                className={cx(
+                  "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
+                  enabled
+                    ? "bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400"
+                    : "bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400",
+                )}
+              >
+                <FiActivity className="h-5 w-5" aria-hidden="true" />
+              </span>
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Status</p>
+                <p className="text-base font-black text-slate-900 dark:text-white">
+                  {enabled ? "Fully Operational" : "Deactivated"}
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-4 text-xs leading-5 text-slate-600 dark:border-slate-800 dark:bg-slate-900/50 dark:text-slate-400">
+              <p className="font-semibold text-slate-800 dark:text-slate-200">Governance Policy:</p>
+              <ul className="mt-2 list-inside list-disc space-y-1">
+                <li>Students navigating directly to <code>/ai</code> will receive an offline status banner.</li>
+                <li>Admin roles can continue testing query prompts without restrictions.</li>
+                <li>Audit logging of past inquiries remains fully accessible.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-6 border-t border-slate-200 pt-4 dark:border-slate-800">
+          <p className="text-xs text-slate-400">
+            Last updated via RMS Governance Config. Changes take effect across user sessions instantly.
+          </p>
         </div>
       </aside>
     </section>
@@ -1447,18 +1611,18 @@ function AnnouncementManagementFeature({
   onSubmit,
 }) {
   const isVisible = Boolean(announcement?.isActive);
-  const visibilityButtonLabel = isVisible ? "Hide card" : "Show card";
+  const visibilityButtonLabel = isVisible ? "Hide from Dashboard" : "Publish to Dashboard";
   const VisibilityIcon = isVisible ? FiEyeOff : FiEye;
 
   return (
     <div className="grid gap-8 lg:grid-cols-[1fr_420px]">
-      <form onSubmit={onSubmit} className="surface-card p-5">
+      <form onSubmit={onSubmit} className="surface-card p-6 sm:p-8">
         <SectionHeading
-          kicker="Dashboard card"
-          title="Announcement / Featured Update"
-          description="Update the image, title, description, and action link shown on the dashboard."
+          kicker="CAMPUS BROADCAST"
+          title="Announcement / Featured Card"
+          description="Design and manage high-impact announcement banners presented to students on the main dashboard."
           actions={
-            <>
+            <div className="flex flex-wrap items-center gap-2.5">
               <button
                 type="button"
                 onClick={onVisibilityToggle}
@@ -1468,24 +1632,38 @@ function AnnouncementManagementFeature({
                 <VisibilityIcon className={visibilitySaving ? "animate-pulse" : ""} aria-hidden="true" />
                 {visibilitySaving ? "Updating..." : visibilityButtonLabel}
               </button>
-              <button type="button" onClick={onRefresh} className="btn-secondary" disabled={loading || saving}>
+              <button
+                type="button"
+                onClick={onRefresh}
+                className="btn-secondary"
+                disabled={loading || saving}
+              >
                 <FiRefreshCw className={loading ? "animate-spin" : ""} aria-hidden="true" />
                 Refresh
               </button>
-            </>
+            </div>
           }
         />
 
-        <div className="mt-6 grid gap-5">
+        <div className="mt-8 space-y-6">
           <FormField
             id="announcement-image"
-            label="Cover Image"
-            helper={imageFile ? imageFile.name : imagePreview ? "Current image selected." : "Upload one image."}
+            label="Banner Cover Graphic"
+            helper={
+              imageFile
+                ? `Selected: ${imageFile.name}`
+                : imagePreview
+                  ? "Current cloud cover graphic loaded."
+                  : "Upload a high-resolution 16:9 banner image (PNG, WebP, or JPG)."
+            }
           >
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <label htmlFor="announcement-image" className="btn-secondary cursor-pointer">
-                <FiImage aria-hidden="true" />
-                Choose image
+            <div className="flex flex-col gap-3 rounded-2xl border-2 border-dashed border-slate-200 p-5 transition hover:border-violet-400 dark:border-slate-800 dark:hover:border-violet-500 sm:flex-row sm:items-center">
+              <label
+                htmlFor="announcement-image"
+                className="btn-secondary cursor-pointer shrink-0"
+              >
+                <FiUploadCloud className="h-4 w-4" aria-hidden="true" />
+                {imagePreview ? "Replace Cover" : "Choose Image"}
               </label>
               <input
                 id="announcement-image"
@@ -1494,13 +1672,22 @@ function AnnouncementManagementFeature({
                 onChange={onImageChange}
                 className="sr-only"
               />
-              <span className="text-sm font-medium text-slate-600 dark:text-slate-300">
-                {imageFile ? "New cover ready" : imagePreview ? "Cover available" : "No cover selected"}
-              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-slate-800 dark:text-slate-200">
+                  {imageFile ? imageFile.name : imagePreview ? "Graphic active in draft" : "No image selected"}
+                </p>
+                <p className="text-xs text-slate-400">
+                  Max file size: 5MB • Formats: PNG, JPG, WebP
+                </p>
+              </div>
             </div>
           </FormField>
 
-          <FormField id="announcement-title" label="Title">
+          <FormField
+            id="announcement-title"
+            label="Banner Headline"
+            helper={`${(form.title || "").length}/120 characters`}
+          >
             <input
               id="announcement-title"
               type="text"
@@ -1508,22 +1695,32 @@ function AnnouncementManagementFeature({
               onChange={(event) => onFormChange("title", event.target.value)}
               className="form-field"
               maxLength={120}
-              placeholder="Short announcement title"
+              placeholder="e.g., Mid-Term Examination Routine Published"
+              required
             />
           </FormField>
 
-          <FormField id="announcement-description" label="Description">
+          <FormField
+            id="announcement-description"
+            label="Notice Details & Body"
+            helper={`${(form.description || "").length}/1200 characters`}
+          >
             <textarea
               id="announcement-description"
               value={form.description}
               onChange={(event) => onFormChange("description", event.target.value)}
-              className="form-field min-h-40 resize-y"
+              className="form-field min-h-36 resize-y"
               maxLength={1200}
-              placeholder="Announcement details"
+              placeholder="Provide context, instructions, and relevant schedule details for the student community..."
+              required
             />
           </FormField>
 
-          <FormField id="announcement-link" label="Action Link">
+          <FormField
+            id="announcement-link"
+            label="Destination Action Link"
+            helper="Optional URL triggered when students click 'Learn More'."
+          >
             <div className="relative">
               <FiLink
                 className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"
@@ -1531,71 +1728,102 @@ function AnnouncementManagementFeature({
               />
               <input
                 id="announcement-link"
-                type="text"
+                type="url"
                 value={form.link}
                 onChange={(event) => onFormChange("link", event.target.value)}
                 className="form-field pl-12"
                 maxLength={2048}
-                placeholder="https://example.com/details"
+                placeholder="https://iiuc.ac.bd/notices/midterm-routine"
               />
             </div>
           </FormField>
 
-          <button type="submit" className="btn-primary w-full sm:w-fit" disabled={saving || loading}>
-            <FiSave className={saving ? "animate-pulse" : ""} aria-hidden="true" />
-            {saving ? "Saving..." : "Save announcement"}
-          </button>
+          <div className="pt-2">
+            <button
+              type="submit"
+              className="btn-primary w-full sm:w-auto"
+              disabled={saving || loading}
+            >
+              <FiSave className={saving ? "animate-pulse" : ""} aria-hidden="true" />
+              {saving ? "Saving Changes..." : "Save Announcement Card"}
+            </button>
+          </div>
         </div>
       </form>
 
       <aside className="surface-card overflow-hidden shadow-2xl shadow-slate-950/15 ring-1 ring-white/60 dark:shadow-black/40 dark:ring-white/10">
         <div className="border-b border-slate-200 p-5 dark:border-slate-800">
           <SectionHeading
-            kicker={announcement ? (announcement.isActive ? "Live preview" : "Hidden preview") : "Preview"}
-            title={announcement ? "Saved card" : "Draft card"}
+            kicker={announcement ? (announcement.isActive ? "LIVE BROADCAST" : "DRAFT MODE") : "PREVIEW"}
+            title={announcement ? (announcement.isActive ? "Live Dashboard Card" : "Saved Draft Card") : "Card Preview"}
             description={
               announcement
                 ? announcement.isActive
-                  ? "Visible on the dashboard."
-                  : "Saved content is hidden from the dashboard."
-                : "Complete the form to publish the card."
+                  ? "Currently visible on student dashboards."
+                  : "Saved in database, but concealed from public dashboards."
+                : "Fill out the form to generate the campus announcement preview."
             }
           />
         </div>
 
         {loading ? (
-          <LoadingState label="Loading announcement..." />
+          <div className="p-8">
+            <LoadingState label="Loading announcement preview..." />
+          </div>
         ) : imagePreview ? (
           <div>
             <div className="relative overflow-hidden bg-slate-950">
               <img
                 src={imagePreview}
-                alt=""
-                className="absolute inset-0 h-full w-full object-cover"
+                alt="Announcement banner preview"
+                className="h-80 w-full object-cover transition-transform duration-500 hover:scale-105"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/30 to-transparent" />
-              <div className="relative flex min-h-72 items-end p-4">
-                <div className="w-full rounded-lg border border-white/20 bg-slate-950/35 p-4 text-white shadow-2xl backdrop-blur-xl">
-                  <p className="text-xs font-bold uppercase text-green-200">Featured update</p>
-                  <h3 className="safe-text mt-2 text-2xl font-black leading-tight">
-                    {form.title || "Announcement title"}
-                  </h3>
-                  <p className="mt-3 line-clamp-4 whitespace-pre-line text-sm leading-6 text-slate-100">
-                    {form.description || "Announcement description"}
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent" />
+              <div className="absolute top-4 left-4">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-950/80 px-3 py-1 text-xs font-bold text-white shadow-lg backdrop-blur-md">
+                  <span
+                    className={cx(
+                      "h-2 w-2 rounded-full",
+                      isVisible ? "bg-emerald-400 animate-pulse" : "bg-amber-400",
+                    )}
+                  />
+                  {isVisible ? "Active Broadcast" : "Hidden Draft"}
+                </span>
+              </div>
+              <div className="relative flex items-end p-5">
+                <div className="w-full rounded-2xl border border-white/20 bg-slate-950/60 p-5 text-white shadow-2xl backdrop-blur-xl">
+                  <p className="text-xs font-black uppercase tracking-wider text-violet-300">
+                    Featured Update
                   </p>
-                  <span className="mt-4 inline-flex min-h-10 items-center justify-center rounded-lg bg-white px-4 py-2 text-sm font-bold text-slate-950">
-                    Learn More
-                  </span>
+                  <h3 className="safe-text mt-2 text-2xl font-black leading-tight text-white">
+                    {form.title || "Announcement Title"}
+                  </h3>
+                  <p className="mt-2.5 line-clamp-3 whitespace-pre-line text-sm leading-relaxed text-slate-200">
+                    {form.description || "Announcement description will render here with full formatting..."}
+                  </p>
+                  <div className="mt-4 flex items-center justify-between gap-3">
+                    <span className="inline-flex items-center gap-1.5 rounded-lg bg-white px-4 py-2 text-xs font-bold text-slate-950 shadow-md">
+                      Learn More
+                      <FiExternalLink className="h-3 w-3" />
+                    </span>
+                    {form.link && (
+                      <span className="truncate text-xs font-mono text-slate-400 max-w-[180px]">
+                        {form.link}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         ) : (
-          <EmptyState
-            icon={<FiImage className="h-7 w-7" aria-hidden="true" />}
-            title="No announcement yet"
-            description="Add a cover image and content to publish the dashboard card."
-          />
+          <div className="p-8">
+            <EmptyState
+              icon={<FiImage className="h-8 w-8 text-slate-400" aria-hidden="true" />}
+              title="No announcement graphic"
+              description="Add a cover graphic and title to render the interactive dashboard preview."
+            />
+          </div>
         )}
       </aside>
     </div>
@@ -1625,13 +1853,13 @@ function SponsorManagementFeature({
 
   return (
     <div className="grid gap-8 lg:grid-cols-[1fr_420px]">
-      <form onSubmit={onSubmit} className="surface-card p-5">
+      <form onSubmit={onSubmit} className="surface-card p-6 sm:p-8">
         <SectionHeading
-          kicker="Supported By"
-          title="Sponsor Management"
-          description="Update the sponsor logo, details, contact information, and social links shown on the public site."
+          kicker="PARTNERS & PATRONS"
+          title="Institutional Sponsor Management"
+          description="Configure the partner organization logo, public profile description, and external social channels shown across the public portal."
           actions={
-            <>
+            <div className="flex flex-wrap items-center gap-2.5">
               <button
                 type="button"
                 onClick={onVisibilityToggle}
@@ -1639,29 +1867,45 @@ function SponsorManagementFeature({
                 disabled={loading || saving || visibilitySaving}
               >
                 <VisibilityIcon className={visibilitySaving ? "animate-pulse" : ""} aria-hidden="true" />
-                {visibilitySaving ? "Updating..." : enabled ? "Hide sponsor" : "Show sponsor"}
+                {visibilitySaving ? "Updating..." : enabled ? "Hide Sponsor" : "Show Sponsor"}
               </button>
-              <button type="button" onClick={onRefresh} className="btn-secondary" disabled={loading || saving}>
+              <button
+                type="button"
+                onClick={onRefresh}
+                className="btn-secondary"
+                disabled={loading || saving}
+              >
                 <FiRefreshCw className={loading ? "animate-spin" : ""} aria-hidden="true" />
                 Refresh
               </button>
-            </>
+            </div>
           }
         />
 
         {loading ? (
-          <LoadingState label="Loading sponsor..." />
+          <div className="mt-8">
+            <LoadingState label="Loading sponsor profile..." />
+          </div>
         ) : (
-          <div className="mt-6 grid gap-5">
+          <div className="mt-8 space-y-6">
             <FormField
               id="sponsor-logo"
-              label="Sponsor Logo"
-              helper={logoFile ? logoFile.name : logoPreview ? "Current logo selected." : "Upload a PNG or transparent logo."}
+              label="Sponsor Brandmark / Logo"
+              helper={
+                logoFile
+                  ? `Selected: ${logoFile.name}`
+                  : logoPreview
+                    ? "Current partner logo loaded."
+                    : "Upload a transparent PNG or high-res vector logo."
+              }
             >
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <label htmlFor="sponsor-logo" className="btn-secondary cursor-pointer">
-                  <FiImage aria-hidden="true" />
-                  Choose logo
+              <div className="flex flex-col gap-3 rounded-2xl border-2 border-dashed border-slate-200 p-5 transition hover:border-violet-400 dark:border-slate-800 dark:hover:border-violet-500 sm:flex-row sm:items-center">
+                <label
+                  htmlFor="sponsor-logo"
+                  className="btn-secondary cursor-pointer shrink-0"
+                >
+                  <FiUploadCloud className="h-4 w-4" aria-hidden="true" />
+                  {logoPreview ? "Replace Logo" : "Choose Logo"}
                 </label>
                 <input
                   id="sponsor-logo"
@@ -1670,13 +1914,18 @@ function SponsorManagementFeature({
                   onChange={onLogoChange}
                   className="sr-only"
                 />
-                <span className="text-sm font-medium text-slate-600 dark:text-slate-300">
-                  {logoFile ? "New logo ready" : logoPreview ? "Logo available" : "No logo selected"}
-                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-slate-800 dark:text-slate-200">
+                    {logoFile ? logoFile.name : logoPreview ? "Logo active in draft" : "No file selected"}
+                  </p>
+                  <p className="text-xs text-slate-400">
+                    Transparent PNG or SVG recommended
+                  </p>
+                </div>
               </div>
             </FormField>
 
-            <FormField id="sponsor-name" label="Sponsor Name">
+            <FormField id="sponsor-name" label="Partner / Organization Name">
               <input
                 id="sponsor-name"
                 type="text"
@@ -1684,24 +1933,28 @@ function SponsorManagementFeature({
                 onChange={(event) => onFormChange("name", event.target.value)}
                 className="form-field"
                 maxLength={160}
-                placeholder="Sponsor name"
+                placeholder="e.g., TechCorp Solutions Bangladesh"
                 required
               />
             </FormField>
 
-            <FormField id="sponsor-description" label="Short Description">
+            <FormField
+              id="sponsor-description"
+              label="Partnership Scope & Description"
+              helper={`${(form.description || "").length}/1200 characters`}
+            >
               <textarea
                 id="sponsor-description"
                 value={form.description}
                 onChange={(event) => onFormChange("description", event.target.value)}
-                className="form-field min-h-36 resize-y"
+                className="form-field min-h-32 resize-y"
                 maxLength={1200}
-                placeholder="Describe the sponsor relationship or contribution."
+                placeholder="Describe how the sponsor supports the routine management system and student community..."
                 required
               />
             </FormField>
 
-            <FormField id="sponsor-website" label="Website">
+            <FormField id="sponsor-website" label="Official Web Portal">
               <div className="relative">
                 <FiGlobe
                   className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"
@@ -1714,25 +1967,27 @@ function SponsorManagementFeature({
                   onChange={(event) => onFormChange("websiteUrl", event.target.value)}
                   className="form-field pl-12"
                   maxLength={2048}
-                  placeholder="https://example.com"
+                  placeholder="https://sponsor.org"
                 />
               </div>
             </FormField>
 
-            <FormField id="sponsor-contact" label="Contact Information">
+            <FormField id="sponsor-contact" label="Direct Contact Information">
               <textarea
                 id="sponsor-contact"
                 value={form.contactInfo}
                 onChange={(event) => onFormChange("contactInfo", event.target.value)}
-                className="form-field min-h-28 resize-y"
+                className="form-field min-h-24 resize-y"
                 maxLength={1200}
-                placeholder="Optional contact details"
+                placeholder="Key liaison contacts, inquiry email, telephone numbers..."
               />
             </FormField>
 
             <div>
-              <p className="field-label">Social Links</p>
-              <div className="mt-2 grid gap-3 sm:grid-cols-2">
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                Connected Social Ecosystem
+              </p>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
                 {SPONSOR_SOCIAL_CONFIG.map((item) => {
                   const Icon = item.icon;
 
@@ -1749,7 +2004,7 @@ function SponsorManagementFeature({
                           type="url"
                           value={form.socialLinks?.[item.key] || ""}
                           onChange={(event) => onSocialLinkChange(item.key, event.target.value)}
-                          className="form-field pl-11"
+                          className="form-field pl-11 text-xs"
                           maxLength={2048}
                           placeholder={item.placeholder}
                         />
@@ -1760,10 +2015,16 @@ function SponsorManagementFeature({
               </div>
             </div>
 
-            <button type="submit" className="btn-primary w-full sm:w-fit" disabled={saving || loading}>
-              <FiSave className={saving ? "animate-pulse" : ""} aria-hidden="true" />
-              {saving ? "Saving..." : "Save sponsor"}
-            </button>
+            <div className="pt-2">
+              <button
+                type="submit"
+                className="btn-primary w-full sm:w-auto"
+                disabled={saving || loading}
+              >
+                <FiSave className={saving ? "animate-pulse" : ""} aria-hidden="true" />
+                {saving ? "Saving Changes..." : "Save Sponsor Profile"}
+              </button>
+            </div>
           </div>
         )}
       </form>
@@ -1771,56 +2032,78 @@ function SponsorManagementFeature({
       <aside className="surface-card overflow-hidden shadow-2xl shadow-slate-950/15 ring-1 ring-white/60 dark:shadow-black/40 dark:ring-white/10">
         <div className="border-b border-slate-200 p-5 dark:border-slate-800">
           <SectionHeading
-            kicker={enabled ? "Visible site-wide" : sponsor ? "Hidden site-wide" : "Preview"}
-            title={sponsor ? "Saved sponsor" : "Draft sponsor"}
+            kicker={enabled ? "PUBLICLY VISIBLE" : "RESTRICTED / HIDDEN"}
+            title={sponsor ? "Sponsor Plate Preview" : "Draft Preview"}
             description={
               enabled
-                ? "This sponsor can appear on the home page and footer."
-                : "Sponsor content is saved but hidden from public pages."
+                ? "This partner plate is currently displayed in the site footer and landing page."
+                : "Sponsor data is saved in database but hidden from public pages."
             }
           />
         </div>
 
         {loading ? (
-          <LoadingState label="Loading sponsor preview..." />
+          <div className="p-8">
+            <LoadingState label="Loading sponsor preview..." />
+          </div>
         ) : logoPreview || form.name || form.description ? (
-          <div className="grid gap-5 p-5">
-            <SponsorLogoPlate logo={logoPreview} name={form.name || "Sponsor"} size="preview" />
+          <div className="grid gap-6 p-6">
+            <div className="flex justify-center rounded-2xl border border-slate-200/80 bg-slate-50/70 p-6 dark:border-slate-800 dark:bg-slate-900/50">
+              <SponsorLogoPlate logo={logoPreview} name={form.name || "Sponsor"} size="preview" />
+            </div>
+
             <div>
-              <p className="section-kicker">Supported By</p>
-              <h3 className="safe-text mt-3 text-2xl font-black text-slate-950 dark:text-white">
-                {form.name || "Sponsor name"}
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-violet-500/10 px-2.5 py-0.5 text-xs font-bold text-violet-700 dark:bg-violet-500/20 dark:text-violet-300">
+                Official Patron
+              </span>
+              <h3 className="safe-text mt-2 text-2xl font-black text-slate-950 dark:text-white">
+                {form.name || "Partner Organization"}
               </h3>
-              <p className="mt-3 whitespace-pre-line text-sm leading-6 text-slate-600 dark:text-slate-300">
-                {form.description || "Sponsor description will appear here."}
+              <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+                {form.description || "Partner organization description will be featured here."}
               </p>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
+
+            <div className="flex flex-wrap items-center gap-3">
               {form.websiteUrl && (
-                <a href={form.websiteUrl} target="_blank" rel="noreferrer" className="btn-secondary">
-                  <FiLink aria-hidden="true" />
-                  Website
+                <a
+                  href={form.websiteUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn-secondary"
+                >
+                  <FiExternalLink aria-hidden="true" />
+                  Visit Website
                 </a>
               )}
               <SponsorSocialLinks socialLinks={form.socialLinks} compact />
             </div>
+
             <div
               className={cx(
-                "rounded-lg border px-4 py-3 text-sm font-semibold",
+                "rounded-xl border px-4 py-3 text-xs font-bold flex items-center gap-2",
                 enabled
-                  ? "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-100"
-                  : "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100",
+                  ? "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200"
+                  : "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200",
               )}
             >
-              {enabled ? "Sponsor display is enabled." : "Sponsor display is disabled."}
+              <span
+                className={cx(
+                  "h-2 w-2 rounded-full",
+                  enabled ? "bg-emerald-500 animate-pulse" : "bg-amber-500",
+                )}
+              />
+              {enabled ? "Live: Broadcast across public site" : "Concealed: Disabled from public view"}
             </div>
           </div>
         ) : (
-          <EmptyState
-            icon={<FiAward className="h-7 w-7" aria-hidden="true" />}
-            title="No sponsor yet"
-            description="Add a logo and sponsor details to publish a Supported By section."
-          />
+          <div className="p-8">
+            <EmptyState
+              icon={<FiAward className="h-8 w-8 text-slate-400" aria-hidden="true" />}
+              title="No sponsor profile"
+              description="Provide partner branding and details to render the public showcase preview."
+            />
+          </div>
         )}
       </aside>
     </div>
@@ -1843,11 +2126,12 @@ function SessionFeature({
   onSubmit,
 }) {
   return (
-    <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
-      <div className="surface-card p-5">
+    <div className="grid gap-8 lg:grid-cols-[1fr_380px]">
+      <div className="surface-card p-6 sm:p-8">
         <SectionHeading
-          kicker="Sessions"
-          title="Session Management"
+          kicker="TIMETABLE CALENDAR"
+          title="Academic Sessions Registry"
+          description="Manage academic sessions and active term flags. The active session determines live timetable lookups, class period mappings, and student routine displays."
           actions={
             <button
               type="button"
@@ -1861,80 +2145,137 @@ function SessionFeature({
           }
         />
 
-        <div className="mt-6">
+        <div className="mt-8">
           {loading ? (
-            <LoadingState label="Loading sessions..." />
+            <div className="p-4">
+              <LoadingState label="Loading academic sessions..." />
+            </div>
           ) : sessions.length === 0 ? (
-            <EmptyState
-              icon={<FiCalendar className="h-7 w-7" aria-hidden="true" />}
-              title="No sessions found"
-              description="Add a session to activate routine lookups."
-            />
+            <div className="p-4">
+              <EmptyState
+                icon={<FiCalendar className="h-8 w-8 text-slate-400" aria-hidden="true" />}
+                title="No academic sessions recorded"
+                description="Register an academic session in the panel to activate timetable lookups."
+              />
+            </div>
           ) : (
             <div className="grid gap-4">
-              {sessions.map((sessionItem) => (
-                <article
-                  key={sessionItem.session}
-                  className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950"
-                >
-                  <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-3">
-                        <h2 className="safe-text text-xl font-bold text-slate-950 dark:text-white">
-                          {sessionItem.session}
-                        </h2>
-                        <span
-                          className={
-                            sessionItem.isActive
-                              ? "status-pill border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200"
-                              : "status-pill border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
-                          }
-                        >
-                          {sessionItem.isActive ? "Active" : "Closed"}
-                        </span>
-                      </div>
-                      <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-                        Start: <span className="font-semibold">{sessionItem.start || "N/A"}</span>
-                        {" "}- Stop: <span className="font-semibold">{sessionItem.stop || "Open"}</span>
-                      </p>
-                    </div>
+              {sessions.map((sessionItem) => {
+                const isSelected = editingSession === sessionItem.session;
 
-                    <button
-                      type="button"
-                      onClick={() => onEdit(sessionItem)}
-                      className="btn-secondary"
-                    >
-                      <FiEdit3 aria-hidden="true" />
-                      Edit
-                    </button>
-                  </div>
-                </article>
-              ))}
+                return (
+                  <article
+                    key={sessionItem.session}
+                    className={cx(
+                      "group relative overflow-hidden rounded-2xl border p-5 transition-all",
+                      isSelected
+                        ? "border-violet-500 bg-violet-50/40 ring-2 ring-violet-500/20 dark:border-violet-500/60 dark:bg-violet-950/20"
+                        : "border-slate-200/90 bg-white hover:border-violet-300 dark:border-slate-800 dark:bg-slate-950/60 dark:hover:border-slate-700",
+                    )}
+                  >
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex items-start gap-4">
+                        <span
+                          className={cx(
+                            "flex h-12 w-12 shrink-0 items-center justify-center rounded-xl",
+                            sessionItem.isActive
+                              ? "bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400"
+                              : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400",
+                          )}
+                        >
+                          <FiCalendar className="h-6 w-6" aria-hidden="true" />
+                        </span>
+
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2.5">
+                            <h3 className="safe-text text-lg font-black text-slate-950 dark:text-white">
+                              {sessionItem.session}
+                            </h3>
+                            <span
+                              className={cx(
+                                "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold",
+                                sessionItem.isActive
+                                  ? "bg-emerald-500/10 text-emerald-700 ring-1 ring-inset ring-emerald-500/30 dark:bg-emerald-500/15 dark:text-emerald-300"
+                                  : "bg-slate-100 text-slate-600 ring-1 ring-inset ring-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:ring-slate-700",
+                              )}
+                            >
+                              <span
+                                className={cx(
+                                  "h-1.5 w-1.5 rounded-full",
+                                  sessionItem.isActive ? "bg-emerald-500 animate-pulse" : "bg-slate-400",
+                                )}
+                              />
+                              {sessionItem.isActive ? "Active Routine Term" : "Archived Session"}
+                            </span>
+                          </div>
+
+                          <div className="mt-2 flex flex-wrap items-center gap-4 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                            <span className="flex items-center gap-1.5">
+                              <span className="text-slate-400">Effective:</span>
+                              <span className="font-mono text-slate-700 dark:text-slate-300">
+                                {sessionItem.start || "N/A"}
+                              </span>
+                            </span>
+                            <span className="text-slate-300 dark:text-slate-700">•</span>
+                            <span className="flex items-center gap-1.5">
+                              <span className="text-slate-400">Conclusion:</span>
+                              <span className="font-mono text-slate-700 dark:text-slate-300">
+                                {sessionItem.stop || "Continuous / Open"}
+                              </span>
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => onEdit(sessionItem)}
+                        className={cx(
+                          "btn-secondary shrink-0",
+                          isSelected && "bg-violet-600 text-white hover:bg-violet-700 dark:bg-violet-500 dark:hover:bg-violet-600",
+                        )}
+                      >
+                        <FiEdit3 aria-hidden="true" />
+                        {isSelected ? "Editing" : "Edit Details"}
+                      </button>
+                    </div>
+                  </article>
+                );
+              })}
             </div>
           )}
         </div>
       </div>
 
-      <aside className="surface-card p-5">
+      <aside className="surface-card p-6 sm:p-7">
         <SectionHeading
-          kicker={editingSession ? "Edit session" : "New session"}
-          title={editingSession ? editingSession : "Add Session"}
+          kicker={editingSession ? "TERM CONFIGURATION" : "NEW REGISTRATION"}
+          title={editingSession ? `Edit ${editingSession}` : "Add New Session"}
+          description={
+            editingSession
+              ? "Modify term validity dates and active flag status."
+              : "Register an upcoming academic session in the routine database."
+          }
         />
 
         <form onSubmit={onSubmit} className="mt-6 space-y-5">
-          <FormField id="session-name" label="Session name">
+          <FormField
+            id="session-name"
+            label="Session Identifier"
+            helper={editingSession ? "Session code is permanent once initialized." : "e.g., Autumn 2025, Spring 2026"}
+          >
             <input
               id="session-name"
               value={sessionForm.session}
               onChange={(event) => onFormChange("session", event.target.value)}
-              placeholder="Enter session name"
+              placeholder="e.g. Autumn 2025"
               className="form-field"
               disabled={Boolean(editingSession)}
               required
             />
           </FormField>
 
-          <FormField id="session-start" label="Start date">
+          <FormField id="session-start" label="Term Start Date">
             <input
               id="session-start"
               type="date"
@@ -1947,9 +2288,14 @@ function SessionFeature({
 
           <label
             htmlFor="session-active"
-            className="flex min-h-12 cursor-pointer items-center justify-between gap-4 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100"
+            className="flex min-h-12 cursor-pointer items-center justify-between gap-4 rounded-xl border border-slate-200/90 bg-slate-50/80 px-4 py-3 text-sm font-semibold text-slate-800 transition hover:bg-slate-100/70 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-100 dark:hover:bg-slate-800/60"
           >
-            <span>Active session</span>
+            <div>
+              <span className="block font-bold">Primary Active Session</span>
+              <span className="block text-xs font-normal text-slate-500 dark:text-slate-400">
+                Directs all public timetable queries to this term.
+              </span>
+            </div>
             <input
               id="session-active"
               type="checkbox"
@@ -1959,7 +2305,11 @@ function SessionFeature({
             />
           </label>
 
-          <FormField id="session-stop" label="Stop date">
+          <FormField
+            id="session-stop"
+            label="Term End / Stop Date"
+            helper={sessionForm.isActive ? "Disabled while term is flagged as active." : "Required for archived sessions."}
+          >
             <input
               id="session-stop"
               type="date"
@@ -1971,7 +2321,7 @@ function SessionFeature({
             />
           </FormField>
 
-          <div className="flex flex-wrap justify-end gap-3">
+          <div className="flex flex-wrap items-center justify-end gap-2.5 pt-3">
             {editingSession && (
               <button type="button" onClick={onReset} className="btn-secondary">
                 <FiX aria-hidden="true" />
@@ -1980,7 +2330,7 @@ function SessionFeature({
             )}
             <button type="submit" className="btn-primary" disabled={sessionSaving}>
               {editingSession ? <FiSave aria-hidden="true" /> : <FiPlus aria-hidden="true" />}
-              {sessionSaving ? "Saving..." : editingSession ? "Save changes" : "Add session"}
+              {sessionSaving ? "Saving..." : editingSession ? "Save Changes" : "Register Session"}
             </button>
           </div>
         </form>
@@ -2003,76 +2353,92 @@ function CrUsersFeature({
 }) {
   return (
     <section className="table-shell">
-      <div className="flex flex-col gap-4 border-b border-slate-200 bg-white px-5 py-5 sm:flex-row sm:items-end sm:justify-between dark:border-slate-800 dark:bg-slate-900">
+      <div className="flex flex-col gap-4 border-b border-slate-200 bg-white px-6 py-6 sm:flex-row sm:items-end sm:justify-between dark:border-slate-800 dark:bg-slate-900">
         <div>
-          <p className="section-kicker">Users</p>
-          <h2 className="mt-1 text-2xl font-bold text-slate-950 dark:text-white">
-            CR Users
-          </h2>
+          <p className="text-xs font-bold uppercase tracking-wider text-violet-600 dark:text-violet-400">
+            Student Representatives
+          </p>
+          <div className="mt-1 flex items-center gap-3">
+            <h2 className="text-2xl font-black tracking-tight text-slate-950 dark:text-white">
+              Class Representative Registry
+            </h2>
+            <span className="inline-flex items-center rounded-full bg-violet-500/10 px-2.5 py-0.5 text-xs font-bold text-violet-700 dark:bg-violet-500/20 dark:text-violet-300">
+              {pagination.total} registered
+            </span>
+          </div>
           <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-            {pagination.total} CR user{pagination.total === 1 ? "" : "s"} found
+            Assigned CRs have routine update privileges for their respective academic sections.
           </p>
         </div>
-        <button type="button" onClick={onRefresh} className="btn-secondary" disabled={loading}>
+        <button type="button" onClick={onRefresh} className="btn-secondary shrink-0" disabled={loading}>
           <FiRefreshCw className={loading ? "animate-spin" : ""} aria-hidden="true" />
-          Refresh
+          Refresh Registry
         </button>
       </div>
 
       {loading ? (
-        <LoadingState label="Loading CR users..." />
+        <div className="p-8">
+          <LoadingState label="Loading CR users..." />
+        </div>
       ) : crUsers.length === 0 ? (
-        <EmptyState
-          icon={<FiUsers className="h-7 w-7" aria-hidden="true" />}
-          title="No CR users found"
-          description="Assign a CR role by student ID, then refresh this list."
-        />
+        <div className="p-8">
+          <EmptyState
+            icon={<FiUsers className="h-8 w-8 text-slate-400" aria-hidden="true" />}
+            title="No class representatives found"
+            description="Use the Direct Role Update feature to assign a student the CR privilege."
+          />
+        </div>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[820px] text-left text-sm">
-            <caption className="sr-only">CR users</caption>
-            <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
+          <table className="w-full min-w-[840px] text-left text-sm">
+            <caption className="sr-only">CR users registry</caption>
+            <thead className="border-b border-slate-200 bg-slate-50/80 text-xs font-bold uppercase tracking-wider text-slate-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-400">
               <tr>
-                <th scope="col" className="px-5 py-4 font-bold">Student</th>
-                <th scope="col" className="px-5 py-4 font-bold">Section</th>
-                <th scope="col" className="px-5 py-4 font-bold">Contact</th>
-                <th scope="col" className="px-5 py-4 font-bold">Role</th>
+                <th scope="col" className="px-6 py-4">Student Representative</th>
+                <th scope="col" className="px-6 py-4">Section</th>
+                <th scope="col" className="px-6 py-4">Communication</th>
+                <th scope="col" className="px-6 py-4">Assigned Role</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
               {crUsers.map((student) => (
-                <tr key={student.id} className="transition hover:bg-violet-50/60 dark:hover:bg-slate-900">
-                  <td className="px-5 py-4">
+                <tr
+                  key={student.id}
+                  className="transition-colors hover:bg-violet-50/40 dark:hover:bg-slate-800/50"
+                >
+                  <td className="px-6 py-4">
                     <button
                       type="button"
                       onClick={() => onOpenProfile(student.id)}
-                      className="group flex min-w-0 items-center gap-3 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
+                      className="group flex min-w-0 items-center gap-3.5 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
                     >
                       <AdminAvatar image={student.profilePic} name={student.name || student.id} />
-                      <span className="min-w-0">
-                        <span className="safe-text block font-bold text-slate-950 transition group-hover:text-violet-700 dark:text-white dark:group-hover:text-violet-200">
+                      <div className="min-w-0">
+                        <span className="safe-text block font-bold text-slate-950 transition group-hover:text-violet-600 dark:text-white dark:group-hover:text-violet-300">
                           {student.name || "Student"}
                         </span>
-                        <span className="safe-text mt-1 block text-xs text-slate-500 dark:text-slate-400">
+                        <span className="font-mono text-xs text-slate-500 dark:text-slate-400">
                           ID: {student.id}
                         </span>
-                      </span>
+                      </div>
                     </button>
                   </td>
-                  <td className="safe-text px-5 py-4 font-semibold text-slate-700 dark:text-slate-200">
-                    {student.sec || "N/A"}
+                  <td className="px-6 py-4">
+                    <span className="inline-flex items-center rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-800 ring-1 ring-inset ring-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700">
+                      {student.sec ? `Section ${student.sec}` : "No Section"}
+                    </span>
                   </td>
-                  <td className="px-5 py-4 text-slate-600 dark:text-slate-300">
-                    <p className="safe-text">{student.email || "No email"}</p>
-                    <p className="safe-text mt-1 text-xs text-slate-500 dark:text-slate-400">
-                      {student.phone || "No phone"}
+                  <td className="px-6 py-4 text-slate-600 dark:text-slate-300">
+                    <p className="safe-text text-xs font-semibold">{student.email || "No email registered"}</p>
+                    <p className="safe-text mt-1 font-mono text-xs text-slate-400 dark:text-slate-500">
+                      {student.phone || "No phone registered"}
                     </p>
                   </td>
-                  <td className="px-5 py-4">
+                  <td className="px-6 py-4">
                     <select
                       value={student.type}
                       onChange={(event) => onRoleChange(student.id, event.target.value)}
-                      className="form-field min-w-36"
+                      className="form-field min-w-36 text-xs font-semibold"
                       aria-label={`Role for ${student.name || student.id}`}
                     >
                       {VALID_ROLES.map((role) => (
@@ -2104,80 +2470,105 @@ function CrUsersFeature({
 function LoginLogsFeature({ loginLogs, loading, onRefresh, onOpenProfile }) {
   return (
     <section className="table-shell">
-      <div className="flex flex-col gap-4 border-b border-slate-200 bg-white px-5 py-5 sm:flex-row sm:items-end sm:justify-between dark:border-slate-800 dark:bg-slate-900">
+      <div className="flex flex-col gap-4 border-b border-slate-200 bg-white px-6 py-6 sm:flex-row sm:items-end sm:justify-between dark:border-slate-800 dark:bg-slate-900">
         <div>
-          <p className="section-kicker">Login history</p>
-          <h2 className="mt-1 text-2xl font-bold text-slate-950 dark:text-white">
-            Latest 10 Logged In
-          </h2>
+          <p className="text-xs font-bold uppercase tracking-wider text-violet-600 dark:text-violet-400">
+            Security Audit Stream
+          </p>
+          <div className="mt-1 flex items-center gap-3">
+            <h2 className="text-2xl font-black tracking-tight text-slate-950 dark:text-white">
+              Authentication Audit Feed
+            </h2>
+            <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-bold text-slate-700 ring-1 ring-inset ring-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700">
+              Latest 10 Sessions
+            </span>
+          </div>
           <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-            Showing the newest successful login records from the login log.
+            Real-time verification log of recent successful account sign-ins across the university portal.
           </p>
         </div>
-        <button type="button" onClick={onRefresh} className="btn-secondary" disabled={loading}>
+        <button type="button" onClick={onRefresh} className="btn-secondary shrink-0" disabled={loading}>
           <FiRefreshCw className={loading ? "animate-spin" : ""} aria-hidden="true" />
-          Refresh
+          Refresh Stream
         </button>
       </div>
 
       {loading ? (
-        <LoadingState label="Loading latest logins..." />
+        <div className="p-8">
+          <LoadingState label="Loading authentication stream..." />
+        </div>
       ) : loginLogs.length === 0 ? (
-        <EmptyState
-          icon={<FiClock className="h-7 w-7" aria-hidden="true" />}
-          title="No login records found"
-          description="Recent successful logins will appear here."
-        />
+        <div className="p-8">
+          <EmptyState
+            icon={<FiClock className="h-8 w-8 text-slate-400" aria-hidden="true" />}
+            title="No authentication events recorded"
+            description="Recent student and administrator sign-in events will stream here."
+          />
+        </div>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[820px] text-left text-sm">
+          <table className="w-full min-w-[840px] text-left text-sm">
             <caption className="sr-only">Latest login records</caption>
-            <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
+            <thead className="border-b border-slate-200 bg-slate-50/80 text-xs font-bold uppercase tracking-wider text-slate-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-400">
               <tr>
-                <th scope="col" className="px-5 py-4 font-bold">Student</th>
-                <th scope="col" className="px-5 py-4 font-bold">Section</th>
-                <th scope="col" className="px-5 py-4 font-bold">Role</th>
-                <th scope="col" className="px-5 py-4 font-bold">Login time</th>
+                <th scope="col" className="px-6 py-4">User Identity</th>
+                <th scope="col" className="px-6 py-4">Cohort / Section</th>
+                <th scope="col" className="px-6 py-4">Authorization Role</th>
+                <th scope="col" className="px-6 py-4">Sign-in Timestamp</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
               {loginLogs.map((entry, index) => (
                 <tr
                   key={`${entry.id}-${entry.loginTime || index}`}
-                  className="transition hover:bg-violet-50/60 dark:hover:bg-slate-900"
+                  className="transition-colors hover:bg-violet-50/40 dark:hover:bg-slate-800/50"
                 >
-                  <td className="px-5 py-4">
+                  <td className="px-6 py-4">
                     <button
                       type="button"
                       onClick={() => onOpenProfile(entry.id)}
-                      className="group flex min-w-0 items-center gap-3 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
+                      className="group flex min-w-0 items-center gap-3.5 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
                     >
                       <AdminAvatar image={entry.profilePic} name={entry.studentName || entry.id} />
                       <div className="min-w-0">
-                        <p className="safe-text font-bold text-slate-950 transition group-hover:text-violet-700 dark:text-white dark:group-hover:text-violet-200">
-                          {entry.studentName || "Unknown student"}
+                        <p className="safe-text font-bold text-slate-950 transition group-hover:text-violet-600 dark:text-white dark:group-hover:text-violet-300">
+                          {entry.studentName || "Unknown Student"}
                         </p>
-                        <p className="safe-text mt-1 text-xs text-slate-500 dark:text-slate-400">
+                        <p className="font-mono text-xs text-slate-500 dark:text-slate-400">
                           ID: {entry.id}
                         </p>
                         {entry.email && (
-                          <p className="safe-text mt-1 text-xs text-slate-500 dark:text-slate-400">
+                          <p className="safe-text truncate text-xs text-slate-400 max-w-[200px]">
                             {entry.email}
                           </p>
                         )}
                       </div>
                     </button>
                   </td>
-                  <td className="safe-text px-5 py-4 font-semibold text-slate-700 dark:text-slate-200">
-                    {entry.sec || "N/A"}
+                  <td className="px-6 py-4">
+                    <span className="inline-flex items-center rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-800 ring-1 ring-inset ring-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700">
+                      {entry.sec ? `Section ${entry.sec}` : "No Section"}
+                    </span>
                   </td>
-                  <td className="px-5 py-4">
-                    <span className="status-pill border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
+                  <td className="px-6 py-4">
+                    <span
+                      className={cx(
+                        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider",
+                        entry.type === "ADMIN"
+                          ? "bg-violet-500/10 text-violet-700 ring-1 ring-inset ring-violet-500/30 dark:bg-violet-500/20 dark:text-violet-300"
+                          : entry.type === "cr"
+                            ? "bg-emerald-500/10 text-emerald-700 ring-1 ring-inset ring-emerald-500/30 dark:bg-emerald-500/20 dark:text-emerald-300"
+                            : "bg-slate-100 text-slate-700 ring-1 ring-inset ring-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700",
+                      )}
+                    >
                       {entry.type || "N/A"}
                     </span>
                   </td>
-                  <td className="safe-text px-5 py-4 font-semibold text-slate-700 dark:text-slate-200">
-                    {formatLoginTime(entry.loginTime)}
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
+                      <FiClock className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />
+                      <span>{formatLoginTime(entry.loginTime)}</span>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -2190,101 +2581,118 @@ function LoginLogsFeature({ loginLogs, loading, onRefresh, onOpenProfile }) {
 }
 
 /**
- * Fixed latest-record monitoring view. List controls stay at the API boundary
- * so pagination, search, and filters can be added without reshaping this UI.
+ * Fixed latest-record monitoring view for AI queries.
  */
 function AiQueryLogsFeature({ logs, loading, onRefresh, onOpenProfile }) {
   return (
     <section className="table-shell">
-      <div className="flex flex-col gap-4 border-b border-slate-200 bg-white px-5 py-5 sm:flex-row sm:items-end sm:justify-between dark:border-slate-800 dark:bg-slate-900">
+      <div className="flex flex-col gap-4 border-b border-slate-200 bg-white px-6 py-6 sm:flex-row sm:items-end sm:justify-between dark:border-slate-800 dark:bg-slate-900">
         <div>
-          <p className="section-kicker">AI monitoring</p>
-          <h2 className="mt-1 text-2xl font-bold text-slate-950 dark:text-white">
-            AI Query Logs
-          </h2>
-          <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-400">
-            Latest 10 requests, ordered by record ID from newest to oldest.
+          <p className="text-xs font-bold uppercase tracking-wider text-violet-600 dark:text-violet-400">
+            Neural Co-Pilot Audit
+          </p>
+          <div className="mt-1 flex items-center gap-3">
+            <h2 className="text-2xl font-black tracking-tight text-slate-950 dark:text-white">
+              Inbound AI Prompt Telemetry
+            </h2>
+            <span className="inline-flex items-center rounded-full bg-violet-500/10 px-2.5 py-0.5 text-xs font-bold text-violet-700 dark:bg-violet-500/20 dark:text-violet-300">
+              Latest 10 Inquiries
+            </span>
+          </div>
+          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+            Real-time prompt requests dispatched by students, ordered by record ID from newest to oldest.
           </p>
         </div>
-        <button type="button" onClick={onRefresh} className="btn-secondary" disabled={loading}>
+        <button type="button" onClick={onRefresh} className="btn-secondary shrink-0" disabled={loading}>
           <FiRefreshCw className={loading ? "animate-spin" : ""} aria-hidden="true" />
-          Refresh
+          Refresh Logs
         </button>
       </div>
 
       {loading ? (
-        <LoadingState label="Loading latest AI queries..." />
+        <div className="p-8">
+          <LoadingState label="Loading latest AI queries..." />
+        </div>
       ) : logs.length === 0 ? (
-        <EmptyState
-          icon={<FiMessageSquare className="h-7 w-7" aria-hidden="true" />}
-          title="No AI queries recorded"
-          description="New AI requests will appear here as they reach the system."
-        />
+        <div className="p-8">
+          <EmptyState
+            icon={<FiMessageSquare className="h-8 w-8 text-slate-400" aria-hidden="true" />}
+            title="No AI queries recorded"
+            description="Inbound student AI prompts and routine requests will stream here."
+          />
+        </div>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1050px] text-left text-sm">
             <caption className="sr-only">
               The latest ten AI queries ordered by descending record ID
             </caption>
-            <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
+            <thead className="border-b border-slate-200 bg-slate-50/80 text-xs font-bold uppercase tracking-wider text-slate-500 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-400">
               <tr>
-                <th scope="col" className="px-5 py-4 font-bold">Query ID</th>
-                <th scope="col" className="px-5 py-4 font-bold">Student</th>
-                <th scope="col" className="px-5 py-4 font-bold">Query preview</th>
-                <th scope="col" className="px-5 py-4 font-bold">Source</th>
-                <th scope="col" className="px-5 py-4 font-bold">Received</th>
-                <th scope="col" className="px-5 py-4 font-bold">Record ID</th>
+                <th scope="col" className="px-6 py-4">Query Ticket</th>
+                <th scope="col" className="px-6 py-4">Prompt Author</th>
+                <th scope="col" className="px-6 py-4">Prompt Content</th>
+                <th scope="col" className="px-6 py-4">Origin Source</th>
+                <th scope="col" className="px-6 py-4">Dispatch Timestamp</th>
+                <th scope="col" className="px-6 py-4">Record ID</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
               {logs.map((entry) => {
                 const hasStudent = Boolean(entry.studentId);
 
                 return (
                   <tr
                     key={entry.id}
-                    className="align-top transition hover:bg-violet-50/60 dark:hover:bg-slate-900"
+                    className="align-top transition-colors hover:bg-violet-50/40 dark:hover:bg-slate-800/50"
                   >
-                    <td className="px-5 py-4">
+                    <td className="px-6 py-4">
                       <span className="inline-flex rounded-lg bg-violet-50 px-2.5 py-1 font-mono text-xs font-bold text-violet-700 ring-1 ring-inset ring-violet-200 dark:bg-violet-500/10 dark:text-violet-200 dark:ring-violet-500/30">
                         AIQ-{entry.id}
                       </span>
                     </td>
-                    <td className="px-5 py-4">
+                    <td className="px-6 py-4">
                       {hasStudent ? (
                         <button
                           type="button"
                           onClick={() => onOpenProfile(entry.studentId)}
-                          className="safe-text font-bold text-slate-950 transition hover:text-violet-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 dark:text-white dark:hover:text-violet-200"
+                          className="safe-text font-bold text-slate-950 transition hover:text-violet-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 dark:text-white dark:hover:text-violet-300"
                         >
-                          {entry.studentId}
+                          <span className="font-mono text-xs underline decoration-violet-300 underline-offset-2">
+                            {entry.studentId}
+                          </span>
                         </button>
                       ) : (
-                        <span className="status-pill border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
-                          Guest
+                        <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-600 ring-1 ring-inset ring-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:ring-slate-700">
+                          Guest User
                         </span>
                       )}
                     </td>
-                    <td className="px-5 py-4">
+                    <td className="px-6 py-4">
                       <div className="max-w-xl">
-                        <p className="whitespace-pre-wrap break-words font-medium leading-6 text-slate-800 dark:text-slate-100">
-                          {entry.query || "No query text recorded"}
-                        </p>
-                        <p className="mt-2 text-xs font-medium text-slate-500 dark:text-slate-400">
-                          {entry.queryLength ?? String(entry.query || "").length} characters
+                        <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3.5 text-xs leading-relaxed text-slate-800 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200">
+                          <p className="whitespace-pre-wrap break-words font-medium">
+                            {entry.query || "No query text recorded"}
+                          </p>
+                        </div>
+                        <p className="mt-1.5 font-mono text-[11px] font-medium text-slate-400">
+                          Payload: {entry.queryLength ?? String(entry.query || "").length} characters
                         </p>
                       </div>
                     </td>
-                    <td className="px-5 py-4">
-                      <span className="status-pill border-sky-200 bg-sky-50 text-sky-800 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-200">
-                        {entry.source || "Unknown"}
+                    <td className="px-6 py-4">
+                      <span className="inline-flex items-center rounded-full bg-sky-50 px-2.5 py-0.5 text-xs font-bold text-sky-800 ring-1 ring-inset ring-sky-200 dark:bg-sky-500/10 dark:text-sky-300 dark:ring-sky-500/30">
+                        {entry.source || "web"}
                       </span>
                     </td>
-                    <td className="safe-text px-5 py-4 font-semibold text-slate-700 dark:text-slate-200">
-                      {formatLoginTime(entry.createdAt)}
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300">
+                        <FiClock className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />
+                        <span>{formatLoginTime(entry.createdAt)}</span>
+                      </div>
                     </td>
-                    <td className="px-5 py-4">
-                      <span className="font-mono text-xs font-semibold text-slate-600 dark:text-slate-300">
+                    <td className="px-6 py-4">
+                      <span className="font-mono text-xs font-semibold text-slate-400">
                         #{entry.id}
                       </span>
                     </td>
@@ -2299,6 +2707,9 @@ function AiQueryLogsFeature({ logs, loading, onRefresh, onOpenProfile }) {
   );
 }
 
+/**
+ * Modern submission management feature panel.
+ */
 function SubmissionManagementFeature({
   submissions,
   loading,
@@ -2316,84 +2727,102 @@ function SubmissionManagementFeature({
 }) {
   return (
     <section className="table-shell">
-      <div className="flex flex-col gap-4 border-b border-slate-200 bg-white px-5 py-5 dark:border-slate-800 dark:bg-slate-900">
+      <div className="flex flex-col gap-6 border-b border-slate-200 bg-white px-6 py-6 dark:border-slate-800 dark:bg-slate-900">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="section-kicker">Notifications ({unviewedCount})</p>
-            <h2 className="mt-1 text-2xl font-bold text-slate-950 dark:text-white">
-              Submission Management
+            <div className="flex items-center gap-2">
+              <p className="text-xs font-bold uppercase tracking-wider text-violet-600 dark:text-violet-400">
+                Community Dispatch Inbox
+              </p>
+              {unviewedCount > 0 && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/10 px-2.5 py-0.5 text-xs font-bold text-rose-700 dark:bg-rose-500/20 dark:text-rose-300">
+                  <span className="h-1.5 w-1.5 rounded-full bg-rose-500 animate-pulse" />
+                  {unviewedCount} unread
+                </span>
+              )}
+            </div>
+            <h2 className="mt-1 text-2xl font-black tracking-tight text-slate-950 dark:text-white">
+              Student Submissions & Applications
             </h2>
             <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-              Review CR applications, feedback, suggestions, complaints, requests, and password changes.
+              Review CR candidacies, platform feedback, complaints, course requests, and credential resets.
             </p>
           </div>
-          <button type="button" onClick={onRefresh} className="btn-secondary" disabled={loading}>
+          <button type="button" onClick={onRefresh} className="btn-secondary shrink-0" disabled={loading}>
             <FiRefreshCw className={loading ? "animate-spin" : ""} aria-hidden="true" />
-            Refresh
+            Refresh Inbox
           </button>
         </div>
 
-        <div className="grid gap-3 lg:grid-cols-[1fr_1fr_1fr_auto]">
-          <FormField id="submission-filter-type" label="Type">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <FormField id="submission-filter-type" label="Submission Category">
             <select
               id="submission-filter-type"
               value={filters.type}
               onChange={(event) => onFilterChange("type", event.target.value)}
-              className="form-field"
+              className="form-field text-xs font-semibold"
             >
-              <option value="">All types</option>
+              <option value="">All Categories</option>
               {SUBMISSION_TYPES.map((type) => (
                 <option key={type} value={type}>
-                  {type === "CR" ? "CR application" : type}
+                  {type === "CR" ? "CR Application" : type}
                 </option>
               ))}
             </select>
           </FormField>
 
-          <FormField id="submission-filter-viewed" label="Viewed">
+          <FormField id="submission-filter-viewed" label="Read Status">
             <select
               id="submission-filter-viewed"
               value={filters.viewed}
               onChange={(event) => onFilterChange("viewed", event.target.value)}
-              className="form-field"
+              className="form-field text-xs font-semibold"
             >
-              <option value="">All</option>
-              <option value="false">Unviewed</option>
-              <option value="true">Viewed</option>
+              <option value="">All Read States</option>
+              <option value="false">Unread (New)</option>
+              <option value="true">Viewed (Reviewed)</option>
             </select>
           </FormField>
 
-          <FormField id="submission-filter-resolved" label="Resolved">
+          <FormField id="submission-filter-resolved" label="Resolution State">
             <select
               id="submission-filter-resolved"
               value={filters.resolved}
               onChange={(event) => onFilterChange("resolved", event.target.value)}
-              className="form-field"
+              className="form-field text-xs font-semibold"
             >
-              <option value="">All</option>
-              <option value="false">Pending</option>
-              <option value="true">Resolved</option>
+              <option value="">All Resolution States</option>
+              <option value="false">Pending Action</option>
+              <option value="true">Resolved / Handled</option>
             </select>
           </FormField>
 
           <div className="flex items-end">
-            <button type="button" onClick={onClearFilters} className="btn-secondary w-full">
-              Clear filters
+            <button
+              type="button"
+              onClick={onClearFilters}
+              className="btn-secondary w-full text-xs font-bold"
+            >
+              Clear All Filters
             </button>
           </div>
         </div>
       </div>
 
       {loading ? (
-        <LoadingState label="Loading submissions..." />
+        <div className="p-8">
+          <LoadingState label="Loading submissions..." />
+        </div>
       ) : submissions.length === 0 ? (
-        <EmptyState
-          icon={<FiMessageSquare className="h-7 w-7" aria-hidden="true" />}
-          title="No submissions found"
-          description="New user submissions will appear here."
-        />
+        <div className="p-8">
+          <EmptyState
+            icon={<FiMessageSquare className="h-8 w-8 text-slate-400" aria-hidden="true" />}
+            title="No submissions match criteria"
+            description="No submissions found with the active filter settings. Reset filters or check back later."
+          />
+        </div>
       ) : (
-        <div className="grid gap-4 p-5">
+        <div className="grid gap-4 p-6">
           {submissions.map((submission) => {
             const isExpanded = expandedSubmissionId === submission.id;
             const passwordChangeDetails = getPasswordChangeDetails(submission);
@@ -2402,43 +2831,58 @@ function SubmissionManagementFeature({
             return (
               <article
                 key={submission.id}
-                className={`rounded-lg border p-4 transition ${
+                className={cx(
+                  "relative overflow-hidden rounded-2xl border p-5 sm:p-6 transition-all",
                   submission.view
-                    ? "border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950"
-                    : "border-violet-300 bg-violet-50/70 dark:border-violet-500/40 dark:bg-violet-500/10"
-                }`}
+                    ? "border-slate-200/90 bg-white hover:border-slate-300 dark:border-slate-800 dark:bg-slate-950/60 dark:hover:border-slate-700"
+                    : "border-violet-300 bg-violet-50/40 ring-1 ring-violet-500/20 hover:border-violet-400 dark:border-violet-500/40 dark:bg-violet-950/20",
+                )}
               >
+                {!submission.view && (
+                  <span className="absolute top-0 right-0 h-3 w-3 rounded-bl-lg bg-violet-600" />
+                )}
+
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="status-pill border-violet-200 bg-violet-50 text-violet-800 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-200">
-                        {submission.type}
+                      <span className="inline-flex items-center rounded-full bg-violet-500/10 px-2.5 py-0.5 text-xs font-bold text-violet-700 ring-1 ring-inset ring-violet-500/30 dark:bg-violet-500/20 dark:text-violet-300">
+                        {submission.type === "CR" ? "CR Application" : submission.type}
                       </span>
                       <ViewedStatus viewed={submission.view} />
                       <ResolvedStatus resolved={submission.resolved} />
                     </div>
+
                     <h3 className="mt-3">
                       <button
                         type="button"
                         onClick={() => onOpenProfile(submission.by)}
-                        className="safe-text text-left text-base font-bold text-slate-950 transition hover:text-violet-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 dark:text-white dark:hover:text-violet-200"
+                        className="safe-text text-left text-base font-black text-slate-950 transition hover:text-violet-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 dark:text-white dark:hover:text-violet-300"
                       >
-                        {submission.studentName || "Student"} ({submission.by})
+                        {submission.studentName || "Student"}
+                        <span className="ml-2 font-mono text-xs font-normal text-slate-400">
+                          ({submission.by})
+                        </span>
                       </button>
                     </h3>
-                    <p className="mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">
-                      {submission.studentSection || "No section"} - {formatLoginTime(submission.createdAt)}
-                    </p>
+
+                    <div className="mt-1 flex flex-wrap items-center gap-3 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                      <span>{submission.studentSection ? `Section ${submission.studentSection}` : "No Section"}</span>
+                      <span>•</span>
+                      <span className="flex items-center gap-1">
+                        <FiClock className="h-3 w-3 text-slate-400" />
+                        {formatLoginTime(submission.createdAt)}
+                      </span>
+                    </div>
                   </div>
 
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap items-center gap-2.5 shrink-0">
                     <button
                       type="button"
                       onClick={() => onOpenSubmission(submission)}
                       className="btn-secondary"
                     >
                       <FiEye aria-hidden="true" />
-                      {isExpanded ? "Hide" : "View"}
+                      {isExpanded ? "Hide Details" : "View Details"}
                     </button>
                     <button
                       type="button"
@@ -2448,41 +2892,51 @@ function SubmissionManagementFeature({
                       <FiCheckCircle aria-hidden="true" />
                       {isPasswordChange
                         ? submission.resolved
-                          ? "Mark pending"
-                          : "Approve"
+                          ? "Mark Pending"
+                          : "Approve Reset"
                         : submission.resolved
-                          ? "Unresolve"
-                          : "Resolve"}
+                          ? "Reopen Ticket"
+                          : "Mark Resolved"}
                     </button>
                   </div>
                 </div>
 
                 {isExpanded && (
-                  <div className="mt-4 rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950">
-                    <div className="grid gap-4 lg:grid-cols-[1fr_260px]">
+                  <div className="mt-5 rounded-xl border border-slate-200/90 bg-slate-50/80 p-5 dark:border-slate-800 dark:bg-slate-900/60">
+                    <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
                       <div>
                         {isPasswordChange ? (
                           <>
-                            <p className="section-kicker">Password change request</p>
-                            <div className="mt-3 grid gap-2 text-sm">
+                            <p className="text-xs font-bold uppercase tracking-wider text-violet-600 dark:text-violet-400">
+                              Credential Reset Telemetry
+                            </p>
+                            <div className="mt-3 grid gap-2.5 text-xs">
                               <InfoLine label="Student ID" value={passwordChangeDetails.studentId || submission.by} />
                               <InfoLine label="Confirm ID" value={passwordChangeDetails.confirmStudentId || submission.by} />
-                              <InfoLine label="Password hash" value={passwordChangeDetails.passwordHash || "N/A"} />
+                              <InfoLine label="Password Hash" value={passwordChangeDetails.passwordHash || "N/A"} />
                             </div>
                           </>
                         ) : (
                           <>
-                            <p className="section-kicker">Description</p>
-                            <p className="mt-2 break-words text-sm leading-6 text-slate-700 dark:text-slate-300">
-                              {submission.description}
+                            <p className="text-xs font-bold uppercase tracking-wider text-violet-600 dark:text-violet-400">
+                              Submission Message Body
                             </p>
+                            <div className="mt-2.5 rounded-lg border border-slate-200/70 bg-white p-4 text-xs leading-relaxed text-slate-800 dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-200">
+                              <p className="whitespace-pre-line break-words">
+                                {submission.description}
+                              </p>
+                            </div>
                           </>
                         )}
                       </div>
-                      <div className="grid gap-2 text-sm">
-                        <InfoLine label="Email" value={submission.studentEmail || "N/A"} />
-                        <InfoLine label="Phone" value={submission.studentPhone || "N/A"} />
-                        <InfoLine label="Updated" value={formatLoginTime(submission.updatedAt)} />
+
+                      <div className="grid gap-2 text-xs">
+                        <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                          Submitter Metadata
+                        </p>
+                        <InfoLine label="Registered Email" value={submission.studentEmail || "N/A"} />
+                        <InfoLine label="Contact Telephone" value={submission.studentPhone || "N/A"} />
+                        <InfoLine label="Last Activity" value={formatLoginTime(submission.updatedAt)} />
                       </div>
                     </div>
                   </div>
@@ -2505,13 +2959,20 @@ function SubmissionManagementFeature({
 function ViewedStatus({ viewed }) {
   return (
     <span
-      className={
+      className={cx(
+        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold tracking-wider",
         viewed
-          ? "status-pill border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
-          : "status-pill border-violet-200 bg-violet-50 text-violet-800 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-200"
-      }
+          ? "bg-slate-100 text-slate-600 ring-1 ring-inset ring-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:ring-slate-700"
+          : "bg-violet-500/10 text-violet-700 ring-1 ring-inset ring-violet-500/30 dark:bg-violet-500/20 dark:text-violet-300",
+      )}
     >
-      {viewed ? "Viewed" : "Unviewed"}
+      <span
+        className={cx(
+          "h-1.5 w-1.5 rounded-full",
+          viewed ? "bg-slate-400" : "bg-violet-600 animate-pulse",
+        )}
+      />
+      {viewed ? "Reviewed" : "Unread"}
     </span>
   );
 }
@@ -2519,22 +2980,29 @@ function ViewedStatus({ viewed }) {
 function ResolvedStatus({ resolved }) {
   return (
     <span
-      className={
+      className={cx(
+        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold tracking-wider",
         resolved
-          ? "status-pill border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200"
-          : "status-pill border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200"
-      }
+          ? "bg-emerald-500/10 text-emerald-700 ring-1 ring-inset ring-emerald-500/30 dark:bg-emerald-500/20 dark:text-emerald-300"
+          : "bg-amber-500/10 text-amber-700 ring-1 ring-inset ring-amber-500/30 dark:bg-amber-500/20 dark:text-amber-300",
+      )}
     >
-      {resolved ? "Resolved" : "Pending"}
+      <span
+        className={cx(
+          "h-1.5 w-1.5 rounded-full",
+          resolved ? "bg-emerald-500" : "bg-amber-500",
+        )}
+      />
+      {resolved ? "Resolved" : "Pending Action"}
     </span>
   );
 }
 
 function InfoLine({ label, value }) {
   return (
-    <div className="flex items-center justify-between gap-4 rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-900">
+    <div className="flex items-center justify-between gap-4 rounded-xl border border-slate-200/80 bg-white px-3.5 py-2.5 dark:border-slate-800 dark:bg-slate-950/60">
       <span className="font-semibold text-slate-500 dark:text-slate-400">{label}</span>
-      <span className="safe-text text-right font-bold text-slate-950 dark:text-white">
+      <span className="safe-text truncate text-right font-mono font-bold text-slate-950 dark:text-white">
         {value}
       </span>
     </div>
@@ -2553,7 +3021,7 @@ function getPasswordChangeDetails(submission) {
 
 function AdminAvatar({ image, name }) {
   return (
-    <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-950 text-sm font-black text-white ring-1 ring-slate-200 dark:bg-white dark:text-slate-950 dark:ring-slate-700">
+    <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 text-sm font-black text-white shadow-md ring-2 ring-white/80 dark:ring-slate-800">
       {image ? (
         <img src={image} alt="" className="h-full w-full object-cover" />
       ) : (
@@ -2578,55 +3046,89 @@ function PeriodManagementFeature({
 
   return (
     <section className="table-shell">
-      <div className="flex flex-col gap-4 border-b border-slate-200 bg-white px-5 py-5 sm:flex-row sm:items-end sm:justify-between dark:border-slate-800 dark:bg-slate-900">
+      <div className="flex flex-col gap-4 border-b border-slate-200 bg-white px-6 py-6 sm:flex-row sm:items-end sm:justify-between dark:border-slate-800 dark:bg-slate-900">
         <div>
-          <p className="section-kicker">Routine periods</p>
-          <h2 className="mt-1 text-2xl font-bold text-slate-950 dark:text-white">
-            Period Time Management
-          </h2>
+          <p className="text-xs font-bold uppercase tracking-wider text-violet-600 dark:text-violet-400">
+            Timetable Intervals
+          </p>
+          <div className="mt-1 flex items-center gap-3">
+            <h2 className="text-2xl font-black tracking-tight text-slate-950 dark:text-white">
+              Class Period & Shift Schedules
+            </h2>
+            <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-bold text-slate-700 ring-1 ring-inset ring-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700">
+              Dual Campus Shifts
+            </span>
+          </div>
           <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-            Update the 12-hour time windows used by routine pages and live class detection.
+            Configure the 12-hour time intervals used across daily class routine grids and live session trackers.
           </p>
         </div>
-        <button type="button" onClick={onRefresh} className="btn-secondary" disabled={loading}>
+        <button type="button" onClick={onRefresh} className="btn-secondary shrink-0" disabled={loading}>
           <FiRefreshCw className={loading ? "animate-spin" : ""} aria-hidden="true" />
-          Refresh
+          Refresh Periods
         </button>
       </div>
 
       {loading ? (
-        <LoadingState label="Loading periods..." />
+        <div className="p-8">
+          <LoadingState label="Loading routine period schedules..." />
+        </div>
       ) : periods.length === 0 ? (
-        <EmptyState
-          icon={<FiClock className="h-7 w-7" aria-hidden="true" />}
-          title="No periods found"
-          description="Run the latest migration to create and seed the period table."
-        />
+        <div className="p-8">
+          <EmptyState
+            icon={<FiClock className="h-8 w-8 text-slate-400" aria-hidden="true" />}
+            title="No period slots found"
+            description="Database period records are uninitialized. Check migrations or add slots."
+          />
+        </div>
       ) : (
-        <div className="grid gap-5 p-5 lg:grid-cols-2">
+        <div className="grid gap-6 p-6 lg:grid-cols-2">
           {genders.map((gender) => {
             const rows = periods
               .filter((periodItem) => periodItem.gender === gender)
               .sort((first, second) => Number(first.no) - Number(second.no));
 
+            const isMale = gender === "male";
+
             return (
               <div
                 key={gender}
-                className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950"
+                className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950/60"
               >
-                <div className="mb-4 flex items-center justify-between gap-3">
-                  <div>
-                    <p className="section-kicker">{gender} shift</p>
-                    <h3 className="mt-1 text-xl font-bold capitalize text-slate-950 dark:text-white">
-                      {gender} periods
-                    </h3>
+                <div
+                  className={cx(
+                    "flex items-center justify-between border-b px-5 py-4",
+                    isMale
+                      ? "border-sky-100 bg-sky-50/50 dark:border-sky-900/30 dark:bg-sky-950/20"
+                      : "border-violet-100 bg-violet-50/50 dark:border-violet-900/30 dark:bg-violet-950/20",
+                  )}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <span
+                      className={cx(
+                        "flex h-8 w-8 items-center justify-center rounded-lg text-xs font-black uppercase",
+                        isMale
+                          ? "bg-sky-500/15 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300"
+                          : "bg-violet-500/15 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300",
+                      )}
+                    >
+                      {isMale ? "M" : "F"}
+                    </span>
+                    <div>
+                      <h3 className="text-base font-black capitalize text-slate-950 dark:text-white">
+                        {gender} Shift Schedule
+                      </h3>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        Official academic slots
+                      </p>
+                    </div>
                   </div>
-                  <span className="status-pill border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
-                    {rows.length} slots
+                  <span className="inline-flex items-center rounded-full bg-white px-2.5 py-0.5 text-xs font-bold text-slate-700 shadow-sm ring-1 ring-inset ring-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:ring-slate-700">
+                    {rows.length} Active Slots
                   </span>
                 </div>
 
-                <div className="grid gap-3">
+                <div className="grid gap-3 p-5">
                   {rows.map((periodItem) => {
                     const periodKey = getPeriodKey(periodItem);
                     const invalid = !isValidPeriodRange(periodItem.startTime, periodItem.stopTime);
@@ -2635,38 +3137,48 @@ function PeriodManagementFeature({
                     return (
                       <article
                         key={periodKey}
-                        className="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900"
+                        className={cx(
+                          "rounded-xl border p-4 transition-all",
+                          invalid
+                            ? "border-rose-300 bg-rose-50/40 dark:border-rose-500/40 dark:bg-rose-950/20"
+                            : "border-slate-200/80 bg-slate-50/70 hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900/50 dark:hover:border-slate-700",
+                        )}
                       >
                         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
                           <div className="min-w-0 flex-1">
-                            <p className="text-sm font-black text-slate-950 dark:text-white">
-                              Period {periodItem.no}
-                            </p>
+                            <div className="flex items-center gap-2">
+                              <span className="inline-flex items-center gap-1 rounded-md bg-slate-200/80 px-2 py-0.5 text-[11px] font-black uppercase tracking-wider text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                                <FiClock className="h-3 w-3" />
+                                Period {periodItem.no}
+                              </span>
+                            </div>
+
                             <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                              <FormField id={`${periodKey}-start`} label="Start time">
+                              <FormField id={`${periodKey}-start`} label="Commencement">
                                 <input
                                   id={`${periodKey}-start`}
                                   value={periodItem.startTime}
                                   onChange={(event) => onChange(periodItem, "startTime", event.target.value)}
-                                  className="form-field"
+                                  className="form-field text-xs font-semibold"
                                   placeholder="10:40 AM"
                                   autoComplete="off"
                                 />
                               </FormField>
-                              <FormField id={`${periodKey}-stop`} label="Stop time">
+                              <FormField id={`${periodKey}-stop`} label="Conclusion">
                                 <input
                                   id={`${periodKey}-stop`}
                                   value={periodItem.stopTime}
                                   onChange={(event) => onChange(periodItem, "stopTime", event.target.value)}
-                                  className="form-field"
+                                  className="form-field text-xs font-semibold"
                                   placeholder="11:30 AM"
                                   autoComplete="off"
                                 />
                               </FormField>
                             </div>
+
                             {invalid && (
-                              <p className="mt-2 text-sm font-semibold text-rose-600 dark:text-rose-300">
-                                Start time must not be after stop time.
+                              <p className="mt-2 text-xs font-bold text-rose-600 dark:text-rose-400">
+                                Invalid sequence: Start time must occur prior to stop time.
                               </p>
                             )}
                           </div>
@@ -2675,10 +3187,10 @@ function PeriodManagementFeature({
                             type="button"
                             onClick={() => onSave(periodItem)}
                             disabled={saving || invalid}
-                            className="btn-primary md:self-end"
+                            className="btn-primary md:self-end text-xs shrink-0"
                           >
-                            <FiSave aria-hidden="true" />
-                            {saving ? "Saving..." : "Save"}
+                            <FiSave className={saving ? "animate-spin" : ""} aria-hidden="true" />
+                            {saving ? "Saving..." : "Save Slot"}
                           </button>
                         </div>
                       </article>
@@ -2713,37 +3225,80 @@ function DirectRoleFeature({
   onSubmit,
 }) {
   return (
-    <section className="grid gap-8 lg:grid-cols-[1fr_360px]">
+    <section className="grid gap-8 lg:grid-cols-[1fr_380px]">
       <div className="surface-card p-6 sm:p-8">
         <SectionHeading
-          kicker="Direct update"
-          title="Update Role by Student"
-          description="Search by student name or ID, choose the correct user, then apply a role."
+          kicker="ACCESS CONTROL DISPATCHER"
+          title="Direct Role Authority Manager"
+          description="Locate student and faculty records by name or matriculation ID, inspect verification credentials, and dispatch authority updates."
         />
-        <div className="mt-6 grid gap-4 md:grid-cols-3">
-          {VALID_ROLES.map((role) => (
-            <div
-              key={role}
-              className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950"
-            >
-              <p className="text-xs font-bold uppercase text-slate-500 dark:text-slate-400">
-                Role
-              </p>
-              <p className="mt-2 text-xl font-black text-slate-950 dark:text-white">
-                {role}
+
+        <div className="mt-8 space-y-6">
+          <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+            Authorization Tiers & Privileges
+          </p>
+
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="rounded-2xl border border-violet-200/80 bg-violet-50/40 p-5 dark:border-violet-500/30 dark:bg-violet-950/20">
+              <div className="flex items-center justify-between">
+                <span className="inline-flex rounded-lg bg-violet-600 px-2.5 py-1 text-xs font-black uppercase text-white shadow-sm">
+                  ADMIN
+                </span>
+                <FiShield className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+              </div>
+              <h4 className="mt-3 text-base font-black text-slate-950 dark:text-white">
+                System Governance
+              </h4>
+              <p className="mt-1 text-xs leading-5 text-slate-600 dark:text-slate-400">
+                Unrestricted administration: session control, AI feature toggling, submission triage, and global period management.
               </p>
             </div>
-          ))}
+
+            <div className="rounded-2xl border border-emerald-200/80 bg-emerald-50/40 p-5 dark:border-emerald-500/30 dark:bg-emerald-950/20">
+              <div className="flex items-center justify-between">
+                <span className="inline-flex rounded-lg bg-emerald-600 px-2.5 py-1 text-xs font-black uppercase text-white shadow-sm">
+                  CR
+                </span>
+                <FiUserCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <h4 className="mt-3 text-base font-black text-slate-950 dark:text-white">
+                Class Representative
+              </h4>
+              <p className="mt-1 text-xs leading-5 text-slate-600 dark:text-slate-400">
+                Section scheduling privileges: can update and maintain live routine tables for their specific academic section.
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200/80 bg-slate-50/60 p-5 dark:border-slate-800 dark:bg-slate-900/40">
+              <div className="flex items-center justify-between">
+                <span className="inline-flex rounded-lg bg-slate-700 px-2.5 py-1 text-xs font-black uppercase text-white shadow-sm dark:bg-slate-700">
+                  STUDENT
+                </span>
+                <FiUsers className="h-4 w-4 text-slate-500 dark:text-slate-400" />
+              </div>
+              <h4 className="mt-3 text-base font-black text-slate-950 dark:text-white">
+                Student Member
+              </h4>
+              <p className="mt-1 text-xs leading-5 text-slate-600 dark:text-slate-400">
+                Standard read-only schedule lookups, personal timetable tracking, academic resource access, and AI Co-Pilot inquiries.
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
-      <aside className="surface-card p-5">
-        <SectionHeading kicker="Role editor" title="Update by ID or name" />
+      <aside className="surface-card p-6 sm:p-7">
+        <SectionHeading
+          kicker="ROLE DISPATCH"
+          title="Update User Authority"
+          description="Type name or matriculation ID to search and bind a new authority role."
+        />
+
         <form onSubmit={onSubmit} className="mt-6 space-y-5">
           <FormField
             id="custom-id"
-            label="Student name or ID"
-            helper={roleSearchLoading ? "Searching students..." : "Type at least 2 characters for suggestions."}
+            label="Student Name or Matriculation ID"
+            helper={roleSearchLoading ? "Searching student registry..." : "Type at least 2 characters for autocomplete."}
           >
             <div className="relative">
               <FiSearch
@@ -2754,8 +3309,8 @@ function DirectRoleFeature({
                 id="custom-id"
                 value={customId}
                 onChange={(event) => onIdChange(event.target.value)}
-                placeholder="Search name or ID"
-                className="form-field pl-12"
+                placeholder="e.g. C213000 or Student Name"
+                className="form-field pl-12 font-medium"
                 autoComplete="off"
               />
               {!selectedStudent && roleSuggestions.length > 0 && (
@@ -2766,39 +3321,43 @@ function DirectRoleFeature({
               )}
             </div>
           </FormField>
+
           {selectedStudent && (
             <SelectedAdminStudent
               student={selectedStudent}
               onOpenProfile={onOpenProfile}
             />
           )}
-          <FormField id="custom-role" label="New role">
+
+          <FormField id="custom-role" label="Assign New Authority Role">
             <select
               id="custom-role"
               value={customType}
               onChange={(event) => onTypeChange(event.target.value)}
-              className="form-field"
+              className="form-field font-bold text-xs"
             >
               {VALID_ROLES.map((role) => (
                 <option key={role} value={role}>
-                  {role}
+                  {role.toUpperCase()}
                 </option>
               ))}
             </select>
           </FormField>
+
           <button type="submit" className="btn-primary w-full" disabled={updating}>
             {updating ? (
               <>
                 <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
-                Updating...
+                Dispatching Update...
               </>
             ) : (
               <>
                 <FiShield aria-hidden="true" />
-                Update Role
+                Dispatch Role Update
               </>
             )}
           </button>
+
           {roleMessage && (
             <Notice
               key={roleMessage.id}
@@ -2816,25 +3375,25 @@ function DirectRoleFeature({
 
 function AdminStudentSuggestionList({ suggestions, onSelect }) {
   return (
-    <ul className="absolute left-0 right-0 top-full z-30 mt-2 max-h-72 overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-xl dark:border-slate-700 dark:bg-slate-900">
+    <ul className="absolute left-0 right-0 top-full z-30 mt-2 max-h-72 overflow-y-auto rounded-2xl border border-slate-200 bg-white/95 py-2 shadow-2xl backdrop-blur-xl dark:border-slate-700 dark:bg-slate-900/95">
       {suggestions.map((studentRecord) => (
         <li key={studentRecord.id}>
           <button
             type="button"
             onClick={() => onSelect(studentRecord)}
-            className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-violet-50 focus:bg-violet-50 focus:outline-none dark:hover:bg-slate-800 dark:focus:bg-slate-800"
+            className="flex w-full items-center gap-3.5 px-4 py-3 text-left transition hover:bg-violet-50/70 focus:bg-violet-50 focus:outline-none dark:hover:bg-slate-800/70 dark:focus:bg-slate-800"
           >
             <AdminAvatar image={studentRecord.profilePic} name={studentRecord.name || studentRecord.id} />
             <span className="min-w-0 flex-1">
               <span className="safe-text block text-sm font-bold text-slate-950 dark:text-white">
                 {studentRecord.name || "Student"}
               </span>
-              <span className="safe-text mt-1 block text-xs font-semibold text-slate-500 dark:text-slate-400">
-                {studentRecord.id} - Section {studentRecord.sec || "N/A"}
+              <span className="font-mono text-xs text-slate-500 dark:text-slate-400">
+                {studentRecord.id} • Sec {studentRecord.sec || "N/A"}
               </span>
             </span>
-            <span className="status-pill border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200">
-              {studentRecord.type || "N/A"}
+            <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-bold uppercase text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+              {studentRecord.type || "student"}
             </span>
           </button>
         </li>
@@ -2845,32 +3404,38 @@ function AdminStudentSuggestionList({ suggestions, onSelect }) {
 
 function SelectedAdminStudent({ student, onOpenProfile }) {
   return (
-    <div className="rounded-lg border border-violet-200 bg-violet-50 p-3 dark:border-violet-500/30 dark:bg-violet-500/10">
-      <div className="flex items-center gap-3">
+    <div className="rounded-2xl border border-violet-200 bg-violet-50/60 p-4 dark:border-violet-500/30 dark:bg-violet-950/20">
+      <div className="flex items-center gap-3.5">
         <AdminAvatar image={student.profilePic} name={student.name || student.id} />
         <div className="min-w-0 flex-1">
-          <p className="safe-text font-bold text-slate-950 dark:text-white">
+          <p className="safe-text font-black text-slate-950 dark:text-white">
             {student.name || "Student"}
           </p>
-          <p className="safe-text mt-1 text-xs font-semibold text-slate-600 dark:text-slate-300">
-            {student.id} - Section {student.sec || "N/A"} - {student.type || "N/A"}
-          </p>
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300">
+            <span className="font-mono">{student.id}</span>
+            <span>•</span>
+            <span>Section {student.sec || "N/A"}</span>
+            <span>•</span>
+            <span className="uppercase text-violet-700 dark:text-violet-300 font-bold">
+              {student.type || "student"}
+            </span>
+          </div>
         </div>
       </div>
       <button
         type="button"
         onClick={() => onOpenProfile(student.id)}
-        className="btn-secondary mt-3 w-full"
+        className="btn-secondary mt-3.5 w-full text-xs"
       >
         <FiEye aria-hidden="true" />
-        Open profile
+        Inspect Student Record
       </button>
     </div>
   );
 }
 
 /**
- * Paged controls for the CR user table.
+ * Paged controls for the CR user table and submissions.
  */
 function PaginationControls({ pagination, disabled, onPageChange }) {
   const page = pagination?.page || 1;
@@ -2880,16 +3445,18 @@ function PaginationControls({ pagination, disabled, onPageChange }) {
   if (total === 0) return null;
 
   return (
-    <div className="flex flex-col gap-3 border-t border-slate-200 px-5 py-4 text-sm sm:flex-row sm:items-center sm:justify-between dark:border-slate-800">
-      <p className="font-semibold text-slate-600 dark:text-slate-300">
-        Page {page} of {totalPages} - {total} result{total === 1 ? "" : "s"}
+    <div className="flex flex-col gap-3 border-t border-slate-200 bg-slate-50/50 px-6 py-4 text-xs font-semibold text-slate-600 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800 dark:bg-slate-900/40 dark:text-slate-300">
+      <p>
+        Showing page <span className="font-bold text-slate-900 dark:text-white">{page}</span> of{" "}
+        <span className="font-bold text-slate-900 dark:text-white">{totalPages}</span> •{" "}
+        <span className="font-bold text-slate-900 dark:text-white">{total}</span> total record{total === 1 ? "" : "s"}
       </p>
       <div className="flex gap-2">
         <button
           type="button"
           onClick={() => onPageChange(page - 1)}
           disabled={disabled || page <= 1}
-          className="btn-secondary"
+          className="btn-secondary text-xs"
         >
           <FiChevronLeft aria-hidden="true" />
           Previous
@@ -2898,7 +3465,7 @@ function PaginationControls({ pagination, disabled, onPageChange }) {
           type="button"
           onClick={() => onPageChange(page + 1)}
           disabled={disabled || page >= totalPages}
-          className="btn-secondary"
+          className="btn-secondary text-xs"
         >
           Next
           <FiChevronRight aria-hidden="true" />
