@@ -29,6 +29,7 @@ import {
   FiX,
   FiZap,
 } from "react-icons/fi";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import Header from "./components/Header";
 import ResourceHighlights from "./components/ResourceHighlights";
 import RoutineActionToggle from "./components/RoutineActionToggle";
@@ -61,6 +62,76 @@ const HOME_CACHE_TTL = 2 * 60 * 1000;
 const SEMESTER_LABELS = Array.from({ length: 8 }, (_, index) => index + 1);
 const POPULAR_SECTIONS = ["7BM", "7BF", "5BM", "5BF", "3BM", "1BM"];
 
+const heroContainerVariants = {
+  hidden: { opacity: 0 },
+  visible: (prefersReducedMotion) => ({
+    opacity: 1,
+    transition: prefersReducedMotion
+      ? { duration: 0.1 }
+      : {
+          staggerChildren: 0.08,
+          delayChildren: 0.05,
+        },
+  }),
+};
+
+const heroItemVariants = {
+  hidden: (prefersReducedMotion) => ({
+    opacity: 0,
+    y: prefersReducedMotion ? 0 : 16,
+  }),
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.45,
+      ease: [0.22, 1, 0.36, 1],
+    },
+  },
+};
+
+const sectionScrollVariants = {
+  hidden: (prefersReducedMotion) => ({
+    opacity: 0,
+    y: prefersReducedMotion ? 0 : 20,
+  }),
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.5,
+      ease: [0.22, 1, 0.36, 1],
+    },
+  },
+};
+
+const gridStaggerVariants = {
+  hidden: { opacity: 0 },
+  visible: (prefersReducedMotion) => ({
+    opacity: 1,
+    transition: prefersReducedMotion
+      ? { duration: 0.1 }
+      : {
+          staggerChildren: 0.07,
+        },
+  }),
+};
+
+const cardStaggerItemVariants = {
+  hidden: (prefersReducedMotion) => ({
+    opacity: 0,
+    y: prefersReducedMotion ? 0 : 16,
+  }),
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.4,
+      ease: [0.22, 1, 0.36, 1],
+    },
+  },
+};
+
 const emptyHomeAnalytics = {
   period: { from: "", to: "" },
   resources: {
@@ -80,6 +151,7 @@ const emptyHomeAnalytics = {
 const Home = () => {
   const { user, isLoggedIn } = useAuth();
   const navigate = useNavigate();
+  const prefersReducedMotion = useReducedMotion();
   const {
     activeSessionName,
     activeSessionLoading,
@@ -591,71 +663,117 @@ const Home = () => {
 
         <div className="page-wrap grid gap-12 py-12 lg:grid-cols-[minmax(0,1.2fr)_minmax(380px,440px)] lg:items-center lg:py-20">
           {/* Left Column: Heading & Value Proposition */}
-          <div className="flex flex-col items-start text-left">
-            <div className="inline-flex items-center gap-2 rounded-full border border-violet-400/30 bg-violet-500/15 px-3.5 py-1 text-xs font-bold text-violet-200 backdrop-blur-md">
+          <motion.div
+            custom={prefersReducedMotion}
+            variants={heroContainerVariants}
+            initial="hidden"
+            animate="visible"
+            className="flex flex-col items-start text-left"
+          >
+            <motion.div
+              custom={prefersReducedMotion}
+              variants={heroItemVariants}
+              className="inline-flex items-center gap-2 rounded-full border border-violet-400/30 bg-violet-500/15 px-3.5 py-1 text-xs font-bold text-violet-200 backdrop-blur-md"
+            >
               <span className="flex h-2 w-2 rounded-full bg-emerald-400 animate-soft-pulse" />
               <span>IIUC CSE Academic Routine Management</span>
-            </div>
+            </motion.div>
 
-            <h1 className="display-heading hero-heading-glow mt-6 text-3xl text-white sm:text-5xl lg:text-6xl">
+            <motion.h1
+              custom={prefersReducedMotion}
+              variants={heroItemVariants}
+              className="display-heading hero-heading-glow mt-6 text-3xl text-white sm:text-5xl lg:text-6xl"
+            >
               Academic schedules, class routines & resources,{" "}
               <span className="bg-gradient-to-r from-violet-300 via-sky-300 to-emerald-300 bg-clip-text text-transparent">
                 simplified.
               </span>
-            </h1>
+            </motion.h1>
 
-            <p className="mt-5 max-w-2xl text-base leading-relaxed text-slate-300 sm:text-lg">
+            <motion.p
+              custom={prefersReducedMotion}
+              variants={heroItemVariants}
+              className="mt-5 max-w-2xl text-base leading-relaxed text-slate-300 sm:text-lg"
+            >
               Check daily class routines by section, room, or faculty member. Sign in to customize your personal routine, add/drop courses, and explore peer-shared notes.
-            </p>
+            </motion.p>
 
             {/* Quick action buttons */}
-            <div className="mt-7 flex flex-wrap items-center gap-3">
-              <a
+            <motion.div
+              custom={prefersReducedMotion}
+              variants={heroItemVariants}
+              className="mt-7 flex flex-wrap items-center gap-3"
+            >
+              <motion.a
+                whileHover={prefersReducedMotion ? {} : { scale: 1.02 }}
+                whileTap={prefersReducedMotion ? {} : { scale: 0.98 }}
                 href="#routine-search"
                 className="btn-primary"
               >
                 <FiSearch aria-hidden="true" />
                 Find Section Routine
-              </a>
-              <Link
-                to="/resources"
-                className="btn-secondary !border-white/20 !bg-white/10 !text-white hover:!bg-white/20"
+              </motion.a>
+              <motion.div
+                whileHover={prefersReducedMotion ? {} : { scale: 1.02 }}
+                whileTap={prefersReducedMotion ? {} : { scale: 0.98 }}
               >
-                <FiBookOpen aria-hidden="true" />
-                Browse Resources
-              </Link>
-              {isLoggedIn ? (
                 <Link
-                  to="/homepersonal"
-                  className="btn-secondary !border-emerald-400/30 !bg-emerald-500/15 !text-emerald-200 hover:!bg-emerald-500/25"
-                >
-                  <FiGrid aria-hidden="true" />
-                  My Dashboard
-                </Link>
-              ) : (
-                <Link
-                  to="/auth/login"
+                  to="/resources"
                   className="btn-secondary !border-white/20 !bg-white/10 !text-white hover:!bg-white/20"
                 >
-                  <FiLogIn aria-hidden="true" />
-                  Sign In
+                  <FiBookOpen aria-hidden="true" />
+                  Browse Resources
                 </Link>
+              </motion.div>
+              {isLoggedIn ? (
+                <motion.div
+                  whileHover={prefersReducedMotion ? {} : { scale: 1.02 }}
+                  whileTap={prefersReducedMotion ? {} : { scale: 0.98 }}
+                >
+                  <Link
+                    to="/homepersonal"
+                    className="btn-secondary !border-emerald-400/30 !bg-emerald-500/15 !text-emerald-200 hover:!bg-emerald-500/25"
+                  >
+                    <FiGrid aria-hidden="true" />
+                    My Dashboard
+                  </Link>
+                </motion.div>
+              ) : (
+                <motion.div
+                  whileHover={prefersReducedMotion ? {} : { scale: 1.02 }}
+                  whileTap={prefersReducedMotion ? {} : { scale: 0.98 }}
+                >
+                  <Link
+                    to="/auth/login"
+                    className="btn-secondary !border-white/20 !bg-white/10 !text-white hover:!bg-white/20"
+                  >
+                    <FiLogIn aria-hidden="true" />
+                    Sign In
+                  </Link>
+                </motion.div>
               )}
-            </div>
+            </motion.div>
 
             {/* Quick Hero Stat Cards */}
-            <div className="mt-10 grid w-full grid-cols-1 gap-3 sm:grid-cols-3">
+            <motion.div
+              custom={prefersReducedMotion}
+              variants={heroItemVariants}
+              className="mt-10 grid w-full grid-cols-1 gap-3 sm:grid-cols-3"
+            >
               {summaryStats.map((stat, index) => (
-                <HeroStatCard key={stat.label} stat={stat} index={index} />
+                <HeroStatCard key={stat.label} stat={stat} index={index} prefersReducedMotion={prefersReducedMotion} />
               ))}
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
 
           {/* Right Column: Routine Search Box */}
           <div className="w-full">
-            <form
+            <motion.form
               id="routine-search"
               onSubmit={handleSearch}
+              initial={prefersReducedMotion ? false : { opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
               className="hero-glass-card hero-form-card overflow-hidden border border-white/20 bg-slate-900/65 p-6 shadow-2xl shadow-slate-950/50 backdrop-blur-2xl transition-all duration-300 hover:border-violet-400/40 sm:p-7"
             >
               <div className="flex items-center justify-between border-b border-white/10 pb-4">
@@ -679,9 +797,11 @@ const Home = () => {
                 </label>
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {POPULAR_SECTIONS.map((sec) => (
-                    <button
+                    <motion.button
                       key={sec}
                       type="button"
+                      whileHover={prefersReducedMotion ? {} : { scale: 1.05 }}
+                      whileTap={prefersReducedMotion ? {} : { scale: 0.95 }}
                       onClick={() => handleQuickPreset(sec)}
                       className={cx(
                         "rounded-md px-2.5 py-1 text-xs font-bold transition",
@@ -691,7 +811,7 @@ const Home = () => {
                       )}
                     >
                       {sec}
-                    </button>
+                    </motion.button>
                   ))}
                 </div>
               </div>
@@ -785,8 +905,10 @@ const Home = () => {
                   </div>
                 </FormField>
 
-                <button
+                <motion.button
                   type="submit"
+                  whileHover={prefersReducedMotion || !canSearch || routineLoading ? {} : { scale: 1.01 }}
+                  whileTap={prefersReducedMotion || !canSearch || routineLoading ? {} : { scale: 0.98 }}
                   className="btn-primary mt-2 w-full shadow-lg shadow-violet-600/30"
                   disabled={!canSearch || routineLoading}
                 >
@@ -801,9 +923,9 @@ const Home = () => {
                       <span>View Section Schedule</span>
                     </>
                   )}
-                </button>
+                </motion.button>
               </div>
-            </form>
+            </motion.form>
           </div>
         </div>
       </section>
@@ -811,96 +933,116 @@ const Home = () => {
       {/* ─── MAIN CONTENT BODY ─── */}
       <main className="page-wrap space-y-20 py-12 sm:space-y-24 sm:py-16">
         {/* Global Feedback Notice */}
-        {notice && (
-          <Notice type={notice.type} onDismiss={() => setNotice(null)}>
-            {notice.text}
-          </Notice>
-        )}
+        <AnimatePresence mode="wait">
+          {notice && (
+            <motion.div
+              key="global-notice"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.25 }}
+            >
+              <Notice type={notice.type} onDismiss={() => setNotice(null)}>
+                {notice.text}
+              </Notice>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Featured Campus Announcement */}
         {announcement && (
-          <FeaturedAnnouncementCard announcement={announcement} />
+          <FeaturedAnnouncementCard announcement={announcement} prefersReducedMotion={prefersReducedMotion} />
         )}
 
         {/* ─── ROUTINE RESULTS SECTION ─── */}
-        {hasSearched && (
-          <section id="routine-results" className="scroll-mt-24 space-y-4">
-            <RoutineTable
-              title={`${normalizedSection || "Section"} Routine Matrix`}
-              subtitle={`Academic Session: ${normalizedSession || activeSessionName || "Selected"} • Shift: ${shift === 1 ? "Male (Morning)" : "Female (Day)"}`}
-              timeSlots={timeSlots}
-              displayDays={schedule.length ? DISPLAY_DAYS : []}
-              getItemsForDay={generateDaySchedule}
-              onCellClick={(item) => {
-                if (item?.details && item.details.length > 0) {
-                  setSelectedClassItem(item);
+        <AnimatePresence mode="wait">
+          {hasSearched && (
+            <motion.section
+              id="routine-results"
+              key="routine-results"
+              initial={prefersReducedMotion ? false : { opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -16 }}
+              transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+              className="scroll-mt-24 space-y-4"
+            >
+              <RoutineTable
+                title={`${normalizedSection || "Section"} Routine Matrix`}
+                subtitle={`Academic Session: ${normalizedSession || activeSessionName || "Selected"} • Shift: ${shift === 1 ? "Male (Morning)" : "Female (Day)"}`}
+                timeSlots={timeSlots}
+                displayDays={schedule.length ? DISPLAY_DAYS : []}
+                getItemsForDay={generateDaySchedule}
+                onCellClick={(item) => {
+                  if (item?.details && item.details.length > 0) {
+                    setSelectedClassItem(item);
+                  }
+                }}
+                actions={
+                  schedule.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="status-pill border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
+                        <FiClock className="h-3.5 w-3.5 text-violet-500" />
+                        {shift === 1 ? "Male Shift" : "Female Shift"}
+                      </span>
+                      {isLoggedIn && (
+                        <RoutineActionToggle
+                          visible={showRoutineActions}
+                          onToggle={() => setShowRoutineActions((current) => !current)}
+                        />
+                      )}
+                      <button
+                        type="button"
+                        onClick={handleDownloadPDF}
+                        className="btn-secondary"
+                      >
+                        <FiDownload aria-hidden="true" />
+                        <span>Print Timetable</span>
+                      </button>
+                    </div>
+                  )
                 }
-              }}
-              actions={
-                schedule.length > 0 && (
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="status-pill border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
-                      <FiClock className="h-3.5 w-3.5 text-violet-500" />
-                      {shift === 1 ? "Male Shift" : "Female Shift"}
-                    </span>
-                    {isLoggedIn && (
-                      <RoutineActionToggle
-                        visible={showRoutineActions}
-                        onToggle={() => setShowRoutineActions((current) => !current)}
-                      />
-                    )}
-                    <button
-                      type="button"
-                      onClick={handleDownloadPDF}
-                      className="btn-secondary"
-                    >
-                      <FiDownload aria-hidden="true" />
-                      <span>Print Timetable</span>
-                    </button>
-                  </div>
-                )
-              }
-              renderCourseActions={(item) =>
-                isLoggedIn &&
-                showRoutineActions &&
-                item.courseData && (
-                  <div className="mt-1 flex items-center justify-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => updatePersonalCourse("add", item.courseData)}
-                      disabled={
-                        busyCourses[
-                          `add-${item.courseData.code}-${item.courseData.section}-${item.courseData.session}`
-                        ]
-                      }
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600 text-white transition hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-60"
-                      aria-label={`Add ${item.courseData.code} to personal routine`}
-                      title="Add to personal routine"
-                    >
-                      <FiPlus className="h-4 w-4" aria-hidden="true" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => updatePersonalCourse("remove", item.courseData)}
-                      disabled={
-                        busyCourses[
-                          `remove-${item.courseData.code}-${item.courseData.section}-${item.courseData.session}`
-                        ]
-                      }
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-rose-600 text-white transition hover:bg-rose-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 disabled:opacity-60"
-                      aria-label={`Remove ${item.courseData.code} from personal routine`}
-                      title="Remove from personal routine"
-                    >
-                      <FiTrash2 className="h-4 w-4" aria-hidden="true" />
-                    </button>
-                  </div>
-                )
-              }
-              emptyTitle="No schedule found"
-              emptyDescription="We couldn't find any classes for this section and session combination. Please verify the section code."
-            />
-          </section>
-        )}
+                renderCourseActions={(item) =>
+                  isLoggedIn &&
+                  showRoutineActions &&
+                  item.courseData && (
+                    <div className="mt-1 flex items-center justify-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => updatePersonalCourse("add", item.courseData)}
+                        disabled={
+                          busyCourses[
+                            `add-${item.courseData.code}-${item.courseData.section}-${item.courseData.session}`
+                          ]
+                        }
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600 text-white transition hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-60"
+                        aria-label={`Add ${item.courseData.code} to personal routine`}
+                        title="Add to personal routine"
+                      >
+                        <FiPlus className="h-4 w-4" aria-hidden="true" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updatePersonalCourse("remove", item.courseData)}
+                        disabled={
+                          busyCourses[
+                            `remove-${item.courseData.code}-${item.courseData.section}-${item.courseData.session}`
+                          ]
+                        }
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-rose-600 text-white transition hover:bg-rose-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 disabled:opacity-60"
+                        aria-label={`Remove ${item.courseData.code} from personal routine`}
+                        title="Remove from personal routine"
+                      >
+                        <FiTrash2 className="h-4 w-4" aria-hidden="true" />
+                      </button>
+                    </div>
+                  )
+                }
+                emptyTitle="No schedule found"
+                emptyDescription="We couldn't find any classes for this section and session combination. Please verify the section code."
+              />
+            </motion.section>
+          )}
+        </AnimatePresence>
 
         {/* Selected Class Details Modal */}
         {selectedClassItem && (
@@ -912,22 +1054,46 @@ const Home = () => {
         )}
 
         {/* ─── ACADEMIC NAVIGATION HUB (BENTO GRID) ─── */}
-        <section id="academic-hub" className="animate-enter space-y-8">
+        <motion.section
+          id="academic-hub"
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-40px" }}
+          custom={prefersReducedMotion}
+          variants={sectionScrollVariants}
+          className="space-y-8"
+        >
           <SectionHeading
             kicker="Academic Hub"
             title="Explore RMS Portals & Services"
             description="Quick access to routine lookup, course notes, department contacts, transit schedules, and student management workspaces."
           />
 
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <motion.div
+            className="grid gap-6 md:grid-cols-2 lg:grid-cols-3"
+            variants={gridStaggerVariants}
+            custom={prefersReducedMotion}
+          >
             {academicHubCategories.map((category) => (
-              <AcademicHubCard key={category.id} category={category} />
+              <AcademicHubCard
+                key={category.id}
+                category={category}
+                prefersReducedMotion={prefersReducedMotion}
+              />
             ))}
-          </div>
-        </section>
+          </motion.div>
+        </motion.section>
 
         {/* ─── STUDY MATERIALS & RESOURCE HIGHLIGHTS ─── */}
-        <section id="resource-highlights" className="animate-enter space-y-6">
+        <motion.section
+          id="resource-highlights"
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-40px" }}
+          custom={prefersReducedMotion}
+          variants={sectionScrollVariants}
+          className="space-y-6"
+        >
           <SectionHeading
             kicker="Peer Knowledge"
             title="Featured Academic Resources"
@@ -937,17 +1103,25 @@ const Home = () => {
             onAdd={() => navigate(isLoggedIn ? "/edit/details?tab=resources" : "/auth/login")}
             onFind={() => navigate("/resources")}
           />
-        </section>
+        </motion.section>
 
         {/* ─── PLATFORM INSIGHTS & ANALYTICS ─── */}
         <HomeAnalyticsSection
           analytics={homeAnalytics}
           loading={analyticsLoading}
           error={analyticsError}
+          prefersReducedMotion={prefersReducedMotion}
         />
 
         {/* ─── TOP CONTRIBUTORS / HALL OF FAME ─── */}
-        <section id="contributors" className="animate-enter">
+        <motion.section
+          id="contributors"
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-40px" }}
+          custom={prefersReducedMotion}
+          variants={sectionScrollVariants}
+        >
           <div className="surface-card overflow-hidden p-6 sm:p-8">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
               <div>
@@ -960,13 +1134,19 @@ const Home = () => {
                   Recognizing the students who help peers succeed by sharing course materials and notes.
                 </p>
               </div>
-              <Link
-                to="/info/community"
-                className="btn-secondary w-fit shrink-0"
+              <motion.div
+                whileHover={prefersReducedMotion ? {} : { scale: 1.02 }}
+                whileTap={prefersReducedMotion ? {} : { scale: 0.98 }}
+                className="w-fit shrink-0"
               >
-                <FiUsers aria-hidden="true" />
-                <span>View Full Directory</span>
-              </Link>
+                <Link
+                  to="/info/community"
+                  className="btn-secondary w-fit shrink-0"
+                >
+                  <FiUsers aria-hidden="true" />
+                  <span>View Full Directory</span>
+                </Link>
+              </motion.div>
             </div>
 
             <div className="mt-8">
@@ -980,39 +1160,54 @@ const Home = () => {
                   ))}
                 </div>
               ) : topContributors.length ? (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <motion.div
+                  className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+                  variants={gridStaggerVariants}
+                  custom={prefersReducedMotion}
+                >
                   {topContributors.slice(0, 6).map((contributor, index) => (
                     <ContributorCard
                       key={contributor.id || index}
                       contributor={contributor}
                       rank={index + 1}
                       onOpenProfile={openCommunityProfile}
+                      prefersReducedMotion={prefersReducedMotion}
                     />
                   ))}
-                </div>
+                </motion.div>
               ) : (
                 <EmptyState
                   icon={<FiAward className="h-8 w-8 text-amber-500" aria-hidden="true" />}
                   title="No contributors yet"
                   description="Be the first to upload lecture notes or past papers and earn your spot here!"
                   action={
-                    <button
+                    <motion.button
                       type="button"
+                      whileHover={prefersReducedMotion ? {} : { scale: 1.02 }}
+                      whileTap={prefersReducedMotion ? {} : { scale: 0.98 }}
                       onClick={() => navigate(isLoggedIn ? "/edit/details?tab=resources" : "/auth/login")}
                       className="btn-primary"
                     >
                       <FiPlus aria-hidden="true" />
                       <span>Contribute Material</span>
-                    </button>
+                    </motion.button>
                   }
                 />
               )}
             </div>
           </div>
-        </section>
+        </motion.section>
 
         {/* ─── FEATURED PARTNER SPONSOR ─── */}
-        <SponsorSection sponsor={featuredSponsor} />
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-40px" }}
+          custom={prefersReducedMotion}
+          variants={sectionScrollVariants}
+        >
+          <SponsorSection sponsor={featuredSponsor} />
+        </motion.div>
       </main>
     </div>
   );
@@ -1020,7 +1215,7 @@ const Home = () => {
 
 /* ─── SUB-COMPONENTS ─── */
 
-function HeroStatCard({ stat, index }) {
+function HeroStatCard({ stat, index, prefersReducedMotion }) {
   const tones = {
     violet: "bg-violet-500/20 text-violet-200 border-violet-400/30",
     emerald: "bg-emerald-500/20 text-emerald-200 border-emerald-400/30",
@@ -1028,8 +1223,11 @@ function HeroStatCard({ stat, index }) {
   };
 
   return (
-    <div
-      className="hero-glass-card border border-white/10 bg-white/5 p-4 text-left shadow-lg backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:border-white/25 hover:bg-white/10"
+    <motion.div
+      variants={cardStaggerItemVariants}
+      custom={prefersReducedMotion}
+      whileHover={prefersReducedMotion ? {} : { y: -3, transition: { duration: 0.2 } }}
+      className="hero-glass-card border border-white/10 bg-white/5 p-4 text-left shadow-lg backdrop-blur-md transition-colors hover:border-white/25 hover:bg-white/10"
       style={{ animationDelay: `${index * 80}ms` }}
     >
       <div className="flex items-center gap-3">
@@ -1042,11 +1240,11 @@ function HeroStatCard({ stat, index }) {
         </div>
       </div>
       <p className="mt-2 text-[11px] text-slate-400">{stat.subtext}</p>
-    </div>
+    </motion.div>
   );
 }
 
-function AcademicHubCard({ category }) {
+function AcademicHubCard({ category, prefersReducedMotion }) {
   const Icon = category.icon;
   const tones = {
     violet: {
@@ -1079,9 +1277,12 @@ function AcademicHubCard({ category }) {
   const currentTone = tones[category.tone] || tones.violet;
 
   return (
-    <article
+    <motion.article
+      variants={cardStaggerItemVariants}
+      custom={prefersReducedMotion}
+      whileHover={prefersReducedMotion ? {} : { y: -4, transition: { duration: 0.2 } }}
       className={cx(
-        "surface-card flex h-full flex-col justify-between p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl",
+        "surface-card flex h-full flex-col justify-between p-6 transition-colors duration-300 hover:shadow-xl",
         currentTone.accent,
       )}
     >
@@ -1130,17 +1331,24 @@ function AcademicHubCard({ category }) {
           );
         })}
       </div>
-    </article>
+    </motion.article>
   );
 }
 
-function FeaturedAnnouncementCard({ announcement }) {
+function FeaturedAnnouncementCard({ announcement, prefersReducedMotion }) {
   const title = announcement.title || "Featured Campus Notice";
   const link = announcement.link || "/";
   const isExternal = isExternalAnnouncementLink(link);
 
   return (
-    <section className="surface-card group overflow-hidden border border-violet-200/60 shadow-xl transition-all duration-300 hover:shadow-2xl dark:border-violet-500/20">
+    <motion.section
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true, margin: "-40px" }}
+      custom={prefersReducedMotion}
+      variants={sectionScrollVariants}
+      className="surface-card group overflow-hidden border border-violet-200/60 shadow-xl transition-all duration-300 hover:shadow-2xl dark:border-violet-500/20"
+    >
       <div className="relative min-h-[320px] overflow-hidden bg-slate-950 sm:min-h-[380px]">
         {announcement.image && (
           <img
@@ -1166,7 +1374,9 @@ function FeaturedAnnouncementCard({ announcement }) {
 
             <div className="pt-2">
               {isExternal ? (
-                <a
+                <motion.a
+                  whileHover={prefersReducedMotion ? {} : { scale: 1.02 }}
+                  whileTap={prefersReducedMotion ? {} : { scale: 0.98 }}
                   href={link}
                   target="_blank"
                   rel="noreferrer"
@@ -1174,18 +1384,24 @@ function FeaturedAnnouncementCard({ announcement }) {
                 >
                   <span>Learn More</span>
                   <FiExternalLink aria-hidden="true" />
-                </a>
+                </motion.a>
               ) : (
-                <Link to={link} className="btn-primary">
-                  <span>Learn More</span>
-                  <FiArrowRight aria-hidden="true" />
-                </Link>
+                <motion.div
+                  whileHover={prefersReducedMotion ? {} : { scale: 1.02 }}
+                  whileTap={prefersReducedMotion ? {} : { scale: 0.98 }}
+                  className="inline-block"
+                >
+                  <Link to={link} className="btn-primary">
+                    <span>Learn More</span>
+                    <FiArrowRight aria-hidden="true" />
+                  </Link>
+                </motion.div>
               )}
             </div>
           </div>
         </div>
       </div>
-    </section>
+    </motion.section>
   );
 }
 
@@ -1199,12 +1415,20 @@ function isExternalAnnouncementLink(link) {
   }
 }
 
-function HomeAnalyticsSection({ analytics, loading, error }) {
+function HomeAnalyticsSection({ analytics, loading, error, prefersReducedMotion }) {
   const normalizedAnalytics = normalizeHomeAnalytics(analytics);
   const resourceGrowth = normalizedAnalytics.resources.growth;
 
   return (
-    <section id="platform-analytics" className="animate-enter space-y-6">
+    <motion.section
+      id="platform-analytics"
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true, margin: "-40px" }}
+      custom={prefersReducedMotion}
+      variants={sectionScrollVariants}
+      className="space-y-6"
+    >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <SectionHeading
           kicker="Live Platform Trends"
@@ -1219,7 +1443,11 @@ function HomeAnalyticsSection({ analytics, loading, error }) {
 
       {error && <Notice type="error">{error}</Notice>}
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <motion.div
+        className="grid gap-4 sm:grid-cols-3"
+        variants={gridStaggerVariants}
+        custom={prefersReducedMotion}
+      >
         <HomeMetricCard
           icon={<FiBookOpen className="h-5 w-5" aria-hidden="true" />}
           label="Shared Resources"
@@ -1227,6 +1455,7 @@ function HomeAnalyticsSection({ analytics, loading, error }) {
           loading={loading}
           tone="violet"
           subtext="Course files & study materials"
+          prefersReducedMotion={prefersReducedMotion}
         />
         <HomeMetricCard
           icon={<FiUsers className="h-5 w-5" aria-hidden="true" />}
@@ -1235,6 +1464,7 @@ function HomeAnalyticsSection({ analytics, loading, error }) {
           loading={loading}
           tone="emerald"
           subtext="Active platform accounts"
+          prefersReducedMotion={prefersReducedMotion}
         />
         <HomeMetricCard
           icon={<FiTrendingUp className="h-5 w-5" aria-hidden="true" />}
@@ -1244,13 +1474,15 @@ function HomeAnalyticsSection({ analytics, loading, error }) {
           loading={loading}
           tone="sky"
           subtext="Continuous timeline history"
+          prefersReducedMotion={prefersReducedMotion}
         />
-      </div>
+      </motion.div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <SemesterResourceChart
           data={normalizedAnalytics.resources.semesterDistribution}
           loading={loading}
+          prefersReducedMotion={prefersReducedMotion}
         />
         <GrowthLineChart
           title="Resource Upload Trend"
@@ -1259,13 +1491,14 @@ function HomeAnalyticsSection({ analytics, loading, error }) {
           loading={loading}
           icon={<FiTrendingUp aria-hidden="true" />}
           tone="violet"
+          prefersReducedMotion={prefersReducedMotion}
         />
       </div>
-    </section>
+    </motion.section>
   );
 }
 
-function HomeMetricCard({ icon, label, value, loading, tone = "violet", subtext, suffix = "" }) {
+function HomeMetricCard({ icon, label, value, loading, tone = "violet", subtext, suffix = "", prefersReducedMotion }) {
   const tones = {
     violet: "bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-300",
     emerald: "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300",
@@ -1273,7 +1506,12 @@ function HomeMetricCard({ icon, label, value, loading, tone = "violet", subtext,
   };
 
   return (
-    <article className="surface-card p-5 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
+    <motion.article
+      variants={cardStaggerItemVariants}
+      custom={prefersReducedMotion}
+      whileHover={prefersReducedMotion ? {} : { y: -3, transition: { duration: 0.2 } }}
+      className="surface-card p-5 transition-colors duration-300 hover:shadow-lg"
+    >
       <div className="flex items-center gap-4">
         <div className={cx("flex h-12 w-12 shrink-0 items-center justify-center rounded-xl", tones[tone] || tones.violet)}>
           {icon}
@@ -1300,16 +1538,19 @@ function HomeMetricCard({ icon, label, value, loading, tone = "violet", subtext,
           )}
         </div>
       </div>
-    </article>
+    </motion.article>
   );
 }
 
-function SemesterResourceChart({ data, loading }) {
+function SemesterResourceChart({ data, loading, prefersReducedMotion }) {
   const rows = normalizeSemesterDistribution(data);
   const maxTotal = Math.max(...rows.map((item) => item.total), 1);
 
   return (
-    <article className="surface-card p-6 transition-all duration-300 hover:shadow-xl">
+    <motion.article
+      whileHover={prefersReducedMotion ? {} : { y: -2, transition: { duration: 0.2 } }}
+      className="surface-card p-6 transition-colors duration-300 hover:shadow-xl"
+    >
       <div className="flex items-center gap-3">
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-50 text-violet-600 dark:bg-violet-500/10 dark:text-violet-300">
           <FiBarChart2 className="h-5 w-5" />
@@ -1336,21 +1577,23 @@ function SemesterResourceChart({ data, loading }) {
               className="group/bar relative flex h-52 flex-col justify-end gap-2"
             >
               <div className="flex h-40 items-end rounded-lg bg-slate-100 p-1 dark:bg-slate-900">
-                <div
+                <motion.div
+                  initial={prefersReducedMotion ? false : { height: 0 }}
+                  animate={{ height: `${height}%` }}
+                  transition={{ duration: 0.5, delay: index * 0.04 }}
                   className={cx(
-                    "w-full rounded-md transition-all duration-500",
+                    "w-full rounded-md transition-colors duration-300",
                     loading
                       ? "animate-pulse bg-slate-300 dark:bg-slate-700"
                       : "bg-gradient-to-t from-violet-600 to-violet-400 dark:from-violet-500 dark:to-violet-300 group-hover/bar:from-violet-500 group-hover/bar:to-emerald-400",
                   )}
-                  style={{ height: `${height}%` }}
                 />
               </div>
               <div className="text-center">
                 <p className="text-xs font-bold text-slate-500 dark:text-slate-400">
                   Sem {item.semester}
                 </p>
-                <p className="text-xs font-black text-slate-900 dark:text-white">
+                <p className="text-xs font-black text-slate-950 dark:text-white">
                   {loading ? "-" : <AnimatedNumber value={item.total} formatter={formatCompactNumber} />}
                 </p>
               </div>
@@ -1358,11 +1601,11 @@ function SemesterResourceChart({ data, loading }) {
           );
         })}
       </div>
-    </article>
+    </motion.article>
   );
 }
 
-function GrowthLineChart({ title, description, data, loading, icon, tone: _tone = "violet" }) {
+function GrowthLineChart({ title, description, data, loading, icon, tone: _tone = "violet", prefersReducedMotion }) {
   const rows = Array.isArray(data) ? data : [];
   const maxTotal = Math.max(...rows.map((item) => item.total), 1);
   const points = getLineChartPoints(rows, maxTotal);
@@ -1375,7 +1618,10 @@ function GrowthLineChart({ title, description, data, loading, icon, tone: _tone 
   const checkpoints = getTimelineCheckpoints(points, rows);
 
   return (
-    <article className="surface-card p-6 transition-all duration-300 hover:shadow-xl">
+    <motion.article
+      whileHover={prefersReducedMotion ? {} : { y: -2, transition: { duration: 0.2 } }}
+      className="surface-card p-6 transition-colors duration-300 hover:shadow-xl"
+    >
       <div className="flex items-center gap-3">
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-50 text-violet-600 dark:bg-violet-500/10 dark:text-violet-300">
           {icon}
@@ -1436,11 +1682,11 @@ function GrowthLineChart({ title, description, data, loading, icon, tone: _tone 
         <span>{formatDisplayDate(rows[Math.floor(rows.length / 2)]?.date)}</span>
         <span>{formatDisplayDate(rows.at(-1)?.date)}</span>
       </div>
-    </article>
+    </motion.article>
   );
 }
 
-function ContributorCard({ contributor, rank, onOpenProfile }) {
+function ContributorCard({ contributor, rank, onOpenProfile, prefersReducedMotion }) {
   const points = Number(contributor.resourceCount || contributor.point || contributor.points || 0);
   const isTopThree = rank <= 3;
   const initials = getContributorInitials(contributor);
@@ -1452,11 +1698,15 @@ function ContributorCard({ contributor, rank, onOpenProfile }) {
   };
 
   return (
-    <button
+    <motion.button
       type="button"
+      variants={cardStaggerItemVariants}
+      custom={prefersReducedMotion}
+      whileHover={prefersReducedMotion ? {} : { y: -3, transition: { duration: 0.2 } }}
+      whileTap={prefersReducedMotion ? {} : { scale: 0.99 }}
       onClick={() => onOpenProfile(contributor.id)}
       className={cx(
-        "group flex w-full items-center justify-between rounded-xl border p-4 text-left transition-all duration-300 hover:-translate-y-1 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500",
+        "group flex w-full items-center justify-between rounded-xl border p-4 text-left transition-colors duration-300 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500",
         isTopThree
           ? "border-amber-300/60 bg-gradient-to-r from-amber-500/5 via-amber-500/10 to-transparent dark:border-amber-500/30 dark:bg-amber-500/5"
           : "border-slate-200 bg-white hover:border-violet-300 dark:border-slate-800 dark:bg-slate-900/70 dark:hover:border-violet-500/40",
@@ -1499,7 +1749,7 @@ function ContributorCard({ contributor, rank, onOpenProfile }) {
           Files
         </span>
       </div>
-    </button>
+    </motion.button>
   );
 }
 
